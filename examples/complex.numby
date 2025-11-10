@@ -1,0 +1,11 @@
+distance = 100 km
+time = 2 hours
+speed = distance / time
+speed in mph
+
+10% of 100
+200 - 25%
+100 * 50%
+
+// Complex expression
+(a = 5, b = 10, a * b + sqrt(a^2 + b^2))

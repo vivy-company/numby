@@ -1,0 +1,190 @@
+{
+  "length_units": {
+    "m": 1.0,
+    "meter": 1.0,
+    "meters": 1.0,
+    "cm": 0.01,
+    "centimeter": 0.01,
+    "centimeters": 0.01,
+    "mm": 0.001,
+    "millimeter": 0.001,
+    "millimeters": 0.001,
+    "km": 1000.0,
+    "kilometer": 1000.0,
+    "kilometers": 1000.0,
+    "ft": 0.3048,
+    "foot": 0.3048,
+    "feet": 0.3048,
+    "inch": 0.0254,
+    "inches": 0.0254,
+    "yard": 0.9144,
+    "yards": 0.9144,
+    "mile": 1609.344,
+    "miles": 1609.344,
+    "mil": 0.0000254,
+    "point": 0.000352778,
+    "points": 0.000352778,
+    "line": 0.00211667,
+    "hand": 0.1016,
+    "rod": 5.0292,
+    "chain": 20.1168,
+    "furlong": 201.168,
+    "cable": 185.2,
+    "nautical mile": 1852.0
+  },
+  "time_units": {
+    "second": 1.0,
+    "seconds": 1.0,
+    "minute": 60.0,
+    "minutes": 60.0,
+    "hour": 3600.0,
+    "hours": 3600.0,
+    "day": 86400.0,
+    "days": 86400.0,
+    "week": 604800.0,
+    "weeks": 604800.0,
+    "month": 2592000.0,  // 30 days
+    "months": 2592000.0,
+    "year": 31536000.0,  // 365 days
+    "years": 31536000.0
+  },
+  "temperature_units": {
+    "kelvin": "kelvin",
+    "kelvins": "kelvin",
+    "celsius": "celsius",
+    "fahrenheit": "fahrenheit"
+  },
+  "area_units": {
+    "m2": 1.0,
+    "square meter": 1.0,
+    "square meters": 1.0,
+    "sq m": 1.0,
+    "sqm": 1.0,
+    "hectare": 10000.0,
+    "hectares": 10000.0,
+    "are": 100.0,
+    "ares": 100.0,
+    "acre": 4046.86,
+    "acres": 4046.86
+  },
+  "volume_units": {
+    "m3": 1.0,
+    "cubic meter": 1.0,
+    "cubic meters": 1.0,
+    "cu m": 1.0,
+    "cbm": 1.0,
+    "liter": 0.001,
+    "liters": 0.001,
+    "l": 0.001,
+    "pint": 0.000473176,
+    "pints": 0.000473176,
+    "quart": 0.000946353,
+    "quarts": 0.000946353,
+    "gallon": 0.00378541,
+    "gallons": 0.00378541,
+    "tea spoon": 4.92892e-6,
+    "table spoon": 1.47868e-5,
+    "cup": 0.000236588
+  },
+  "weight_units": {
+    "gram": 1.0,
+    "grams": 1.0,
+    "g": 1.0,
+    "tonne": 1000000.0,
+    "tonnes": 1000000.0,
+    "carat": 0.2,
+    "carats": 0.2,
+    "centner": 100000.0,
+    "pound": 453.592,
+    "pounds": 453.592,
+    "stone": 6350.29,
+    "stones": 6350.29,
+    "ounce": 28.3495,
+    "ounces": 28.3495
+  },
+  "angular_units": {
+    "radian": 1.0,
+    "radians": 1.0,
+    "degree": 0.0174533,
+    "degrees": 0.0174533,
+    "°": 0.0174533
+  },
+  "data_units": {
+    "bit": 1.0,
+    "bits": 1.0,
+    "byte": 8.0,
+    "bytes": 8.0,
+    "b": 1.0,
+    "B": 8.0
+  },
+  "speed_units": {
+    "m/s": 1.0,
+    "meter per second": 1.0,
+    "meters per second": 1.0,
+    "km/h": 0.277778,
+    "kilometer per hour": 0.277778,
+    "kilometers per hour": 0.277778,
+    "mph": 0.44704,
+    "mile per hour": 0.44704,
+    "miles per hour": 0.44704,
+    "knot": 0.514444,
+    "knots": 0.514444
+  },
+  "currencies": {
+    "USD": 1.0,
+    "EUR": 0.85,
+    "GBP": 0.73,
+    "JPY": 0.0065,
+    "CAD": 0.68
+  },
+  "currency_symbols": [
+    "usd", "eur", "gbp", "jpy", "cad",
+    "$", "€", "£", "¥"
+  ],
+  "operators": {
+    "plus": "+",
+    "minus": "-",
+    "times": "*",
+    "multiplied by": "*",
+    "divided by": "/",
+    "divide by": "/",
+    "subtract": "-",
+    "and": "+",
+    "with": "+",
+    "mod": "%"
+  },
+  "scales": {
+    "k": 1000,
+    "kilo": 1000,
+    "thousand": 1000,
+    "M": 1000000,
+    "mega": 1000000,
+    "million": 1000000,
+    "G": 1000000000,
+    "giga": 1000000000,
+    "billion": 1000000000,
+    "T": 1000000000000,
+    "tera": 1000000000000,
+    "b": 1000000000
+  },
+  "functions": {
+    "log": "log10(",
+    "ln": "ln(",
+    "abs": "abs(",
+    "round": "round(",
+    "ceil": "ceil(",
+    "floor": "floor(",
+    "sinh": "sinh(",
+    "cosh": "cosh(",
+    "tanh": "tanh(",
+    "arcsin": "asin(",
+    "arccos": "acos(",
+    "arctan": "atan("
+  },
+  "custom_units": {
+    "energy": {
+      "joule": 1.0,
+      "calorie": 4.184
+    }
+  }
+}

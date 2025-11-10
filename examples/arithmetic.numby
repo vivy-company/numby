@@ -1,0 +1,6 @@
+x = 10
+y = 20
+result = x + y * 2
+result
+sin(45) + cos(30)
+sqrt(16) + log(100)

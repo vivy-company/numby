@@ -1,0 +1,42 @@
+[package]
+name = "numby"
+version = "0.1.0"
+edition = "2021"
+description = "A powerful natural language calculator with a terminal user interface"
+repository = "https://github.com/wiedymi/numby"
+license = "MIT"
+
+[lib]
+name = "numby"
+path = "src/lib.rs"
+
+[[bin]]
+name = "numby"
+path = "src/main.rs"
+
+[dependencies]
+ratatui = "0.26"
+crossterm = "0.27"
+regex = "1.10"
+fasteval2 = "2.1"
+ropey = "1.6"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.12", features = ["blocking"] }
+clipboard = "0.5"
+ansi_term = "0.12"
+clap = { version = "4.0", features = ["derive"] }
+thiserror = "1.0"
+anyhow = "1.0"
+lazy_static = "1.4"
+dirs = "5.0"
+
+[dev-dependencies]
+approx = "0.5"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

@@ -1,0 +1,29 @@
+use crate::models::{Agent, AppState};
+
+pub struct HistoryAgent;
+
+impl Agent for HistoryAgent {
+    fn priority(&self) -> i32 { 10 } // Highest priority
+
+    fn can_handle(&self, input: &str, _state: &AppState) -> bool {
+        let trimmed = input.trim();
+        matches!(trimmed, "sum" | "total" | "average" | "avg" | "prev")
+    }
+
+    fn process(&self, input: &str, state: &mut AppState, _config: &crate::config::Config) -> Option<(String, bool)> {
+        let trimmed = input.trim();
+        let history_guard = state.history.read().unwrap();
+        match trimmed {
+            "sum" | "total" => Some((format!("{}", history_guard.iter().sum::<f64>()), true)),
+            "average" | "avg" => {
+                if history_guard.is_empty() {
+                    None
+                } else {
+                    Some((format!("{}", history_guard.iter().sum::<f64>() / history_guard.len() as f64), true))
+                }
+            }
+            "prev" => history_guard.last().map(|&v| (format!("{}", v), true)),
+            _ => None,
+        }
+    }
+}

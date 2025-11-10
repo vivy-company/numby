@@ -1,0 +1,25 @@
+{
+    "version": "0.1.0",
+    "description": "A powerful natural language calculator with a terminal user interface",
+    "homepage": "https://github.com/wiedymi/numby",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/wiedymi/numby/releases/download/v$version/numby-windows-x86_64.exe",
+            "hash": "TODO: Add SHA256 hash"
+        }
+    },
+    "bin": "numby.exe",
+    "shortcuts": [
+        ["numby", "numby.exe"]
+    ],
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/wiedymi/numby/releases/download/v$version/numby-windows-x86_64.exe",
+                "hash": "TODO: Add SHA256 hash"
+            }
+        }
+    }
+}

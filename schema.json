@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "length_units": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "number" }
+      }
+    },
+    "time_units": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "number" }
+      }
+    },
+    "temperature_units": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "string" }
+      }
+    },
+    "area_units": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "number" }
+      }
+    },
+    "volume_units": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "number" }
+      }
+    },
+    "weight_units": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "number" }
+      }
+    },
+    "angular_units": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "number" }
+      }
+    },
+    "data_units": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "number" }
+      }
+    },
+    "speed_units": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "number" }
+      }
+    },
+    "currencies": {
+      "type": "object",
+      "patternProperties": {
+        ".*": { "type": "number" }
+      }
+    },
+    "currency_symbols": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["currencies", "currency_symbols"]
+}
