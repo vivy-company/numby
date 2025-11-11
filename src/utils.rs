@@ -30,11 +30,11 @@ pub fn copy_to_clipboard(text: &str) {
     match Clipboard::new() {
         Ok(mut clipboard) => {
             if let Err(e) = clipboard.set_text(text) {
-                eprintln!("Failed to copy to clipboard: {}", e);
+                eprintln!("{}", crate::fl!("clipboard-copy-failed", "error" => &e.to_string()));
             }
         }
         Err(e) => {
-            eprintln!("Clipboard not available: {}", e);
+            eprintln!("{}", crate::fl!("clipboard-not-available", "error" => &e.to_string()));
         }
     }
 }

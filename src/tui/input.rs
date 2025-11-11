@@ -80,8 +80,7 @@ pub fn handle_normal_mode(
         match key.code {
             KeyCode::Char(':') => {
                 *mode = Mode::Command(String::new());
-                *state.status.write().expect("Failed to acquire write lock on status") =
-                    "Commands: :q quit, :w save current, :w filename save as".to_string();
+                let _ = state.set_status(crate::fl!("commands-help"));
             }
             KeyCode::Char('y') => {
                 let current_line = utils::get_current_line(input, *cursor_pos);
@@ -109,8 +108,9 @@ pub fn handle_normal_mode(
                     input.insert(*cursor_pos, &c.to_string());
                     *cursor_pos += 1;
                 } else {
-                    *state.status.write().expect("Failed to acquire write lock on status") =
-                        format!("Input size limit reached ({} chars max)", MAX_EXPR_LENGTH);
+                    let _ = state.set_status(
+                        crate::fl!("input-size-limit", "max" => &MAX_EXPR_LENGTH.to_string())
+                    );
                 }
             }
             KeyCode::Backspace => {
@@ -150,8 +150,9 @@ pub fn handle_normal_mode(
                 if !trimmed.is_empty() {
                     // Validate current line before evaluation
                     if let Err(e) = validate_input_size(trimmed) {
-                        *state.status.write().expect("Failed to acquire write lock on status") =
-                            format!("Line validation error: {}", e);
+                        let _ = state.set_status(
+                            crate::fl!("line-validation-error", "error" => &e.to_string())
+                        );
                     } else {
                         registry.evaluate(trimmed, state);
                     }
@@ -194,7 +195,9 @@ pub fn handle_command_mode(
                             save_file(state, input, Some(validated_path.to_str().unwrap()));
                         }
                         Err(e) => {
-                            *state.status.write().expect("Failed to acquire write lock on status") = format!("Invalid path: {}", e);
+                            let _ = state.set_status(
+                                crate::fl!("invalid-file-path", "error" => &e.to_string())
+                            );
                         }
                     }
                 }
@@ -222,16 +225,18 @@ fn save_file(state: &mut AppState, input: &Rope, new_filename: Option<&str>) {
     } else if let Some(ref current) = state.current_filename {
         current.as_str()
     } else {
-        *state.status.write().expect("Failed to acquire write lock on status") = "No file to save to. Use :w filename".to_string();
+        let _ = state.set_status(crate::fl!("no-file-to-save"));
         return;
     };
 
     match fs::write(filename, input.to_string().as_bytes()) {
         Ok(_) => {
-            *state.status.write().expect("Failed to acquire write lock on status") = format!("File saved: {}", filename);
+            let _ = state.set_status(crate::fl!("file-saved", "path" => filename));
         }
         Err(e) => {
-            *state.status.write().expect("Failed to acquire write lock on status") = format!("Error saving file: {}", e);
+            let _ = state.set_status(
+                crate::fl!("error-saving-file", "error" => &e.to_string())
+            );
         }
     }
 }

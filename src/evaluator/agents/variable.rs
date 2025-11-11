@@ -1,33 +1,62 @@
 use crate::models::{Agent, AppState};
-use crate::evaluator::evaluate_expr;
+use crate::evaluator::{evaluate_expr, EvalContext, preprocess_input};
+use crate::evaluator::agents::PRIORITY_VARIABLE;
+use crate::prettify::prettify_number;
 
 pub struct VariableAgent;
 
 impl Agent for VariableAgent {
-    fn priority(&self) -> i32 { 20 }
+    fn priority(&self) -> i32 { PRIORITY_VARIABLE }
 
     fn can_handle(&self, input: &str, _state: &AppState) -> bool {
         input.contains('=')
     }
 
-    fn process(&self, input: &str, state: &mut AppState, _config: &crate::config::Config) -> Option<(String, bool)> {
+    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool)> {
         let parts: Vec<&str> = input.split('=').collect();
         if parts.len() == 2 {
             let var = parts[0].trim();
             let val_expr = parts[1].trim();
-            // Clone variables to avoid deadlock
-            let mut vars_clone = state.variables.read().expect("Failed to acquire read lock on variables").clone();
-            if let Some(val_str) = evaluate_expr(val_expr, &mut vars_clone, &state.history.read().expect("Failed to acquire read lock on history").clone(), &state.length_units, &state.time_units, &state.temperature_units, &state.area_units, &state.volume_units, &state.weight_units, &state.angular_units, &state.data_units, &state.speed_units, &state.rates, &std::collections::HashMap::new()) {
-                let parts_val: Vec<&str> = val_str.split_whitespace().collect();
-                if let Some(num_str) = parts_val.first() {
-                    if let Ok(val) = num_str.parse::<f64>() {
-                        let unit = if parts_val.len() > 1 { Some(parts_val[1].to_string()) } else { None };
-                        state.variables.write().expect("Failed to acquire write lock on variables").insert(var.to_string(), (val, unit));
-                        // Invalidate caches since variables changed
-                        state.display_cache.write().expect("Failed to acquire write lock on display_cache").clear();
-                        state.highlight_cache.write().expect("Failed to acquire write lock on highlight_cache").clear();
-                    }
-                }
+
+            let mut vars_guard = state.variables.write().ok()?;
+            let history_guard = state.history.read().ok()?;
+
+            let preprocessed = preprocess_input(val_expr, &vars_guard, config);
+
+            let mut ctx = EvalContext {
+                variables: &mut vars_guard,
+                history: &history_guard,
+                length_units: &config.length_units,
+                time_units: &config.time_units,
+                temperature_units: &config.temperature_units,
+                area_units: &config.area_units,
+                volume_units: &config.volume_units,
+                weight_units: &config.weight_units,
+                angular_units: &config.angular_units,
+                data_units: &config.data_units,
+                speed_units: &config.speed_units,
+                rates: &config.currencies,
+                custom_units: &config.custom_units,
+            };
+
+            if let Ok(eval_result) = evaluate_expr(&preprocessed, &mut ctx) {
+                // Insert directly since we already have the lock
+                vars_guard.insert(var.to_string(), (eval_result.value, eval_result.unit.clone()));
+
+                // Drop locks before calling methods that might need them
+                drop(vars_guard);
+                drop(history_guard);
+
+                // Publish event - CacheManager subscriber will handle invalidation
+                state.publish_event(crate::evaluator::StateEvent::VariableChanged(var.to_string()));
+
+                // Format the result string for display
+                let formatted = prettify_number(eval_result.value);
+                let val_str = if let Some(unit) = eval_result.unit {
+                    format!("{} {}", formatted, unit)
+                } else {
+                    formatted
+                };
                 return Some((val_str, true));
             }
         }

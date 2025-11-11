@@ -19,6 +19,8 @@ pub struct Config {
     pub scales: HashMap<String, f64>,
     pub functions: HashMap<String, String>,
     pub custom_units: HashMap<String, HashMap<String, f64>>,
+    #[serde(default)]
+    pub locale: Option<String>,
 }
 
 fn insert_numeric_units(map: &mut HashMap<String, f64>, units: &[(&str, f64)]) {
@@ -329,6 +331,7 @@ impl Default for Config {
             scales: create_scales(),
             functions: create_functions(),
             custom_units: create_custom_units(),
+            locale: None,
         }
     }
 }

@@ -9,6 +9,7 @@ license = "MIT"
 [lib]
 name = "numby"
 path = "src/lib.rs"
+crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bin]]
 name = "numby"
@@ -23,7 +24,6 @@ ropey = "1.6"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = { version = "0.12", features = ["blocking"] }
 arboard = "3.4"
 nu-ansi-term = "0.50"
 clap = { version = "4.0", features = ["derive"] }
@@ -31,6 +31,10 @@ thiserror = "1.0"
 anyhow = "1.0"
 lazy_static = "1.4"
 dirs = "5.0"
+fluent-bundle = "0.15"
+fluent-templates = "0.10"
+unic-langid = "0.9"
+once_cell = "1.19"
 
 [dev-dependencies]
 approx = "0.5"

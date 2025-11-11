@@ -73,7 +73,7 @@ pub fn run(
         if status_timer > 0 {
             status_timer -= 1;
             if status_timer == 0 {
-                *state.status.write().expect("Failed to acquire write lock on status") = String::new();
+                let _ = state.set_status(String::new());
             }
         }
 

@@ -1,9 +1,15 @@
 mod core;
 mod preprocessing;
 pub mod agents;
+pub mod error;
+pub mod cache;
+pub mod events;
 
-pub use core::{evaluate_expr, evaluate_unit_conversion};
-pub use preprocessing::preprocess;
+pub use core::{evaluate_expr, evaluate_unit_conversion, EvalContext};
+pub use preprocessing::{preprocess, preprocess_input};
+pub use error::{EvaluatorError, Result};
+pub use cache::CacheManager;
+pub use events::{StateEvent, EventSubscriber};
 
 use crate::config::Config;
 use crate::models::{Agent, AppState};
@@ -15,7 +21,7 @@ pub struct AgentRegistry {
 }
 
 impl AgentRegistry {
-    pub fn new(config: &Config) -> Self {
+    pub fn new(config: &Config) -> Result<Self> {
         let mut agents: Vec<Box<dyn Agent>> = vec![
             Box::new(agents::HistoryAgent),
             Box::new(agents::VariableAgent),
@@ -23,14 +29,39 @@ impl AgentRegistry {
             Box::new(agents::UnitAgent),
             Box::new(agents::MathAgent),
         ];
+
+        Self::validate_agents(&agents)?;
+
         agents.sort_by_key(|a| a.priority());
-        Self { agents, config: std::sync::Arc::new(config.clone()) }
+        Ok(Self { agents, config: std::sync::Arc::new(config.clone()) })
+    }
+
+    fn validate_agents(agents: &[Box<dyn Agent>]) -> Result<()> {
+        let mut priorities = std::collections::HashMap::new();
+
+        for agent in agents {
+            let priority = agent.priority();
+            if priorities.contains_key(&priority) {
+                return Err(EvaluatorError::ConfigError(
+                    format!("Priority conflict: {} has same priority as another agent", priority)
+                ));
+            }
+            priorities.insert(priority, ());
+        }
+
+        if agents.is_empty() {
+            return Err(EvaluatorError::ConfigError(
+                "No agents registered".to_string()
+            ));
+        }
+
+        Ok(())
     }
 
     pub fn evaluate(&self, input: &str, state: &mut AppState) -> Option<(String, bool)> {
         // Validate input size
         if let Err(e) = validate_input_size(input) {
-            eprintln!("Input validation error: {}", e);
+            eprintln!("{}", crate::fl!("input-validation-error", "error" => &e));
             return None;
         }
         self.evaluate_with_history(input, state, true)
@@ -39,7 +70,7 @@ impl AgentRegistry {
     pub fn evaluate_for_display(&self, input: &str, state: &AppState) -> Option<(String, bool)> {
         // Validate input size
         if let Err(e) = validate_input_size(input) {
-            eprintln!("Input validation error: {}", e);
+            eprintln!("{}", crate::fl!("input-validation-error", "error" => &e));
             return None;
         }
         let mut temp_state = state.clone();
@@ -60,7 +91,7 @@ impl AgentRegistry {
                         // but NOT if it's a history command
                         if let Some(num_str) = res.split_whitespace().next() {
                             if let Ok(r) = num_str.parse::<f64>() {
-                                state.history.write().expect("Failed to acquire write lock on history").push(r);
+                                let _ = state.add_history(r);
                             }
                         }
                     }

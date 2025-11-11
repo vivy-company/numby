@@ -8,6 +8,6 @@ pub fn evaluate_expression(expression: &str, state: &mut AppState, registry: &cr
     if let Some((result, _)) = registry.evaluate(expression, state) {
         println!("{}", Color::Green.paint(result));
     } else {
-        eprintln!("{}", Color::Red.paint("Error evaluating expression"));
+        eprintln!("{}", Color::Red.paint(crate::fl!("error-evaluating-expression")));
     }
 }

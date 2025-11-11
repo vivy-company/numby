@@ -30,8 +30,9 @@ fn get_variable_regex(var: &str) -> Regex {
         .clone()
 }
 
-pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String {
+pub fn preprocess_input(input: &str, variables: &HashMap<String, (f64, Option<String>)>, config: &Config) -> String {
     let mut expr_str = input.to_string();
+
     // Strip comments
     let expr_str_comments = expr_str.lines().map(|line| {
         if let Some(pos) = line.find("//").or_else(|| line.find("#")) {
@@ -43,8 +44,7 @@ pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String 
     expr_str = expr_str_comments.trim().to_string();
 
     // Replace variables with cached regexes
-    let variables_guard = state.variables.read().expect("Failed to acquire read lock on variables");
-    for (var, (val, _unit)) in &*variables_guard {
+    for (var, (val, _unit)) in variables {
         let re = get_variable_regex(var);
         expr_str = re.replace_all(&expr_str, &(*val).to_string()).to_string();
     }
@@ -91,4 +91,9 @@ pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String 
     expr_str = apply_function_parsing(expr_str);
 
     expr_str
+}
+
+pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String {
+    let variables_guard = state.variables.read().expect("Failed to acquire read lock on variables");
+    preprocess_input(input, &variables_guard, config)
 }

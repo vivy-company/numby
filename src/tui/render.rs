@@ -80,21 +80,12 @@ fn render_input_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
 
         // Check highlight cache first
         let cache_key = line_str.to_string();
-        let spans = {
-            let cache = ctx.state.highlight_cache.read().expect("Failed to acquire read lock on highlight_cache");
-            cache.get(&cache_key).cloned()
-        };
-
-        let spans = if let Some(cached_spans) = spans {
+        let spans = if let Some(cached_spans) = ctx.state.cache.get_highlight(&cache_key) {
             cached_spans
         } else {
             // Compute and cache
             let computed = syntax::compute_spans(&line_str, ctx.state, ctx.config);
-            ctx.state
-                .highlight_cache
-                .write()
-                .expect("Failed to acquire write lock on highlight_cache")
-                .insert(cache_key, computed.clone());
+            ctx.state.cache.set_highlight(cache_key, computed.clone());
             computed
         };
 
@@ -126,22 +117,15 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
         let cache_key = format!("{}::{}", line_trim, vars_hash);
 
         // Check display cache
-        let cached_result = {
-            let cache = ctx.state.display_cache.read().expect("Failed to acquire read lock on display_cache");
-            cache.get(&cache_key).cloned()
-        };
-
-        let result = if let Some(cached) = cached_result {
+        let result = if let Some(cached) = ctx.state.cache.get_display(&cache_key) {
             cached
         } else {
             // Evaluate and cache
             let eval_result = ctx.registry.evaluate_for_display(line_trim, ctx.state).map(|(r, _)| r);
             if let Some(ref res) = eval_result {
-                ctx.state
-                    .display_cache
-                    .write()
-                    .expect("Failed to acquire write lock on display_cache")
-                    .insert(cache_key, Some(res.clone()));
+                ctx.state.cache.set_display(cache_key, Some(res.clone()));
+            } else {
+                ctx.state.cache.set_display(cache_key, None);
             }
             eval_result
         };
@@ -214,7 +198,11 @@ fn render_command_mode(f: &mut Frame, cmd: &str, size: Rect) {
         height: 2,
     };
     let help_block = Block::default().style(Style::default().bg(Color::Black).fg(Color::White));
-    let help_text = "Commands: :q quit  :w save  :w <file> save as\nShortcuts: Ctrl+Y copy result  Ctrl+I copy input  Ctrl+A copy input";
+    let help_text = format!(
+        "{}\n{}",
+        crate::fl!("help-commands"),
+        crate::fl!("help-shortcuts")
+    );
     let help_paragraph = Paragraph::new(help_text).block(help_block);
     f.render_widget(help_paragraph, help_rect);
 

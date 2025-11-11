@@ -7,12 +7,12 @@ pub fn validate_file_path(filename: &str) -> Result<PathBuf, String> {
 
     // Reject paths that try to escape
     if filename.contains("..") {
-        return Err("Path traversal detected".into());
+        return Err(crate::fl!("path-traversal-detected"));
     }
 
     // Get current directory
     let current_dir = std::env::current_dir()
-        .map_err(|_| "Cannot determine current directory")?;
+        .map_err(|_| crate::fl!("cannot-determine-cwd"))?;
 
     // Create full path
     let full_path = if path.is_absolute() {
@@ -28,23 +28,23 @@ pub fn validate_file_path(filename: &str) -> Result<PathBuf, String> {
             // File doesn't exist yet, validate parent directory
             if let Some(parent) = full_path.parent() {
                 parent.canonicalize()
-                    .map_err(|_| "Parent directory does not exist")?;
+                    .map_err(|_| crate::fl!("parent-dir-not-exist"))?;
                 full_path
             } else {
-                return Err("Invalid path".into());
+                return Err(crate::fl!("invalid-path"));
             }
         }
-        Err(_) => return Err("Invalid path".into()),
+        Err(_) => return Err(crate::fl!("invalid-path")),
     };
 
     // Ensure the path is within current directory or user's home
     if !canonical.starts_with(&current_dir) {
         if let Some(home_dir) = dirs::home_dir() {
             if !canonical.starts_with(&home_dir) {
-                return Err("Path outside allowed directories".into());
+                return Err(crate::fl!("path-outside-allowed"));
             }
         } else {
-            return Err("Path outside allowed directories".into());
+            return Err(crate::fl!("path-outside-allowed"));
         }
     }
 
@@ -64,7 +64,11 @@ pub const MAX_EXPR_LENGTH: usize = 100_000;
 
 pub fn validate_input_size(input: &str) -> Result<(), String> {
     if input.len() > MAX_EXPR_LENGTH {
-        return Err(format!("Input too long: {} chars (max: {})", input.len(), MAX_EXPR_LENGTH));
+        return Err(crate::fl!(
+            "input-too-long",
+            "actual" => &input.len().to_string(),
+            "max" => &MAX_EXPR_LENGTH.to_string()
+        ));
     }
     Ok(())
 }

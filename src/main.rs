@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod conversions;
 mod evaluator;
+mod i18n;
 mod models;
 mod parser;
 mod prettify;
@@ -14,7 +15,7 @@ use clap::Parser;
 use models::AppState;
 
 #[derive(Parser)]
-#[command(name = "Numby", about = "Numby - A natural language calculator")]
+#[command(name = "Numby")]
 struct Args {
     /// Expression to evaluate
     #[arg(allow_hyphen_values = true)]
@@ -27,6 +28,10 @@ struct Args {
     /// Currency rate in format CURR:RATE
     #[arg(short, long)]
     rate: Vec<String>,
+
+    /// Locale to use (e.g., en-US, es, zh-CN)
+    #[arg(long)]
+    locale: Option<String>,
 
     /// Show version
     #[arg(short, long)]
@@ -51,13 +56,18 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     if args.version {
-        println!("v{}", env!("CARGO_PKG_VERSION"));
+        println!("{}", fl!("version-output", "version" => env!("CARGO_PKG_VERSION")));
         return Ok(());
     }
 
     config::save_default_config_if_missing()?;
 
     let mut config = config::load_config();
+
+    // Initialize locale from CLI arg, config, or system default
+    let locale_str = args.locale.as_deref()
+        .or(config.locale.as_deref());
+    i18n::init_locale(locale_str);
 
     let mut rates = config.currencies;
     for rate_str in &args.rate {
@@ -69,8 +79,9 @@ fn main() -> Result<()> {
 
     let current_filename = determine_filename(args.file, args.expression.as_ref());
 
-    let registry = crate::evaluator::AgentRegistry::new(&config);
-    let mut state = AppState::new(&config);
+    let registry = crate::evaluator::AgentRegistry::new(&config)
+        .expect("Failed to initialize agent registry");
+    let mut state = AppState::builder(&config).build();
     state.current_filename = current_filename;
 
     if let Some(expr) = args.expression {

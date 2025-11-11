@@ -1,9 +1,10 @@
 use crate::models::{Agent, AppState};
+use crate::evaluator::agents::PRIORITY_HISTORY;
 
 pub struct HistoryAgent;
 
 impl Agent for HistoryAgent {
-    fn priority(&self) -> i32 { 10 } // Highest priority
+    fn priority(&self) -> i32 { PRIORITY_HISTORY }
 
     fn can_handle(&self, input: &str, _state: &AppState) -> bool {
         let trimmed = input.trim();

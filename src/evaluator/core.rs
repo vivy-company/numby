@@ -3,9 +3,32 @@ use regex::Regex;
 use std::collections::HashMap;
 
 use crate::conversions::{evaluate_currency_conversion, evaluate_generic_conversion, evaluate_temperature_conversion};
+use crate::evaluator::{EvaluatorError, Result};
 use crate::models::{Rates, TempUnits, Units};
 use crate::parser::{apply_function_parsing, apply_replacements, parse_percentage_op};
 use crate::prettify::prettify_number;
+
+#[derive(Debug, Clone)]
+pub struct EvalResult {
+    pub value: f64,
+    pub unit: Option<String>,
+}
+
+pub struct EvalContext<'a> {
+    pub variables: &'a mut HashMap<String, (f64, Option<String>)>,
+    pub history: &'a [f64],
+    pub length_units: &'a Units,
+    pub time_units: &'a Units,
+    pub temperature_units: &'a TempUnits,
+    pub area_units: &'a Units,
+    pub volume_units: &'a Units,
+    pub weight_units: &'a Units,
+    pub angular_units: &'a Units,
+    pub data_units: &'a Units,
+    pub speed_units: &'a Units,
+    pub rates: &'a Rates,
+    pub custom_units: &'a HashMap<String, HashMap<String, f64>>,
+}
 
 lazy_static! {
     static ref PI_RE: Regex = Regex::new(r"\bpi\b").expect("Invalid regex pattern for pi constant");
@@ -17,134 +40,68 @@ lazy_static! {
     static ref FUNC_RE: Regex = Regex::new(r"(\w+)\s+(\d+(?:\.\d+)?)").expect("Invalid regex pattern for function parsing");
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn evaluate_expr(
-    expr: &str,
-    variables: &mut HashMap<String, (f64, Option<String>)>,
-    history: &[f64],
-    length_units: &Units,
-    time_units: &Units,
-    temperature_units: &TempUnits,
-    area_units: &Units,
-    volume_units: &Units,
-    weight_units: &Units,
-    angular_units: &Units,
-    data_units: &Units,
-    speed_units: &Units,
-    rates: &Rates,
-    custom_units: &HashMap<String, HashMap<String, f64>>,
-) -> Option<String> {
-    // Strip comments (anything after // or # on each line)
-    let expr_str = expr.lines()
-        .map(|line| {
-            // Find the first comment marker (# or //)
-            let comment_pos = line.find("//").or_else(|| line.find("#"));
-            if let Some(pos) = comment_pos {
-                &line[..pos]
-            } else {
-                line
-            }
-        })
-        .collect::<Vec<&str>>()
-        .join("\n");
+pub fn evaluate_expr(expr: &str, ctx: &mut EvalContext) -> Result<EvalResult> {
+    // Preprocessing is now handled elsewhere before calling this function
+    // This function receives already preprocessed input
+    let mut expr_str = expr.to_string();
 
-    let mut expr_str = expr_str.trim().to_string();
-    // Replace vars
+    // Track unit from variables
     let mut has_unit = false;
     let mut result_unit = None;
-    for (var, (val, unit)) in &*variables {
-        let re = Regex::new(&format!(r"\b{}\b", regex::escape(var)))
-            .expect("Invalid regex pattern in variable replacement");
-        expr_str = re.replace_all(&expr_str, &(*val).to_string()).to_string();
-        if (*unit).is_some() {
+    for (_val, unit) in (*ctx.variables).values() {
+        if unit.is_some() {
             has_unit = true;
-            result_unit = (*unit).clone();
+            result_unit = unit.clone();
+            break;
         }
     }
-    // Replace operators
-    expr_str = expr_str.replace("plus", "+");
-    expr_str = expr_str.replace("minus", "-");
-    expr_str = expr_str.replace("times", "*");
-    expr_str = expr_str.replace("multiplied by", "*");
-    expr_str = expr_str.replace("divided by", "/");
-    expr_str = expr_str.replace("divide by", "/");
-    expr_str = expr_str.replace("subtract", "-");
-    expr_str = expr_str.replace("and", "+");
-    expr_str = expr_str.replace("with", "+");
-    expr_str = expr_str.replace("mod", "%");
-    // Bitwise operators
-    expr_str = expr_str.replace("and", "&"); // Wait, conflict with "and" for +
-    // Better to use specific: assume "bitand" or something, but numi uses &
-    // Since "and" is replaced to +, use & directly, but user types "and" for +
-    // For bitwise, perhaps require "&"
-    // Add xor, <<, >>
-    // Since regex, add replacements for xor, left shift, right shift
-    expr_str = expr_str.replace("xor", "^"); // In rust, ^ is bitwise xor for ints, but fasteval2 is float
-    // fasteval2 is for floats, bitwise ops are for ints. Problem.
-    // Perhaps skip bitwise for now, as it's not float math.
-
-    // Constants
-    expr_str = PI_RE.replace_all(&expr_str, &std::f64::consts::PI.to_string()).to_string();
-    expr_str = E_RE.replace_all(&expr_str, &std::f64::consts::E.to_string()).to_string();
-    expr_str = PI_UPPER_RE.replace_all(&expr_str, &std::f64::consts::PI.to_string()).to_string();
-    expr_str = E_UPPER_RE.replace_all(&expr_str, &std::f64::consts::E.to_string()).to_string();
-
-    // Functions
-    expr_str = expr_str.replace("log ", "log10(");
-    expr_str = expr_str.replace("ln ", "ln(");
-    expr_str = expr_str.replace("abs ", "abs(");
-    expr_str = expr_str.replace("round ", "round(");
-    expr_str = expr_str.replace("ceil ", "ceil(");
-    expr_str = expr_str.replace("floor ", "floor(");
-    expr_str = expr_str.replace("sinh ", "sinh(");
-    expr_str = expr_str.replace("cosh ", "cosh(");
-    expr_str = expr_str.replace("tanh ", "tanh(");
-    expr_str = expr_str.replace("arcsin ", "asin(");
-    expr_str = expr_str.replace("arccos ", "acos(");
-    expr_str = expr_str.replace("arctan ", "atan(");
 
     // Special commands
     let trimmed = expr_str.trim();
     if trimmed == "sum" || trimmed == "total" {
-        return Some(format!("{}", history.iter().sum::<f64>()));
+        return Ok(EvalResult {
+            value: ctx.history.iter().sum::<f64>(),
+            unit: None,
+        });
     }
     if trimmed == "average" || trimmed == "avg" {
-        if history.is_empty() {
-            return None;
+        if ctx.history.is_empty() {
+            return Err(EvaluatorError::InvalidExpression(crate::fl!("cannot-compute-average-empty")));
         }
-        return Some(format!(
-            "{}",
-            history.iter().sum::<f64>() / history.len() as f64
-        ));
+        return Ok(EvalResult {
+            value: ctx.history.iter().sum::<f64>() / ctx.history.len() as f64,
+            unit: None,
+        });
     }
     if trimmed == "prev" {
-        return history.last().map(|&v| format!("{}", v));
+        return ctx.history.last()
+            .map(|&v| EvalResult { value: v, unit: None })
+            .ok_or_else(|| EvaluatorError::InvalidExpression(crate::fl!("no-previous-result")));
     }
 
     expr_str = apply_replacements(expr_str);
     expr_str = apply_function_parsing(expr_str);
-    if let Some(result) = parse_percentage_op(&expr_str) { return Some(result); }
+    if let Some(result_str) = parse_percentage_op(&expr_str) {
+        let value = result_str.split_whitespace()
+            .next()
+            .unwrap_or(&result_str)
+            .parse::<f64>()
+            .map_err(|e| EvaluatorError::ParseError(
+                crate::fl!("failed-parse-percentage", "error" => &e.to_string())
+            ))?;
+        return Ok(EvalResult { value, unit: None });
+    }
 
     // Percentage expressions: "X% of Y"
     if let Some(caps) = PERCENT_OF_RE.captures(&expr_str) {
         if let (Some(percent_str), Some(base_str)) = (caps.get(1), caps.get(2)) {
-            if let (Ok(percent), Some(base_result)) = (
-                percent_str.as_str().parse::<f64>(),
-                evaluate_expr(base_str.as_str(), variables, history, length_units, time_units, temperature_units, area_units, volume_units, weight_units, angular_units, data_units, speed_units, rates, custom_units)
-            ) {
-                let result = percent / 100.0 * base_result.split_whitespace()
-                    .next()
-                    .unwrap_or(&base_result)
-                    .parse::<f64>()
-                    .unwrap_or(0.0);
-                let pretty_result = prettify_number(result);
-
-                // Preserve unit from base if present
-                let base_parts: Vec<&str> = base_result.split_whitespace().collect();
-                if base_parts.len() > 1 {
-                    return Some(format!("{} {}", pretty_result, base_parts[1]));
-                } else {
-                    return Some(pretty_result);
+            if let Ok(percent) = percent_str.as_str().parse::<f64>() {
+                if let Ok(base_result) = evaluate_expr(base_str.as_str(), ctx) {
+                    let result = percent / 100.0 * base_result.value;
+                    return Ok(EvalResult {
+                        value: result,
+                        unit: base_result.unit.clone(),
+                    });
                 }
             }
         }
@@ -156,13 +113,15 @@ pub fn evaluate_expr(
             if let (Ok(base), Ok(percent)) = (base_str.as_str().parse::<f64>(), percent_str.as_str().parse::<f64>()) {
                 let percent_decimal = percent / 100.0;
                 let result = match op.as_str() {
-                    "+" => base + (base * percent_decimal),  // X + Y% = X + (X * Y/100)
-                    "-" => base - (base * percent_decimal),  // X - Y% = X - (X * Y/100)
-                    "*" => base * percent_decimal,           // X * Y% = X * (Y/100)
-                    "/" => base / percent_decimal,           // X / Y% = X / (Y/100)
-                    _ => return None,
+                    "+" => base + (base * percent_decimal),
+                    "-" => base - (base * percent_decimal),
+                    "*" => base * percent_decimal,
+                    "/" => base / percent_decimal,
+                    _ => return Err(EvaluatorError::InvalidExpression(
+                        crate::fl!("invalid-percentage-operator", "op" => op.as_str())
+                    )),
                 };
-                return Some(prettify_number(result));
+                return Ok(EvalResult { value: result, unit: None });
             }
         }
     }
@@ -175,8 +134,14 @@ pub fn evaluate_expr(
     if let Some((kw, pos)) = conversion_keyword {
         let left = &expr_str[..pos].trim();
         let right = &expr_str[pos + kw.len()..].trim();
-        if let Some(val) = evaluate_unit_conversion(left, right, length_units, time_units, temperature_units, area_units, volume_units, weight_units, angular_units, data_units, speed_units, rates, custom_units) {
-            return Some(val);
+        if let Some(val) = evaluate_unit_conversion(left, right, ctx.length_units, ctx.time_units, ctx.temperature_units, ctx.area_units, ctx.volume_units, ctx.weight_units, ctx.angular_units, ctx.data_units, ctx.speed_units, ctx.rates, ctx.custom_units) {
+            // Parse the unit conversion result back into value and unit
+            let parts: Vec<&str> = val.split_whitespace().collect();
+            let value = parts.first()
+                .and_then(|v| v.parse::<f64>().ok())
+                .unwrap_or(0.0);
+            let unit = if parts.len() > 1 { Some(parts[1].to_string()) } else { None };
+            return Ok(EvalResult { value, unit });
         }
     }
 
@@ -187,10 +152,10 @@ pub fn evaluate_expr(
     for word in words {
         let lower = word.to_lowercase();
         let upper = word.to_uppercase();
-        if length_units.get(&lower).is_some() || time_units.get(&lower).is_some() || temperature_units.get(&lower).is_some() ||
-           area_units.get(&lower).is_some() || volume_units.get(&lower).is_some() || weight_units.get(&lower).is_some() ||
-           angular_units.get(&lower).is_some() || data_units.get(&lower).is_some() || speed_units.get(&lower).is_some() || rates.get(&upper).is_some() ||
-           custom_units.values().any(|u| u.contains_key(&lower)) {
+        if ctx.length_units.get(&lower).is_some() || ctx.time_units.get(&lower).is_some() || ctx.temperature_units.get(&lower).is_some() ||
+           ctx.area_units.get(&lower).is_some() || ctx.volume_units.get(&lower).is_some() || ctx.weight_units.get(&lower).is_some() ||
+           ctx.angular_units.get(&lower).is_some() || ctx.data_units.get(&lower).is_some() || ctx.speed_units.get(&lower).is_some() || ctx.rates.get(&upper).is_some() ||
+           ctx.custom_units.values().any(|u| u.contains_key(&lower)) {
             num_expr = num_expr.replace(word, "");
             found_unit = Some(word);
         }
@@ -201,28 +166,26 @@ pub fn evaluate_expr(
     num_expr = num_expr.replace(" ", "").trim().to_string();
     // Eval
     if let Ok(val) = num_expr.parse::<f64>() {
-        let pretty_num = prettify_number(val);
-        if has_unit && result_unit.is_some() {
-            Some(format!("{} {}", pretty_num, result_unit.unwrap()))
-        } else if let Some(unit) = found_unit {
-            Some(format!("{} {}", pretty_num, unit))
+        let unit = if has_unit && result_unit.is_some() {
+            result_unit.clone()
         } else {
-            Some(pretty_num)
-        }
+            found_unit.map(|u| u.to_string())
+        };
+        Ok(EvalResult { value: val, unit })
     } else {
         let mut ns = fasteval2::EmptyNamespace;
         match fasteval2::ez_eval(&num_expr, &mut ns) {
             Ok(val) => {
-                let pretty_num = prettify_number(val);
-                if has_unit && result_unit.is_some() {
-                    Some(format!("{} {}", pretty_num, result_unit.unwrap()))
-                } else if let Some(unit) = found_unit {
-                    Some(format!("{} {}", pretty_num, unit))
+                let unit = if has_unit && result_unit.is_some() {
+                    result_unit.clone()
                 } else {
-                    Some(pretty_num)
-                }
+                    found_unit.map(|u| u.to_string())
+                };
+                Ok(EvalResult { value: val, unit })
             }
-            Err(_) => None,
+            Err(e) => Err(EvaluatorError::EvaluationError(
+                crate::fl!("failed-evaluate-expression", "error" => &e.to_string())
+            )),
         }
     }
 }

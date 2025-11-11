@@ -268,8 +268,9 @@ fn test_negative_with_conversion() {
 #[test]
 fn test_history_commands_dont_add_to_history() {
     let config = numby::config::Config::default();
-    let registry = numby::evaluator::AgentRegistry::new(&config);
-    let mut state = numby::models::AppState::new(&config);
+    let registry = numby::evaluator::AgentRegistry::new(&config)
+        .expect("Failed to initialize agent registry");
+    let mut state = numby::models::AppState::builder(&config).build();
     *state.history.write().unwrap() = vec![10.0, 20.0, 30.0];
 
     // Test sum command
@@ -364,8 +365,9 @@ fn test_percentage_expressions() {
 #[test]
 fn test_tui_display_doesnt_modify_history() {
     let config = numby::config::Config::default();
-    let registry = numby::evaluator::AgentRegistry::new(&config);
-    let mut state = numby::models::AppState::new(&config);
+    let registry = numby::evaluator::AgentRegistry::new(&config)
+        .expect("Failed to initialize agent registry");
+    let mut state = numby::models::AppState::builder(&config).build();
     *state.history.write().unwrap() = vec![40.0, 50.0];
 
     // Simulate TUI display evaluation (should not modify history at all)

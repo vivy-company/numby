@@ -1,10 +1,11 @@
 use crate::models::{Agent, AppState};
-use crate::evaluator::{evaluate_expr, evaluate_unit_conversion};
+use crate::evaluator::{evaluate_expr, evaluate_unit_conversion, EvalContext, preprocess_input};
+use crate::evaluator::agents::PRIORITY_UNIT;
 
 pub struct UnitAgent;
 
 impl Agent for UnitAgent {
-    fn priority(&self) -> i32 { 40 }
+    fn priority(&self) -> i32 { PRIORITY_UNIT }
 
     fn can_handle(&self, input: &str, _state: &AppState) -> bool {
         input.contains(" in ") || input.contains(" to ")
@@ -23,25 +24,36 @@ impl Agent for UnitAgent {
 
             // If direct conversion failed, try evaluating the left side as an expression
             // This handles cases like "10 + 5 m in cm" or "100 usd * 2 in jpy"
-            let vars_clone = state.variables.read().expect("Failed to acquire read lock on variables").clone();
-            if let Some(left_result) = evaluate_expr(
-                left,
-                &mut vars_clone.clone(),
-                &state.history.read().expect("Failed to acquire read lock on history").clone(),
-                &config.length_units,
-                &config.time_units,
-                &config.temperature_units,
-                &config.area_units,
-                &config.volume_units,
-                &config.weight_units,
-                &config.angular_units,
-                &config.data_units,
-                &config.speed_units,
-                &config.currencies,
-                &config.custom_units,
-            ) {
+            let mut vars_guard = state.variables.write().ok()?;
+            let history_guard = state.history.read().ok()?;
+
+            let preprocessed = preprocess_input(left, &vars_guard, config);
+
+            let mut ctx = EvalContext {
+                variables: &mut vars_guard,
+                history: &history_guard,
+                length_units: &config.length_units,
+                time_units: &config.time_units,
+                temperature_units: &config.temperature_units,
+                area_units: &config.area_units,
+                volume_units: &config.volume_units,
+                weight_units: &config.weight_units,
+                angular_units: &config.angular_units,
+                data_units: &config.data_units,
+                speed_units: &config.speed_units,
+                rates: &config.currencies,
+                custom_units: &config.custom_units,
+            };
+
+            if let Ok(left_result) = evaluate_expr(&preprocessed, &mut ctx) {
+                // Format the evaluated result back to string for unit conversion
+                let left_result_str = if let Some(unit) = left_result.unit {
+                    format!("{} {}", left_result.value, unit)
+                } else {
+                    left_result.value.to_string()
+                };
                 // Now try conversion with the evaluated result
-                if let Some(val) = evaluate_unit_conversion(&left_result, right, &config.length_units, &config.time_units, &config.temperature_units, &config.area_units, &config.volume_units, &config.weight_units, &config.angular_units, &config.data_units, &config.speed_units, &config.currencies, &config.custom_units) {
+                if let Some(val) = evaluate_unit_conversion(&left_result_str, right, &config.length_units, &config.time_units, &config.temperature_units, &config.area_units, &config.volume_units, &config.weight_units, &config.angular_units, &config.data_units, &config.speed_units, &config.currencies, &config.custom_units) {
                     return Some((val, true));
                 }
             }
