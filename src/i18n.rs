@@ -1,6 +1,6 @@
 use fluent_bundle::FluentValue;
 use fluent_templates::{static_loader, Loader};
-use once_cell::sync::Lazy;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use unic_langid::{langid, LanguageIdentifier};
 
@@ -11,9 +11,9 @@ static_loader! {
     };
 }
 
-/// Global locale setting
-static CURRENT_LOCALE: Lazy<std::sync::RwLock<LanguageIdentifier>> =
-    Lazy::new(|| std::sync::RwLock::new(langid!("en-US")));
+thread_local! {
+    static CURRENT_LOCALE: RefCell<LanguageIdentifier> = RefCell::new(langid!("en-US"));
+}
 
 /// Set the current locale
 #[allow(dead_code)]
@@ -22,19 +22,16 @@ pub fn set_locale(locale: &str) -> Result<(), String> {
         .parse::<LanguageIdentifier>()
         .map_err(|e| format!("Invalid locale: {}", e))?;
 
-    *CURRENT_LOCALE
-        .write()
-        .map_err(|e| format!("Failed to set locale: {}", e))? = lang_id;
+    CURRENT_LOCALE.with(|cell| {
+        *cell.borrow_mut() = lang_id;
+    });
 
     Ok(())
 }
 
 /// Get the current locale
 pub fn get_locale() -> LanguageIdentifier {
-    CURRENT_LOCALE
-        .read()
-        .map(|l| l.clone())
-        .unwrap_or_else(|_| langid!("en-US"))
+    CURRENT_LOCALE.with(|cell| cell.borrow().clone())
 }
 
 /// Detect system locale with fallback to en-US
@@ -55,9 +52,9 @@ pub fn init_locale(config_locale: Option<&str>) {
         .and_then(|l| l.parse::<LanguageIdentifier>().ok())
         .unwrap_or_else(detect_system_locale);
 
-    if let Ok(mut current) = CURRENT_LOCALE.write() {
-        *current = locale;
-    }
+    CURRENT_LOCALE.with(|cell| {
+        *cell.borrow_mut() = locale;
+    });
 }
 
 /// Get a localized string with arguments

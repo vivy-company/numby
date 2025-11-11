@@ -8,40 +8,17 @@ use crate::security::{validate_file_path, sanitize_terminal_string, validate_inp
 
 /// Finds the current line index and column from cursor position
 fn find_cursor_line_col(input: &Rope, cursor_pos: usize) -> (usize, usize) {
-    let lines: Vec<ropey::RopeSlice> = input.lines().collect();
-    let mut pos = 0;
-
-    for (i, line) in lines.iter().enumerate() {
-        let line_len = line.len_chars();
-        if pos <= cursor_pos && cursor_pos < pos + line_len {
-            return (i, cursor_pos - pos);
-        }
-        pos += line_len + 1; // +1 for newline
-    }
-
-    // Cursor at end of document
-    if cursor_pos == input.len_chars() {
-        if let Some(last_line) = lines.last() {
-            return (lines.len() - 1, last_line.len_chars());
-        }
-    }
-
-    (0, 0)
+    let line_idx = input.char_to_line(cursor_pos);
+    let line_start = input.line_to_char(line_idx);
+    let col = cursor_pos - line_start;
+    (line_idx, col)
 }
 
 /// Calculates cursor position from line index and column
 fn cursor_pos_from_line_col(input: &Rope, line_idx: usize, col: usize) -> usize {
-    let lines: Vec<ropey::RopeSlice> = input.lines().collect();
-    let mut pos = 0;
-
-    for (i, line) in lines.iter().enumerate() {
-        if i == line_idx {
-            return pos + col.min(line.len_chars());
-        }
-        pos += line.len_chars() + 1;
-    }
-
-    pos
+    let line_start = input.line_to_char(line_idx);
+    let line_len = input.line(line_idx).len_chars();
+    line_start + col.min(line_len)
 }
 
 /// Moves cursor up one line

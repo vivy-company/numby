@@ -146,28 +146,9 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
 
 /// Calculates cursor position in the visible area and renders it
 fn render_cursor(f: &mut Frame, ctx: &mut RenderContext, text_height: u16, size: Rect) {
-    let lines: Vec<ropey::RopeSlice> = ctx.input.lines().collect();
-    let mut line_idx = 0;
-    let mut col = 0;
-    let mut pos = 0;
-
-    for (i, line) in lines.iter().enumerate() {
-        let line_len = line.len_chars();
-        if pos <= ctx.cursor_pos && ctx.cursor_pos < pos + line_len {
-            line_idx = i;
-            col = ctx.cursor_pos - pos;
-            break;
-        }
-        pos += line_len + 1;
-    }
-
-    // Handle cursor at end of document
-    if ctx.cursor_pos == ctx.input.len_chars() {
-        if let Some(last_line) = lines.last() {
-            line_idx = lines.len() - 1;
-            col = last_line.len_chars();
-        }
-    }
+    let line_idx = ctx.input.char_to_line(ctx.cursor_pos);
+    let line_start = ctx.input.line_to_char(line_idx);
+    let col = ctx.cursor_pos - line_start;
 
     // Adjust scroll offset
     if line_idx >= *ctx.scroll_offset + text_height as usize {

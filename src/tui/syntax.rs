@@ -101,9 +101,10 @@ pub fn compute_spans(
         spans.push(Span::raw("=".to_string()));
 
         // Expression part (right of =) - with variable highlighting
+        let expr_part = &code_part[eq_pos + 1..];
         spans.extend(tokenize_with_highlight(
-            code_part,
-            code_part_end,
+            expr_part,
+            expr_part.len(),
             state,
             config,
         ));

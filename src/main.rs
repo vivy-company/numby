@@ -15,7 +15,11 @@ use clap::Parser;
 use models::AppState;
 
 #[derive(Parser)]
-#[command(name = "Numby")]
+#[command(
+    name = "Numby",
+    about = "Numby - A powerful natural language calculator",
+    version = concat!("v", env!("CARGO_PKG_VERSION"))
+)]
 struct Args {
     /// Expression to evaluate
     #[arg(allow_hyphen_values = true)]
@@ -32,10 +36,6 @@ struct Args {
     /// Locale to use (e.g., en-US, es, zh-CN)
     #[arg(long)]
     locale: Option<String>,
-
-    /// Show version
-    #[arg(short, long)]
-    version: bool,
 }
 
 fn determine_filename(file_arg: Option<String>, expression_arg: Option<&String>) -> Option<String> {
@@ -54,11 +54,6 @@ fn determine_filename(file_arg: Option<String>, expression_arg: Option<&String>)
 
 fn main() -> Result<()> {
     let args = Args::parse();
-
-    if args.version {
-        println!("{}", fl!("version-output", "version" => env!("CARGO_PKG_VERSION")));
-        return Ok(());
-    }
 
     config::save_default_config_if_missing()?;
 
