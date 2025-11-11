@@ -1,5 +1,5 @@
 /target
-ffi/target/
-macos/Numby/build/
+ffi/
+macos/
 *.swp
 .DS_Store
