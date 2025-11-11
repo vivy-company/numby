@@ -7,6 +7,7 @@ pub use preprocessing::preprocess;
 
 use crate::config::Config;
 use crate::models::{Agent, AppState};
+use crate::security::validate_input_size;
 
 pub struct AgentRegistry {
     agents: Vec<Box<dyn Agent>>,
@@ -27,10 +28,20 @@ impl AgentRegistry {
     }
 
     pub fn evaluate(&self, input: &str, state: &mut AppState) -> Option<(String, bool)> {
+        // Validate input size
+        if let Err(e) = validate_input_size(input) {
+            eprintln!("Input validation error: {}", e);
+            return None;
+        }
         self.evaluate_with_history(input, state, true)
     }
 
     pub fn evaluate_for_display(&self, input: &str, state: &AppState) -> Option<(String, bool)> {
+        // Validate input size
+        if let Err(e) = validate_input_size(input) {
+            eprintln!("Input validation error: {}", e);
+            return None;
+        }
         let mut temp_state = state.clone();
         self.evaluate_with_history(input, &mut temp_state, false)
     }
@@ -49,7 +60,7 @@ impl AgentRegistry {
                         // but NOT if it's a history command
                         if let Some(num_str) = res.split_whitespace().next() {
                             if let Ok(r) = num_str.parse::<f64>() {
-                                state.history.write().unwrap().push(r);
+                                state.history.write().expect("Failed to acquire write lock on history").push(r);
                             }
                         }
                     }

@@ -1,7 +1,34 @@
 use regex::Regex;
+use std::collections::HashMap;
+use std::sync::Mutex;
+use lazy_static::lazy_static;
 use crate::config::Config;
 use crate::models::AppState;
 use crate::parser::{apply_function_parsing, apply_replacements};
+
+const MAX_VARIABLES: usize = 1000;
+
+lazy_static! {
+    static ref REGEX_CACHE: Mutex<HashMap<String, Regex>> = Mutex::new(HashMap::new());
+}
+
+fn get_variable_regex(var: &str) -> Regex {
+    let pattern = format!(r"\b{}\b", regex::escape(var));
+
+    let mut cache = REGEX_CACHE.lock().expect("Failed to lock regex cache");
+
+    // Enforce cache size limit to prevent memory bloat
+    if cache.len() >= MAX_VARIABLES && !cache.contains_key(&pattern) {
+        cache.clear();
+    }
+
+    cache.entry(pattern.clone())
+        .or_insert_with(|| {
+            Regex::new(&pattern)
+                .expect("Invalid regex pattern in variable replacement")
+        })
+        .clone()
+}
 
 pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String {
     let mut expr_str = input.to_string();
@@ -15,10 +42,10 @@ pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String 
     }).collect::<Vec<&str>>().join("\n");
     expr_str = expr_str_comments.trim().to_string();
 
-    // Replace variables
-    let variables_guard = state.variables.read().unwrap();
+    // Replace variables with cached regexes
+    let variables_guard = state.variables.read().expect("Failed to acquire read lock on variables");
     for (var, (val, _unit)) in &*variables_guard {
-        let re = Regex::new(&format!(r"\b{}\b", regex::escape(var))).unwrap();
+        let re = get_variable_regex(var);
         expr_str = re.replace_all(&expr_str, &(*val).to_string()).to_string();
     }
 
@@ -28,13 +55,17 @@ pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String 
     }
 
     // Constants
-    let pi_re = Regex::new(r"\bpi\b").unwrap();
+    let pi_re = Regex::new(r"\bpi\b")
+        .expect("Invalid regex pattern for pi constant");
     expr_str = pi_re.replace_all(&expr_str, &std::f64::consts::PI.to_string()).to_string();
-    let e_re = Regex::new(r"\be\b").unwrap();
+    let e_re = Regex::new(r"\be\b")
+        .expect("Invalid regex pattern for e constant");
     expr_str = e_re.replace_all(&expr_str, &std::f64::consts::E.to_string()).to_string();
-    let pi_upper_re = Regex::new(r"\bPI\b").unwrap();
+    let pi_upper_re = Regex::new(r"\bPI\b")
+        .expect("Invalid regex pattern for PI constant");
     expr_str = pi_upper_re.replace_all(&expr_str, &std::f64::consts::PI.to_string()).to_string();
-    let e_upper_re = Regex::new(r"\bE\b").unwrap();
+    let e_upper_re = Regex::new(r"\bE\b")
+        .expect("Invalid regex pattern for E constant");
     expr_str = e_upper_re.replace_all(&expr_str, &std::f64::consts::E.to_string()).to_string();
 
     // Functions
@@ -44,7 +75,8 @@ pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String 
 
     // Scales
     for (scale, factor) in &config.scales {
-        let re = Regex::new(&format!(r"(\d+(?:\.\d+)?)\s*{}\b", regex::escape(scale))).unwrap();
+        let re = Regex::new(&format!(r"(\d+(?:\.\d+)?)\s*{}\b", regex::escape(scale)))
+            .expect("Invalid regex pattern in scale replacement");
         expr_str = re.replace_all(&expr_str, |caps: &regex::Captures| {
             if let Ok(num) = caps[1].parse::<f64>() {
                 (num * factor).to_string()

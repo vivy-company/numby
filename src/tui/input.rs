@@ -4,6 +4,7 @@ use std::fs;
 
 use crate::models::{AppState, Mode};
 use crate::utils;
+use crate::security::{validate_file_path, sanitize_terminal_string, validate_input_size, MAX_EXPR_LENGTH};
 
 /// Finds the current line index and column from cursor position
 fn find_cursor_line_col(input: &Rope, cursor_pos: usize) -> (usize, usize) {
@@ -79,13 +80,17 @@ pub fn handle_normal_mode(
         match key.code {
             KeyCode::Char(':') => {
                 *mode = Mode::Command(String::new());
-                *state.status.write().unwrap() =
+                *state.status.write().expect("Failed to acquire write lock on status") =
                     "Commands: :q quit, :w save current, :w filename save as".to_string();
             }
             KeyCode::Char('y') => {
                 let current_line = utils::get_current_line(input, *cursor_pos);
-                if let Some((result, _)) = registry.evaluate(current_line.trim(), state) {
-                    utils::copy_to_clipboard(&result);
+                let trimmed = current_line.trim();
+                // Validate before evaluation
+                if validate_input_size(trimmed).is_ok() {
+                    if let Some((result, _)) = registry.evaluate(trimmed, state) {
+                        utils::copy_to_clipboard(&result);
+                    }
                 }
             }
             KeyCode::Char('i') | KeyCode::Char('a') => {
@@ -99,8 +104,14 @@ pub fn handle_normal_mode(
                 *mode = Mode::Command(String::new());
             }
             KeyCode::Char(c) => {
-                input.insert(*cursor_pos, &c.to_string());
-                *cursor_pos += 1;
+                // Prevent input from exceeding maximum size
+                if input.len_chars() < MAX_EXPR_LENGTH {
+                    input.insert(*cursor_pos, &c.to_string());
+                    *cursor_pos += 1;
+                } else {
+                    *state.status.write().expect("Failed to acquire write lock on status") =
+                        format!("Input size limit reached ({} chars max)", MAX_EXPR_LENGTH);
+                }
             }
             KeyCode::Backspace => {
                 if *cursor_pos > 0 {
@@ -137,7 +148,13 @@ pub fn handle_normal_mode(
                 let current_line = utils::get_current_line(input, *cursor_pos);
                 let trimmed = current_line.trim();
                 if !trimmed.is_empty() {
-                    registry.evaluate(trimmed, state);
+                    // Validate current line before evaluation
+                    if let Err(e) = validate_input_size(trimmed) {
+                        *state.status.write().expect("Failed to acquire write lock on status") =
+                            format!("Line validation error: {}", e);
+                    } else {
+                        registry.evaluate(trimmed, state);
+                    }
                 }
                 input.insert(*cursor_pos, "\n");
                 *cursor_pos += 1;
@@ -171,7 +188,15 @@ pub fn handle_command_mode(
                 } else if command == "w" {
                     save_file(state, input, None);
                 } else if let Some(filename) = command.strip_prefix("w ") {
-                    save_file(state, input, Some(filename.trim()));
+                    let filename = filename.trim();
+                    match validate_file_path(filename) {
+                        Ok(validated_path) => {
+                            save_file(state, input, Some(validated_path.to_str().unwrap()));
+                        }
+                        Err(e) => {
+                            *state.status.write().expect("Failed to acquire write lock on status") = format!("Invalid path: {}", e);
+                        }
+                    }
                 }
             }
             KeyCode::Esc => {
@@ -188,24 +213,25 @@ pub fn handle_command_mode(
 fn save_file(state: &mut AppState, input: &Rope, new_filename: Option<&str>) {
     let filename = if let Some(new_name) = new_filename {
         state.current_filename = Some(new_name.to_string());
-        // Update terminal title
+        // Update terminal title with sanitized string
         use crossterm::execute;
         use crossterm::terminal::SetTitle;
-        let _ = execute!(std::io::stdout(), SetTitle(new_name));
+        let sanitized_title = sanitize_terminal_string(new_name);
+        let _ = execute!(std::io::stdout(), SetTitle(&sanitized_title));
         new_name
     } else if let Some(ref current) = state.current_filename {
         current.as_str()
     } else {
-        *state.status.write().unwrap() = "No file to save to. Use :w filename".to_string();
+        *state.status.write().expect("Failed to acquire write lock on status") = "No file to save to. Use :w filename".to_string();
         return;
     };
 
     match fs::write(filename, input.to_string().as_bytes()) {
         Ok(_) => {
-            *state.status.write().unwrap() = format!("File saved: {}", filename);
+            *state.status.write().expect("Failed to acquire write lock on status") = format!("File saved: {}", filename);
         }
         Err(e) => {
-            *state.status.write().unwrap() = format!("Error saving file: {}", e);
+            *state.status.write().expect("Failed to acquire write lock on status") = format!("Error saving file: {}", e);
         }
     }
 }

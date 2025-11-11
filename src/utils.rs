@@ -1,4 +1,4 @@
-use clipboard::{ClipboardContext, ClipboardProvider};
+use arboard::Clipboard;
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::Span;
 use ropey::Rope;
@@ -11,7 +11,7 @@ pub fn highlight_word_owned(
 ) -> Span<'static> {
     let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric());
     let lower = clean_word.to_lowercase();
-    if variables.read().unwrap().contains_key(clean_word) {
+    if variables.read().expect("Failed to acquire read lock on variables").contains_key(clean_word) {
         Span::styled(word.to_string(), Style::default().fg(Color::Blue).bold())
     } else if config.operators.contains_key(clean_word) || config.functions.contains_key(clean_word) || config.scales.contains_key(clean_word) {
         Span::styled(word.to_string(), Style::default().fg(Color::Green).bold())
@@ -27,9 +27,9 @@ pub fn highlight_word_owned(
 }
 
 pub fn copy_to_clipboard(text: &str) {
-    match ClipboardContext::new() {
-        Ok(mut ctx) => {
-            if let Err(e) = ctx.set_contents(text.to_string()) {
+    match Clipboard::new() {
+        Ok(mut clipboard) => {
+            if let Err(e) = clipboard.set_text(text) {
                 eprintln!("Failed to copy to clipboard: {}", e);
             }
         }

@@ -29,10 +29,12 @@ pub fn run(
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(
-        stdout,
-        SetTitle(state.current_filename.as_deref().unwrap_or("numby"))
-    )?;
+
+    use crate::security::sanitize_terminal_string;
+    let title = state.current_filename.as_deref().unwrap_or("numby");
+    let sanitized_title = sanitize_terminal_string(title);
+
+    execute!(stdout, SetTitle(&sanitized_title))?;
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
@@ -71,7 +73,7 @@ pub fn run(
         if status_timer > 0 {
             status_timer -= 1;
             if status_timer == 0 {
-                *state.status.write().unwrap() = String::new();
+                *state.status.write().expect("Failed to acquire write lock on status") = String::new();
             }
         }
 

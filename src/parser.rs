@@ -4,21 +4,21 @@ use regex::Regex;
 use crate::prettify::prettify_number;
 
 lazy_static! {
-    static ref BIN_RE: Regex = Regex::new(r"0b([01]+)").unwrap();
-    static ref OCT_RE: Regex = Regex::new(r"0o([0-7]+)").unwrap();
-    static ref HEX_RE: Regex = Regex::new(r"0x([0-9a-fA-F]+)").unwrap();
-    static ref K_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*k\b").unwrap();
-    static ref M_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*M\b").unwrap();
-    static ref G_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*G\b").unwrap();
-    static ref T_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*T\b").unwrap();
-    static ref B_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*b\b").unwrap();
-    static ref KILO_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*kilo\b").unwrap();
-    static ref MEGA_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*mega\b").unwrap();
-    static ref GIGA_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*giga\b").unwrap();
-    static ref TERA_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*tera\b").unwrap();
-    static ref PERCENT_OP_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)%").unwrap();
-    static ref FUNC_RE: Regex = Regex::new(r"(\w+)\s+(\d+(?:\.\d+)?)").unwrap();
-    static ref BIL_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*billion\b").unwrap();
+    static ref BIN_RE: Regex = Regex::new(r"0b([01]+)").expect("Invalid regex pattern for binary number");
+    static ref OCT_RE: Regex = Regex::new(r"0o([0-7]+)").expect("Invalid regex pattern for octal number");
+    static ref HEX_RE: Regex = Regex::new(r"0x([0-9a-fA-F]+)").expect("Invalid regex pattern for hex number");
+    static ref K_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*k\b").expect("Invalid regex pattern for kilo scale");
+    static ref M_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*M\b").expect("Invalid regex pattern for mega scale");
+    static ref G_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*G\b").expect("Invalid regex pattern for giga scale");
+    static ref T_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*T\b").expect("Invalid regex pattern for tera scale");
+    static ref B_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*b\b").expect("Invalid regex pattern for bit scale");
+    static ref KILO_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*kilo\b").expect("Invalid regex pattern for kilo scale");
+    static ref MEGA_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*mega\b").expect("Invalid regex pattern for mega scale");
+    static ref GIGA_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*giga\b").expect("Invalid regex pattern for giga scale");
+    static ref TERA_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*tera\b").expect("Invalid regex pattern for tera scale");
+    static ref PERCENT_OP_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)%").expect("Invalid regex pattern for percent-operation expression");
+    static ref FUNC_RE: Regex = Regex::new(r"(\w+)\s+(\d+(?:\.\d+)?)").expect("Invalid regex pattern for function parsing");
+    static ref BIL_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*billion\b").expect("Invalid regex pattern for billion scale");
 }
 
 /// Apply parsing replacements to the expression string.

@@ -10,12 +10,8 @@ pub fn prettify_number(num: f64) -> String {
     } else if abs_num >= 1e3 {
         format!("{:.1}k", num / 1e3)
     } else if abs_num >= 1e2 {
-        // For 100+, no decimal if whole
-        if num.fract() == 0.0 {
-            format!("{:.0}", num)
-        } else {
-            format!("{}", num)
-        }
+        // For 100+, round to nearest integer
+        format!("{:.0}", num)
     } else {
         format!("{:.2}", num) // For smaller, 2 decimals
     }

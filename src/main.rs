@@ -5,6 +5,7 @@ mod evaluator;
 mod models;
 mod parser;
 mod prettify;
+mod security;
 mod tui;
 mod utils;
 

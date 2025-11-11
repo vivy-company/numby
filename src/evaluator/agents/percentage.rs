@@ -17,22 +17,22 @@ impl Agent for PercentageAgent {
         }
         // Check if it's a percentage operation (% appears after a digit with optional whitespace before it)
         // and NOT a modulo operation (% appears between two numbers with spaces around it)
-        let percent_op_pattern = Regex::new(r"\d+(?:\.\d+)?%").unwrap();
+        let percent_op_pattern = Regex::new(r"\d+(?:\.\d+)?%").expect("Invalid regex pattern for percentage detection");
         percent_op_pattern.is_match(input)
     }
 
     fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool)> {
         // Handle "X% of Y" pattern
-        let percent_of_re = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(.+)").unwrap();
+        let percent_of_re = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(.+)").expect("Invalid regex pattern for percent-of expression");
         if let Some(caps) = percent_of_re.captures(input) {
             if let (Some(percent_str), Some(base_str)) = (caps.get(1), caps.get(2)) {
                 if let Ok(percent) = percent_str.as_str().parse::<f64>() {
                     // Recursively evaluate the base expression
-                    let vars_clone = state.variables.read().unwrap().clone();
+                    let vars_clone = state.variables.read().expect("Failed to acquire read lock on variables").clone();
                     if let Some(base_result) = evaluate_expr(
                         base_str.as_str(),
                         &mut vars_clone.clone(),
-                        &state.history.read().unwrap().clone(),
+                        &state.history.read().expect("Failed to acquire read lock on history").clone(),
                         &config.length_units,
                         &config.time_units,
                         &config.temperature_units,

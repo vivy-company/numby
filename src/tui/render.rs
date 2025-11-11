@@ -58,7 +58,7 @@ pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
 
 /// Renders the status bar at the bottom
 fn render_status_bar(f: &mut Frame, state: &AppState, size: Rect) {
-    let status_text = state.status.read().unwrap().clone();
+    let status_text = state.status.read().expect("Failed to acquire read lock on status").clone();
     if !status_text.is_empty() {
         let status_rect = Rect {
             x: 0,
@@ -81,7 +81,7 @@ fn render_input_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
         // Check highlight cache first
         let cache_key = line_str.to_string();
         let spans = {
-            let cache = ctx.state.highlight_cache.read().unwrap();
+            let cache = ctx.state.highlight_cache.read().expect("Failed to acquire read lock on highlight_cache");
             cache.get(&cache_key).cloned()
         };
 
@@ -93,7 +93,7 @@ fn render_input_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
             ctx.state
                 .highlight_cache
                 .write()
-                .unwrap()
+                .expect("Failed to acquire write lock on highlight_cache")
                 .insert(cache_key, computed.clone());
             computed
         };
@@ -119,7 +119,7 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
         }
 
         // Create cache key that includes variables state
-        let vars = ctx.state.variables.read().unwrap();
+        let vars = ctx.state.variables.read().expect("Failed to acquire read lock on variables");
         let vars_hash = format!("{:?}", *vars); // Simple hash of variable state
         drop(vars); // Release read lock
 
@@ -127,7 +127,7 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
 
         // Check display cache
         let cached_result = {
-            let cache = ctx.state.display_cache.read().unwrap();
+            let cache = ctx.state.display_cache.read().expect("Failed to acquire read lock on display_cache");
             cache.get(&cache_key).cloned()
         };
 
@@ -140,7 +140,7 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
                 ctx.state
                     .display_cache
                     .write()
-                    .unwrap()
+                    .expect("Failed to acquire write lock on display_cache")
                     .insert(cache_key, Some(res.clone()));
             }
             eval_result

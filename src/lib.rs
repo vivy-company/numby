@@ -10,6 +10,7 @@
 //! - `parser`: Parsing utilities and regex replacements.
 //! - `conversions`: Unit and currency conversion functions.
 //! - `prettify`: Number formatting for display.
+//! - `security`: Path validation and input sanitization.
 
 pub mod config;
 pub mod models;
@@ -17,3 +18,4 @@ pub mod prettify;
 pub mod parser;
 pub mod conversions;
 pub mod evaluator;
+pub mod security;

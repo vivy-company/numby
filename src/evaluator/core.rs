@@ -8,13 +8,13 @@ use crate::parser::{apply_function_parsing, apply_replacements, parse_percentage
 use crate::prettify::prettify_number;
 
 lazy_static! {
-    static ref PI_RE: Regex = Regex::new(r"\bpi\b").unwrap();
-    static ref E_RE: Regex = Regex::new(r"\be\b").unwrap();
-    static ref PI_UPPER_RE: Regex = Regex::new(r"\bPI\b").unwrap();
-    static ref E_UPPER_RE: Regex = Regex::new(r"\bE\b").unwrap();
-    static ref PERCENT_OF_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(.+)").unwrap();
-    static ref PERCENT_OP_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)%").unwrap();
-    static ref FUNC_RE: Regex = Regex::new(r"(\w+)\s+(\d+(?:\.\d+)?)").unwrap();
+    static ref PI_RE: Regex = Regex::new(r"\bpi\b").expect("Invalid regex pattern for pi constant");
+    static ref E_RE: Regex = Regex::new(r"\be\b").expect("Invalid regex pattern for e constant");
+    static ref PI_UPPER_RE: Regex = Regex::new(r"\bPI\b").expect("Invalid regex pattern for PI constant");
+    static ref E_UPPER_RE: Regex = Regex::new(r"\bE\b").expect("Invalid regex pattern for E constant");
+    static ref PERCENT_OF_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(.+)").expect("Invalid regex pattern for percent-of expression");
+    static ref PERCENT_OP_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)%").expect("Invalid regex pattern for percent-operation expression");
+    static ref FUNC_RE: Regex = Regex::new(r"(\w+)\s+(\d+(?:\.\d+)?)").expect("Invalid regex pattern for function parsing");
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -53,7 +53,8 @@ pub fn evaluate_expr(
     let mut has_unit = false;
     let mut result_unit = None;
     for (var, (val, unit)) in &*variables {
-        let re = Regex::new(&format!(r"\b{}\b", regex::escape(var))).unwrap();
+        let re = Regex::new(&format!(r"\b{}\b", regex::escape(var)))
+            .expect("Invalid regex pattern in variable replacement");
         expr_str = re.replace_all(&expr_str, &(*val).to_string()).to_string();
         if (*unit).is_some() {
             has_unit = true;
@@ -174,7 +175,7 @@ pub fn evaluate_expr(
     if let Some((kw, pos)) = conversion_keyword {
         let left = &expr_str[..pos].trim();
         let right = &expr_str[pos + kw.len()..].trim();
-        if let Some(val) = evaluate_unit_conversion(left, right, variables, history, length_units, time_units, temperature_units, area_units, volume_units, weight_units, angular_units, data_units, speed_units, rates, custom_units) {
+        if let Some(val) = evaluate_unit_conversion(left, right, length_units, time_units, temperature_units, area_units, volume_units, weight_units, angular_units, data_units, speed_units, rates, custom_units) {
             return Some(val);
         }
     }
@@ -230,8 +231,6 @@ pub fn evaluate_expr(
 pub fn evaluate_unit_conversion(
     left: &str,
     right: &str,
-    _variables: &HashMap<String, (f64, Option<String>)>,
-    _history: &[f64],
     length_units: &Units,
     time_units: &Units,
     temperature_units: &TempUnits,
@@ -245,7 +244,6 @@ pub fn evaluate_unit_conversion(
     custom_units: &HashMap<String, HashMap<String, f64>>,
 ) -> Option<String> {
     let right_lower = right.to_lowercase();
-    let _left_lower = left.to_lowercase();
     // Determine unit type based on right unit
     if length_units.contains_key(&right_lower) {
         if let Some(val) = evaluate_generic_conversion(left, right, length_units) {
@@ -256,7 +254,7 @@ pub fn evaluate_unit_conversion(
             return Some(format!("{} {}", prettify_number(val), right));
         }
     } else if temperature_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_temperature_conversion(left, right, temperature_units) {
+        if let Some(val) = evaluate_temperature_conversion(left, right) {
             return Some(format!("{} {}", prettify_number(val), right));
         }
     } else if area_units.contains_key(&right_lower) {

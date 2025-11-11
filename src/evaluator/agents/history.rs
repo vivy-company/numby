@@ -12,7 +12,7 @@ impl Agent for HistoryAgent {
 
     fn process(&self, input: &str, state: &mut AppState, _config: &crate::config::Config) -> Option<(String, bool)> {
         let trimmed = input.trim();
-        let history_guard = state.history.read().unwrap();
+        let history_guard = state.history.read().expect("Failed to acquire read lock on history");
         match trimmed {
             "sum" | "total" => Some((format!("{}", history_guard.iter().sum::<f64>()), true)),
             "average" | "avg" => {

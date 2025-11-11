@@ -1,4 +1,4 @@
-use crate::models::{Rates, TempUnits, Units};
+use crate::models::{Rates, Units};
 
 fn parse_number_with_scale(num_str: &str) -> Option<f64> {
     // Try direct parse first
@@ -53,7 +53,6 @@ pub fn evaluate_generic_conversion(
 pub fn evaluate_temperature_conversion(
     left: &str,
     right: &str,
-    _temperature_units: &TempUnits,
 ) -> Option<f64> {
     // Assume left is number + unit
     let left_parts: Vec<&str> = left.split_whitespace().collect();
