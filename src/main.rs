@@ -1,6 +1,7 @@
 mod cli;
 mod config;
 mod conversions;
+mod currency_fetcher;
 mod evaluator;
 mod i18n;
 mod models;
@@ -36,6 +37,14 @@ struct Args {
     /// Locale to use (e.g., en-US, es, zh-CN)
     #[arg(long)]
     locale: Option<String>,
+
+    /// Force update currency rates from API
+    #[arg(long)]
+    update_rates: bool,
+
+    /// Skip automatic rate update check on startup
+    #[arg(long)]
+    no_update: bool,
 }
 
 fn determine_filename(file_arg: Option<String>, expression_arg: Option<&String>) -> Option<String> {
@@ -64,6 +73,50 @@ fn main() -> Result<()> {
         .or(config.locale.as_deref());
     i18n::init_locale(locale_str);
 
+    // Handle currency rate updates
+    if args.update_rates {
+        eprintln!("Updating currency rates...");
+        match currency_fetcher::fetch_latest_rates() {
+            Ok((rates, date)) => {
+                eprintln!("Fetched {} currency rates (date: {})", rates.len(), date);
+                config::update_currency_rates(rates.clone(), date.clone())?;
+                eprintln!("Currency rates updated successfully");
+                config.currencies = rates;
+            }
+            Err(e) => {
+                eprintln!("Failed to update currency rates: {}", e);
+                eprintln!("Using cached rates from config");
+            }
+        }
+    } else if !args.no_update {
+        // Automatic background update if rates are stale
+        if let Some(date) = &config.rates_updated_at {
+            if currency_fetcher::are_rates_stale(date) {
+                eprintln!("Currency rates are stale, updating in background...");
+                std::thread::spawn(move || {
+                    if let Ok((rates, date)) = currency_fetcher::fetch_latest_rates() {
+                        let count = rates.len();
+                        if config::update_currency_rates(rates, date.clone()).is_ok() {
+                            eprintln!("Currency rates updated in background ({} currencies, date: {})", count, date);
+                        }
+                    }
+                });
+            }
+        } else {
+            // No timestamp = first run or old config, try to update
+            eprintln!("No currency rate timestamp found, updating...");
+            std::thread::spawn(move || {
+                if let Ok((rates, date)) = currency_fetcher::fetch_latest_rates() {
+                    let count = rates.len();
+                    if config::update_currency_rates(rates, date.clone()).is_ok() {
+                        eprintln!("Currency rates updated ({} currencies, date: {})", count, date);
+                    }
+                }
+            });
+        }
+    }
+
+    // Override with CLI rates
     let mut rates = config.currencies;
     for rate_str in &args.rate {
         if let Some((curr, rate)) = config::parse_rate(rate_str) {

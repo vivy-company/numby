@@ -21,6 +21,7 @@ pub mod conversions;
 pub mod evaluator;
 pub mod security;
 pub mod i18n;
+pub mod currency_fetcher;
 
 #[cfg(test)]
 mod event_tests {
@@ -156,6 +157,342 @@ mod event_tests {
     }
 }
 
+// C FFI API for Swift integration
+
+use std::ffi::{CString, CStr};
+use std::os::raw::c_char;
+
+type NumbyContext = crate::models::AppState; // Use AppState as context
+
+#[no_mangle]
+pub extern "C" fn libnumby_context_new() -> *mut NumbyContext {
+    let config = crate::config::Config::default();
+    Box::into_raw(Box::new(crate::models::AppState::builder(&config).build()))
+}
+
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_evaluate(
+    ctx: *mut NumbyContext,
+    input: *const c_char,
+    out_formatted: *mut *mut c_char,
+    out_unit: *mut *mut c_char,
+    out_error: *mut *mut c_char,
+) -> f64 {
+    // Validate all pointers
+    if ctx.is_null() || input.is_null() || out_formatted.is_null() || out_unit.is_null() || out_error.is_null() {
+        if !out_error.is_null() {
+            if let Ok(s) = CString::new("Invalid null pointer") {
+                *out_error = s.into_raw();
+            }
+        }
+        return 0.0;
+    }
+
+    // Convert C string to Rust string with validation
+    let input_str = match CStr::from_ptr(input).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            if let Ok(s) = CString::new("Invalid UTF-8 input") {
+                *out_error = s.into_raw();
+            }
+            return 0.0;
+        }
+    };
+
+    // Validate input size
+    if let Err(e) = crate::security::validate_input_size(input_str) {
+        if let Ok(s) = CString::new(e) {
+            *out_error = s.into_raw();
+        }
+        return 0.0;
+    }
+
+    let context = &mut *ctx;
+    let config = crate::config::Config::default();
+
+    let registry = match crate::evaluator::AgentRegistry::new(&config) {
+        Ok(r) => r,
+        Err(_) => {
+            if let Ok(s) = CString::new("Failed to initialize registry") {
+                *out_error = s.into_raw();
+            }
+            return 0.0;
+        }
+    };
+
+    match registry.evaluate(input_str, context) {
+        Some((result_str, _)) => {
+            // Parse result_str, e.g., "3.11 miles" -> value=3.11, formatted="3.11 miles", unit="miles"
+            let parts: Vec<&str> = result_str.split_whitespace().collect();
+            let value = parts.first().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+
+            // Safe string conversion
+            if let Ok(formatted_cstr) = CString::new(result_str.clone()) {
+                *out_formatted = formatted_cstr.into_raw();
+            }
+
+            if parts.len() > 1 {
+                let unit_str = parts[1..].join(" ");
+                if let Ok(unit_cstr) = CString::new(unit_str) {
+                    *out_unit = unit_cstr.into_raw();
+                }
+            }
+
+            value
+        }
+        None => {
+            if let Ok(s) = CString::new("Evaluation failed") {
+                *out_error = s.into_raw();
+            }
+            0.0
+        }
+    }
+}
+
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_set_variable(
+    ctx: *mut NumbyContext,
+    name: *const c_char,
+    value: f64,
+    unit: *const c_char,
+) -> i32 {
+    if ctx.is_null() || name.is_null() {
+        return -1;
+    }
+
+    let name_str = match CStr::from_ptr(name).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+
+    let unit_str = if unit.is_null() {
+        None
+    } else {
+        CStr::from_ptr(unit).to_str().ok().map(|s| s.to_string())
+    };
+
+    let context = &mut *ctx;
+    match context.set_variable(name_str.to_string(), value, unit_str) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_load_config(ctx: *mut NumbyContext, path: *const c_char) -> i32 {
+    if ctx.is_null() || path.is_null() {
+        return -1;
+    }
+
+    let path_str = match CStr::from_ptr(path).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+
+    // Validate path length
+    if path_str.len() > 4096 {
+        return -1;
+    }
+
+    // Validate path to prevent path traversal
+    let validated_path = match crate::security::validate_file_path(path_str) {
+        Ok(p) => p,
+        Err(_) => return -1,
+    };
+
+    // Load config from validated file
+    match std::fs::read_to_string(&validated_path) {
+        Ok(contents) => {
+            // Check file size limit (1MB max for config)
+            if contents.len() > 1_048_576 {
+                return -1;
+            }
+
+            match serde_json::from_str::<crate::config::Config>(&contents) {
+                Ok(config) => {
+                    let context = &mut *ctx;
+                    // Update context with new config values
+                    context.length_units = config.length_units;
+                    context.time_units = config.time_units;
+                    context.temperature_units = config.temperature_units;
+                    context.area_units = config.area_units;
+                    context.volume_units = config.volume_units;
+                    context.weight_units = config.weight_units;
+                    context.angular_units = config.angular_units;
+                    context.data_units = config.data_units;
+                    context.speed_units = config.speed_units;
+                    context.rates = config.currencies;
+                    0
+                }
+                Err(_) => -1,
+            }
+        }
+        Err(_) => -1,
+    }
+}
+
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_set_locale(ctx: *mut NumbyContext, locale: *const c_char) -> i32 {
+    if ctx.is_null() || locale.is_null() {
+        return -1;
+    }
+
+    let locale_str = match CStr::from_ptr(locale).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+
+    // Set the locale using i18n module
+    match crate::i18n::set_locale(locale_str) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// # Safety
+///
+/// This function takes ownership of the raw pointer and frees it.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_free_string(s: *mut c_char) {
+    if !s.is_null() {
+        let _ = CString::from_raw(s);
+    }
+}
+
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_clear_history(ctx: *mut NumbyContext) -> i32 {
+    if ctx.is_null() {
+        return -1;
+    }
+
+    let context = &mut *ctx;
+    match context.history.write() {
+        Ok(mut history) => {
+            history.clear();
+            0
+        }
+        Err(_) => -1,
+    }
+}
+
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_get_history_count(ctx: *mut NumbyContext) -> i32 {
+    if ctx.is_null() {
+        return -1;
+    }
+
+    let context = &*ctx;
+    match context.history.read() {
+        Ok(history) => history.len() as i32,
+        Err(_) => -1,
+    }
+}
+
+/// # Safety
+///
+/// This function takes ownership of the raw pointer and frees it.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_context_free(ctx: *mut NumbyContext) {
+    if !ctx.is_null() {
+        drop(Box::from_raw(ctx));
+    }
+}
+
+/// Fetches latest currency rates from the API and updates the config file
+///
+/// Returns 0 on success, -1 on failure
+/// On success, updates both the config file and the context's rates
+///
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_update_currency_rates(ctx: *mut NumbyContext) -> i32 {
+    if ctx.is_null() {
+        return -1;
+    }
+
+    // Fetch rates from API
+    let (rates, date) = match crate::currency_fetcher::fetch_latest_rates() {
+        Ok(result) => result,
+        Err(_) => return -1,
+    };
+
+    // Update config file with new rates
+    if crate::config::update_currency_rates(rates.clone(), date).is_err() {
+        return -1;
+    }
+
+    // Update context with new rates
+    let context = &mut *ctx;
+    context.rates = rates;
+
+    0
+}
+
+/// Checks if currency rates are stale (older than 24 hours)
+///
+/// Returns 1 if stale, 0 if fresh, -1 on error
+///
+/// # Safety
+///
+/// This function is safe to call from C code.
+#[no_mangle]
+pub extern "C" fn libnumby_are_rates_stale() -> i32 {
+    let config = crate::config::load_config();
+    match config.rates_updated_at {
+        Some(date) => {
+            if crate::currency_fetcher::are_rates_stale(&date) {
+                1 // Stale
+            } else {
+                0 // Fresh
+            }
+        }
+        None => 1, // No date = stale
+    }
+}
+
+/// Gets the last update date for currency rates
+///
+/// Returns a C string with the date in YYYY-MM-DD format, or null if unavailable
+/// Caller must free the returned string with libnumby_free_string
+///
+/// # Safety
+///
+/// This function is safe to call from C code.
+#[no_mangle]
+pub extern "C" fn libnumby_get_rates_update_date() -> *mut c_char {
+    let config = crate::config::load_config();
+    match config.rates_updated_at {
+        Some(date) => {
+            if let Ok(cstr) = CString::new(date) {
+                cstr.into_raw()
+            } else {
+                std::ptr::null_mut()
+            }
+        }
+        None => std::ptr::null_mut(),
+    }
+}
+
 #[cfg(test)]
 mod i18n_tests {
     // NOTE: These tests modify global locale state and should be run with:
@@ -168,7 +505,7 @@ mod i18n_tests {
         i18n::init_locale(None);
         let locale = i18n::get_locale();
         // Should be either system locale or en-US fallback
-        assert!(locale.to_string().len() > 0);
+        assert!(!locale.to_string().is_empty());
     }
 
     #[test]

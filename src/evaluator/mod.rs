@@ -64,6 +64,7 @@ impl AgentRegistry {
             eprintln!("{}", crate::fl!("input-validation-error", "error" => &e));
             return None;
         }
+
         self.evaluate_with_history(input, state, true)
     }
 
@@ -74,6 +75,7 @@ impl AgentRegistry {
             return None;
         }
         let mut temp_state = state.clone();
+        temp_state.is_display_only = true;
         self.evaluate_with_history(input, &mut temp_state, false)
     }
 
@@ -85,20 +87,143 @@ impl AgentRegistry {
         for agent in &self.agents {
             if agent.can_handle(&preprocessed, state) {
                 let result = agent.process(&preprocessed, state, &self.config);
-                if let Some((res, add_to_history)) = &result {
+                if let Some((_res, add_to_history, raw_value)) = &result {
                     if modify_history && *add_to_history && !is_history_command {
                         // Add to history if it's an expression and modify_history is true
                         // but NOT if it's a history command
-                        if let Some(num_str) = res.split_whitespace().next() {
-                            if let Ok(r) = num_str.parse::<f64>() {
-                                let _ = state.add_history(r);
-                            }
+                        if let Some(value) = raw_value {
+                            let _ = state.add_history(*value);
                         }
                     }
                 }
-                return result;
+                return result.map(|(res, add_to_history, _)| (res, add_to_history));
             }
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::AppStateBuilder;
+
+    #[test]
+    fn test_history_sum_with_prettified_numbers() {
+        let config = Config::default();
+        let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+        let mut state = AppStateBuilder::new(&config).build();
+
+        // Test case from bug: 400, 300, 2000, 100 should sum to 2800
+        // Previously, 2000 was formatted as "2.0k" and failed to parse, so only 800 was summed
+        let inputs = vec!["400", "300", "2000", "100"];
+
+        for input in &inputs {
+            let _ = registry.evaluate(input, &mut state);
+            std::thread::sleep(std::time::Duration::from_millis(51));
+        }
+
+        // Check history contains all values
+        let history = state.history.read().unwrap();
+        assert_eq!(history.len(), 4, "All 4 values should be in history");
+        assert_eq!(history[0], 400.0);
+        assert_eq!(history[1], 300.0);
+        assert_eq!(history[2], 2000.0);
+        assert_eq!(history[3], 100.0);
+
+        let sum: f64 = history.iter().sum();
+        assert_eq!(sum, 2800.0, "Sum should be 2800, not 800");
+        drop(history);
+
+        // Test sum command
+        let result = registry.evaluate("sum", &mut state);
+        assert!(result.is_some());
+        let (sum_str, _) = result.unwrap();
+        assert_eq!(sum_str, "2800", "sum command should return 2800");
+    }
+
+    #[test]
+    fn test_variable_stability_across_lines() {
+        let config = Config::default();
+        let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+        let mut state = AppStateBuilder::new(&config).build();
+
+        // Line 1: Create first variable
+        let result1 = registry.evaluate("hause = 100000 USD", &mut state);
+        assert!(result1.is_some());
+        let (val1, _) = result1.unwrap();
+        assert!(val1.contains("100") || val1.contains("100000") || val1.contains("100,000") || val1.contains("100k"));
+
+        // Verify variable was stored
+        let vars = state.variables.read().unwrap();
+        assert!(vars.contains_key("hause"));
+        assert_eq!(vars.get("hause").unwrap().0, 100000.0);
+        drop(vars);
+
+        // Wait for rate limit
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // Line 2: Create second variable
+        let result2 = registry.evaluate("salary = 4000 USD", &mut state);
+        assert!(result2.is_some());
+        let (val2, _) = result2.unwrap();
+        assert!(val2.contains("4") || val2.contains("4000") || val2.contains("4,000") || val2.contains("4k"));
+
+        // Verify both variables exist
+        let vars = state.variables.read().unwrap();
+        assert!(vars.contains_key("hause"));
+        assert!(vars.contains_key("salary"));
+        assert_eq!(vars.get("hause").unwrap().0, 100000.0);
+        assert_eq!(vars.get("salary").unwrap().0, 4000.0);
+        drop(vars);
+
+        // Wait for rate limit
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // Line 3: Use variables in calculation
+        let result3 = registry.evaluate("hause / salary", &mut state);
+        assert!(result3.is_some());
+        let (val3, _) = result3.unwrap();
+        // 100000 / 4000 = 25
+        assert!(val3.contains("25"));
+
+        // Verify variables still have correct values
+        let vars = state.variables.read().unwrap();
+        assert_eq!(vars.get("hause").unwrap().0, 100000.0);
+        assert_eq!(vars.get("salary").unwrap().0, 4000.0);
+    }
+
+    #[test]
+    fn test_display_mode_does_not_modify_variables() {
+        let config = Config::default();
+        let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+        let mut state = AppStateBuilder::new(&config).build();
+
+        // Set up initial variable
+        registry.evaluate("x = 100", &mut state);
+
+        // Verify x = 100
+        let vars = state.variables.read().unwrap();
+        assert_eq!(vars.get("x").unwrap().0, 100.0);
+        drop(vars);
+
+        // Call evaluate_for_display with assignment (should not modify variables)
+        let display_result = registry.evaluate_for_display("x = 200", &state);
+        assert!(display_result.is_some());
+
+        // Verify x is still 100 (not modified by display evaluation)
+        let vars = state.variables.read().unwrap();
+        assert_eq!(vars.get("x").unwrap().0, 100.0);
+        drop(vars);
+
+        // Wait for rate limit
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // Call evaluate with assignment (should modify variables)
+        registry.evaluate("x = 200", &mut state);
+
+        // Verify x is now 200
+        let vars = state.variables.read().unwrap();
+        assert_eq!(vars.get("x").unwrap().0, 200.0);
     }
 }

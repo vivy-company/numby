@@ -11,7 +11,7 @@ impl Agent for UnitAgent {
         input.contains(" in ") || input.contains(" to ")
     }
 
-    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool)> {
+    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool, Option<f64>)> {
         let conversion_keyword = input.find(" in ").map(|pos| (" in ", pos)).or_else(|| input.find(" to ").map(|pos| (" to ", pos)));
         if let Some((kw, pos)) = conversion_keyword {
             let left = input[..pos].trim();
@@ -19,7 +19,9 @@ impl Agent for UnitAgent {
 
             // Try direct conversion first (e.g., "100 m in km")
             if let Some(val) = evaluate_unit_conversion(left, right, &state.length_units, &state.time_units, &state.temperature_units, &state.area_units, &state.volume_units, &state.weight_units, &state.angular_units, &state.data_units, &state.speed_units, &state.rates, &config.custom_units) {
-                return Some((val, true));
+                // Extract numeric value from result string for history
+                let numeric_value = val.split_whitespace().next().and_then(|s| s.parse::<f64>().ok());
+                return Some((val, true, numeric_value));
             }
 
             // If direct conversion failed, try evaluating the left side as an expression
@@ -54,7 +56,9 @@ impl Agent for UnitAgent {
                 };
                 // Now try conversion with the evaluated result
                 if let Some(val) = evaluate_unit_conversion(&left_result_str, right, &config.length_units, &config.time_units, &config.temperature_units, &config.area_units, &config.volume_units, &config.weight_units, &config.angular_units, &config.data_units, &config.speed_units, &config.currencies, &config.custom_units) {
-                    return Some((val, true));
+                    // Extract numeric value from result string for history
+                    let numeric_value = val.split_whitespace().next().and_then(|s| s.parse::<f64>().ok());
+                    return Some((val, true, numeric_value));
                 }
             }
         }

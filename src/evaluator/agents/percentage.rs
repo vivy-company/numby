@@ -22,7 +22,7 @@ impl Agent for PercentageAgent {
         percent_op_pattern.is_match(input)
     }
 
-    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool)> {
+    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool, Option<f64>)> {
         // Handle "X% of Y" pattern
         let percent_of_re = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(.+)").expect("Invalid regex pattern for percent-of expression");
         if let Some(caps) = percent_of_re.captures(input) {
@@ -56,9 +56,9 @@ impl Agent for PercentageAgent {
 
                         // Preserve unit from base if present
                         if let Some(unit) = base_result.unit {
-                            return Some((format!("{} {}", pretty_result, unit), true));
+                            return Some((format!("{} {}", pretty_result, unit), true, Some(result)));
                         } else {
-                            return Some((pretty_result, true));
+                            return Some((pretty_result, true, Some(result)));
                         }
                     }
                 }
@@ -67,7 +67,9 @@ impl Agent for PercentageAgent {
 
         // Handle "X + Y%" pattern
         if let Some(result) = parse_percentage_op(input) {
-            return Some((result, true));
+            // Extract numeric value from result string
+            let numeric_value = result.split_whitespace().next().and_then(|s| s.parse::<f64>().ok());
+            return Some((result, true, numeric_value));
         }
         None
     }

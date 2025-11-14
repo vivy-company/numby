@@ -3,3 +3,15 @@ ffi/
 macos/
 *.swp
 .DS_Store
+
+# Xcode user-specific files
+*.xcuserstate
+xcuserdata/
+
+# Xcode build artifacts
+build/
+DerivedData/
+
+# Debug/temp documentation
+*_FIX_SUMMARY.md
+test_*.md

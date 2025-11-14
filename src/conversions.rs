@@ -1,5 +1,61 @@
 use crate::models::{Rates, Units};
 
+/// Map currency symbols to their currency codes
+fn symbol_to_currency_code(symbol: &str) -> Option<&str> {
+    match symbol {
+        "$" => Some("USD"),
+        "€" => Some("EUR"),
+        "£" => Some("GBP"),
+        "¥" => Some("JPY"),
+        "₹" => Some("INR"),
+        "¢" => Some("USD"), // cents
+        "₽" => Some("RUB"),
+        "₩" => Some("KRW"),
+        "₪" => Some("ILS"),
+        "₦" => Some("NGN"),
+        "₨" => Some("PKR"),
+        "₱" => Some("PHP"),
+        "฿" => Some("THB"),
+        "₡" => Some("CRC"),
+        "₴" => Some("UAH"),
+        "₵" => Some("GHS"),
+        "₸" => Some("KZT"),
+        "₺" => Some("TRY"),
+        "₼" => Some("AZN"),
+        "₾" => Some("GEL"),
+        _ => None,
+    }
+}
+
+/// Normalize currency input by converting symbols to codes
+/// Examples: "100$" -> "100 USD", "$100" -> "100 USD", "€50" -> "50 EUR"
+fn normalize_currency_input(input: &str) -> String {
+    let input = input.trim();
+
+    // Check if first char is a currency symbol
+    if let Some(first_char) = input.chars().next() {
+        let first_str = first_char.to_string();
+        if let Some(code) = symbol_to_currency_code(&first_str) {
+            // Symbol at start: "$100" -> "100 USD"
+            let rest = &input[first_char.len_utf8()..].trim();
+            return format!("{} {}", rest, code);
+        }
+    }
+
+    // Check if last char is a currency symbol
+    if let Some(last_char) = input.chars().last() {
+        let last_str = last_char.to_string();
+        if let Some(code) = symbol_to_currency_code(&last_str) {
+            // Symbol at end: "100$" -> "100 USD"
+            let rest = &input[..input.len() - last_char.len_utf8()].trim();
+            return format!("{} {}", rest, code);
+        }
+    }
+
+    // No symbol found, return as-is
+    input.to_string()
+}
+
 fn parse_number_with_scale(num_str: &str) -> Option<f64> {
     // Try direct parse first
     if let Ok(num) = num_str.parse::<f64>() {
@@ -90,16 +146,25 @@ pub fn evaluate_currency_conversion(
     right: &str,
     rates: &Rates,
 ) -> Option<f64> {
+    // Normalize inputs to handle currency symbols
+    let left_normalized = normalize_currency_input(left);
+    let right_normalized = normalize_currency_input(right);
+
     // Similar to length
-    let left_parts: Vec<&str> = left.split_whitespace().collect();
+    let left_parts: Vec<&str> = left_normalized.split_whitespace().collect();
     if left_parts.len() == 2 {
         let num_str = left_parts[0];
         let curr1 = left_parts[1];
-        let curr2 = right;
+        let curr2 = right_normalized.trim();
         if let Some(num) = parse_number_with_scale(num_str) {
             if let Some(rate1) = rates.get(&curr1.to_uppercase()) {
                 if let Some(rate2) = rates.get(&curr2.to_uppercase()) {
-                    return Some(num * rate1 / rate2);
+                    // Formula: amount * (target_per_usd / source_per_usd)
+                    // If rates are "X units per 1 USD", then to convert from source to target:
+                    // First convert source to USD: amount / rate1
+                    // Then convert USD to target: (amount / rate1) * rate2
+                    // Simplified: amount * rate2 / rate1
+                    return Some(num * rate2 / rate1);
                 }
             }
         }

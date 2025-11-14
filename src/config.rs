@@ -21,7 +21,22 @@ pub struct Config {
     pub custom_units: HashMap<String, HashMap<String, f64>>,
     #[serde(default)]
     pub locale: Option<String>,
+    #[serde(default = "default_padding_left")]
+    pub padding_left: u16,
+    #[serde(default = "default_padding_right")]
+    pub padding_right: u16,
+    #[serde(default = "default_padding_top")]
+    pub padding_top: u16,
+    #[serde(default = "default_padding_bottom")]
+    pub padding_bottom: u16,
+    #[serde(default)]
+    pub rates_updated_at: Option<String>,
 }
+
+fn default_padding_left() -> u16 { 2 }
+fn default_padding_right() -> u16 { 2 }
+fn default_padding_top() -> u16 { 0 }
+fn default_padding_bottom() -> u16 { 2 }
 
 fn insert_numeric_units(map: &mut HashMap<String, f64>, units: &[(&str, f64)]) {
     for (key, value) in units {
@@ -229,11 +244,44 @@ fn create_currencies() -> HashMap<String, f64> {
     insert_numeric_units(
         &mut map,
         &[
+            // Base currency
             ("USD", 1.0),
-            ("EUR", 0.85),
-            ("GBP", 0.73),
-            ("JPY", 0.0065),
-            ("CAD", 0.68),
+            // Major fiat currencies (rates represent 1 USD = X of target currency)
+            ("EUR", 0.86287014),     // Euro
+            ("GBP", 0.76203273),     // British Pound
+            ("JPY", 154.7480061),    // Japanese Yen
+            ("CAD", 1.3942405),      // Canadian Dollar
+            ("AUD", 1.5294504),      // Australian Dollar
+            ("CHF", 0.8800703),      // Swiss Franc
+            ("CNY", 7.2373404),      // Chinese Yuan
+            ("INR", 84.4105508),     // Indian Rupee
+            ("MXN", 20.2890511),     // Mexican Peso
+            ("BRL", 5.7765307),      // Brazilian Real
+            ("ZAR", 18.0755011),     // South African Rand
+            ("RUB", 100.0010501),    // Russian Ruble
+            ("KRW", 1396.005701),    // South Korean Won
+            ("SEK", 10.9555061),     // Swedish Krona
+            ("NOK", 11.1155051),     // Norwegian Krone
+            ("DKK", 7.0623504),      // Danish Krone
+            ("SGD", 1.3379804),      // Singapore Dollar
+            ("HKD", 7.7879504),      // Hong Kong Dollar
+            ("NZD", 1.6786304),      // New Zealand Dollar
+            ("TRY", 34.5870006),     // Turkish Lira
+            ("PLN", 4.0910202),      // Polish Zloty
+            ("THB", 34.5705006),     // Thai Baht
+            ("MYR", 4.4520202),      // Malaysian Ringgit
+            ("IDR", 15906.005551),   // Indonesian Rupiah
+            ("PHP", 58.9305012),     // Philippine Peso
+            ("CZK", 23.8160011),     // Czech Koruna
+            ("ILS", 3.7301802),      // Israeli Shekel
+            ("CLP", 976.005101),     // Chilean Peso
+            ("AED", 3.6730201),      // UAE Dirham
+            ("COP", 4407.005205),    // Colombian Peso
+            ("BYN", 3.41012),        // Belarusian Ruble
+            // Major cryptocurrencies (optional, for extended support)
+            ("BTC", 0.00001125),     // Bitcoin
+            ("ETH", 0.00032587),     // Ethereum
+            ("BNB", 0.001621),       // Binance Coin
         ],
     );
     map
@@ -254,6 +302,9 @@ fn create_operators() -> HashMap<String, String> {
             ("and", "+"),
             ("with", "+"),
             ("mod", "%"),
+            // Unicode math symbols
+            ("×", "*"),
+            ("÷", "/"),
         ],
     );
     map
@@ -332,6 +383,11 @@ impl Default for Config {
             functions: create_functions(),
             custom_units: create_custom_units(),
             locale: None,
+            padding_left: default_padding_left(),
+            padding_right: default_padding_right(),
+            padding_top: default_padding_top(),
+            padding_bottom: default_padding_bottom(),
+            rates_updated_at: None,
         }
     }
 }
@@ -384,5 +440,22 @@ pub fn save_default_config_if_missing() -> anyhow::Result<()> {
         let json = serde_json::to_string_pretty(&default_config)?;
         fs::write(config_path, json)?;
     }
+    Ok(())
+}
+
+/// Updates currency rates and timestamp in the config file
+pub fn update_currency_rates(rates: HashMap<String, f64>, date: String) -> anyhow::Result<()> {
+    let mut config = load_config();
+    config.currencies = rates;
+    config.rates_updated_at = Some(date);
+    save_config(&config)
+}
+
+/// Saves config to the primary config path
+pub fn save_config(config: &Config) -> anyhow::Result<()> {
+    let config_path = get_config_path();
+    ensure_config_dir()?;
+    let json = serde_json::to_string_pretty(config)?;
+    fs::write(config_path, json)?;
     Ok(())
 }

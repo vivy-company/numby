@@ -10,7 +10,7 @@ pub type TempUnits = HashMap<String, String>;
 pub trait Agent: Send + Sync {
     fn priority(&self) -> i32;
     fn can_handle(&self, input: &str, state: &AppState) -> bool;
-    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool)>;
+    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool, Option<f64>)>;
 }
 
 #[derive(Clone)]
@@ -37,6 +37,7 @@ pub struct AppState {
     pub rates: HashMap<String, f64>,
     pub cache: Arc<CacheManager>,
     pub subscribers: Arc<RwLock<Vec<Arc<dyn EventSubscriber>>>>,
+    pub is_display_only: bool,
 }
 
 pub struct AppStateBuilder {
@@ -68,6 +69,7 @@ impl AppStateBuilder {
             rates: self.config.currencies.clone(),
             cache,
             subscribers,
+            is_display_only: false,
         }
     }
 }
@@ -101,6 +103,7 @@ impl AppState {
             rates: config.currencies.clone(),
             cache,
             subscribers,
+            is_display_only: false,
         }
     }
 

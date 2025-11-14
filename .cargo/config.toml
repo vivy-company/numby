@@ -1,0 +1,8 @@
+# Disable bitcode embedding for macOS targets
+# This reduces staticlib size significantly (from 49MB to ~27MB)
+# Note: embed-bitcode=no conflicts with lto=true
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "embed-bitcode=no"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "embed-bitcode=no"]

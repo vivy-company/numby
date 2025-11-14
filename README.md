@@ -12,7 +12,7 @@ A powerful natural language calculator with a terminal user interface (TUI). Num
 - **CLI Mode**: Evaluate expressions directly from the command line
 - **Variables**: Store and reuse variables in your calculations
 - **Unit Conversion**: Convert between various units (length, etc.)
-- **Currency Conversion**: Convert between different currencies with configurable rates
+- **Currency Conversion**: Convert between 300+ currencies with automatic daily updates from free API
 - **Percentage Calculations**: Support for percentage expressions and operations
 - **Comments**: Support for `//` and `#` comments to annotate calculations (grayed out in TUI)
 - **History**: Keep track of your calculation history
@@ -105,17 +105,32 @@ numby "2 + 3 * 4"
 numby my_calculations.numby
 ```
 
-### Set Currency Rate
+### Currency Rate Management
+
+Numby automatically updates currency rates daily from a free API (342+ currencies supported). Rates are cached locally and work offline.
 
 ```bash
+# Force update currency rates
+numby --update-rates
+
+# Skip automatic rate update on startup
+numby --no-update
+
+# Manually override a specific rate
 numby --rate EUR:0.85
 ```
+
+**Supported Currencies**: USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR, BTC, ETH, and 300+ more fiat and cryptocurrencies.
+
+**API Source**: [fawazahmed0/currency-api](https://github.com/fawazahmed0/exchange-api) (free, no rate limits, daily updates)
 
 ### Other Options
 
 - `--help`: Show help information
 - `--version`: Show version information
 - `--locale <LOCALE>`: Set language (e.g., `en-US`, `es`, `zh-CN`)
+- `--update-rates`: Force update currency rates from API
+- `--no-update`: Skip automatic currency rate update on startup
 
 ### Interactive Commands
 
@@ -150,10 +165,17 @@ x + y * 2
 
 ### Currency Conversion
 
+Supports 300+ currencies including fiat and cryptocurrencies:
+
 ```
 100 USD to EUR
 500 GBP in JPY
+1 BTC to USD
+50 ETH in EUR
+1000 CNY to INR
 ```
+
+Currency rates update automatically every 24 hours. Use `--update-rates` to force an update or `--no-update` to skip the automatic check.
 
 ### Complex Expressions
 

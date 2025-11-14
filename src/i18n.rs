@@ -12,7 +12,7 @@ static_loader! {
 }
 
 thread_local! {
-    static CURRENT_LOCALE: RefCell<LanguageIdentifier> = RefCell::new(langid!("en-US"));
+    static CURRENT_LOCALE: RefCell<LanguageIdentifier> = const { RefCell::new(langid!("en-US")) };
 }
 
 /// Set the current locale

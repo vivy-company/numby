@@ -12,7 +12,7 @@ impl Agent for VariableAgent {
         input.contains('=')
     }
 
-    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool)> {
+    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool, Option<f64>)> {
         let parts: Vec<&str> = input.split('=').collect();
         if parts.len() == 2 {
             let var = parts[0].trim();
@@ -40,6 +40,18 @@ impl Agent for VariableAgent {
             };
 
             if let Ok(eval_result) = evaluate_expr(&preprocessed, &mut ctx) {
+                // Block variable assignments in display-only mode
+                if state.is_display_only {
+                    // Format the result for display but don't store it
+                    let formatted = prettify_number(eval_result.value);
+                    let val_str = if let Some(unit) = eval_result.unit {
+                        format!("{} {}", formatted, unit)
+                    } else {
+                        formatted
+                    };
+                    return Some((val_str, true, Some(eval_result.value)));
+                }
+
                 // Insert directly since we already have the lock
                 vars_guard.insert(var.to_string(), (eval_result.value, eval_result.unit.clone()));
 
@@ -57,7 +69,7 @@ impl Agent for VariableAgent {
                 } else {
                     formatted
                 };
-                return Some((val_str, true));
+                return Some((val_str, true, Some(eval_result.value)));
             }
         }
         None

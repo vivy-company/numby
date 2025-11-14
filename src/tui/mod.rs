@@ -49,6 +49,7 @@ pub fn run(
     let mut mode = Mode::Normal;
     let mut status_timer: u32 = 0;
     let mut scroll_offset = 0;
+    let mut selection_start: Option<usize> = None;
 
     // Main event loop
     loop {
@@ -89,6 +90,7 @@ pub fn run(
                             &mut mode,
                             state,
                             registry,
+                            &mut selection_start,
                         );
 
                         // Set status timer when entering command mode

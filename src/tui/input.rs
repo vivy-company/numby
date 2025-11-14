@@ -6,6 +6,27 @@ use crate::models::{AppState, Mode};
 use crate::utils;
 use crate::security::{validate_file_path, sanitize_terminal_string, validate_input_size, MAX_EXPR_LENGTH};
 
+/// Helper function to delete a text selection
+fn delete_selection(input: &mut Rope, cursor_pos: &mut usize, selection_start: Option<usize>) -> bool {
+    if let Some(start) = selection_start {
+        let (from, to) = if start < *cursor_pos {
+            (start, *cursor_pos)
+        } else {
+            (*cursor_pos, start)
+        };
+        input.remove(from..to);
+        *cursor_pos = from;
+        true
+    } else {
+        false
+    }
+}
+
+/// Helper function to clear selection
+fn clear_selection(selection_start: &mut Option<usize>) {
+    *selection_start = None;
+}
+
 /// Finds the current line index and column from cursor position
 fn find_cursor_line_col(input: &Rope, cursor_pos: usize) -> (usize, usize) {
     let line_idx = input.char_to_line(cursor_pos);
@@ -52,12 +73,19 @@ pub fn handle_normal_mode(
     mode: &mut Mode,
     state: &mut AppState,
     registry: &crate::evaluator::AgentRegistry,
+    selection_start: &mut Option<usize>,
 ) {
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         match key.code {
             KeyCode::Char(':') => {
                 *mode = Mode::Command(String::new());
                 let _ = state.set_status(crate::fl!("commands-help"));
+                clear_selection(selection_start);
+            }
+            KeyCode::Char('a') => {
+                // Select all
+                *selection_start = Some(0);
+                *cursor_pos = input.len_chars();
             }
             KeyCode::Char('y') => {
                 let current_line = utils::get_current_line(input, *cursor_pos);
@@ -68,9 +96,11 @@ pub fn handle_normal_mode(
                         utils::copy_to_clipboard(&result);
                     }
                 }
+                clear_selection(selection_start);
             }
-            KeyCode::Char('i') | KeyCode::Char('a') => {
+            KeyCode::Char('i') => {
                 utils::copy_to_clipboard(&input.to_string());
+                clear_selection(selection_start);
             }
             _ => {}
         }
@@ -78,8 +108,14 @@ pub fn handle_normal_mode(
         match key.code {
             KeyCode::Char(':') => {
                 *mode = Mode::Command(String::new());
+                clear_selection(selection_start);
             }
             KeyCode::Char(c) => {
+                // Delete selection if exists
+                if delete_selection(input, cursor_pos, *selection_start) {
+                    clear_selection(selection_start);
+                }
+
                 // Prevent input from exceeding maximum size
                 if input.len_chars() < MAX_EXPR_LENGTH {
                     input.insert(*cursor_pos, &c.to_string());
@@ -91,37 +127,52 @@ pub fn handle_normal_mode(
                 }
             }
             KeyCode::Backspace => {
-                if *cursor_pos > 0 {
-                    input.remove(*cursor_pos - 1..*cursor_pos);
-                    *cursor_pos = cursor_pos.saturating_sub(1);
+                if !delete_selection(input, cursor_pos, *selection_start) {
+                    if *cursor_pos > 0 {
+                        input.remove(*cursor_pos - 1..*cursor_pos);
+                        *cursor_pos = cursor_pos.saturating_sub(1);
+                    }
+                } else {
+                    clear_selection(selection_start);
                 }
             }
             KeyCode::Delete => {
-                if *cursor_pos < input.len_chars() {
-                    input.remove(*cursor_pos..*cursor_pos + 1);
+                if !delete_selection(input, cursor_pos, *selection_start) {
+                    if *cursor_pos < input.len_chars() {
+                        input.remove(*cursor_pos..*cursor_pos + 1);
+                    }
+                } else {
+                    clear_selection(selection_start);
                 }
             }
             KeyCode::Left => {
                 *cursor_pos = cursor_pos.saturating_sub(1);
+                clear_selection(selection_start);
             }
             KeyCode::Right => {
                 if *cursor_pos < input.len_chars() {
                     *cursor_pos += 1;
                 }
+                clear_selection(selection_start);
             }
             KeyCode::Up => {
                 *cursor_pos = move_cursor_up(input, *cursor_pos);
+                clear_selection(selection_start);
             }
             KeyCode::Down => {
                 *cursor_pos = move_cursor_down(input, *cursor_pos);
+                clear_selection(selection_start);
             }
             KeyCode::Home => {
                 *cursor_pos = utils::find_line_start(input, *cursor_pos);
+                clear_selection(selection_start);
             }
             KeyCode::End => {
                 *cursor_pos = utils::find_line_end(input, *cursor_pos);
+                clear_selection(selection_start);
             }
             KeyCode::Enter => {
+                clear_selection(selection_start);
                 let current_line = utils::get_current_line(input, *cursor_pos);
                 let trimmed = current_line.trim();
                 if !trimmed.is_empty() {
@@ -137,7 +188,9 @@ pub fn handle_normal_mode(
                 input.insert(*cursor_pos, "\n");
                 *cursor_pos += 1;
             }
-            _ => {}
+            _ => {
+                clear_selection(selection_start);
+            }
         }
     }
 }

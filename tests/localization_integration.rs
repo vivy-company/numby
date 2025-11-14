@@ -2,7 +2,7 @@ use std::process::Command;
 
 fn run_numby_with_locale(locale: &str, expr: &str) -> (String, String, i32) {
     let output = Command::new("cargo")
-        .args(&["run", "--quiet", "--", "--locale", locale, expr])
+        .args(["run", "--quiet", "--", "--locale", locale, expr])
         .output()
         .expect("Failed to execute numby");
 
@@ -15,7 +15,7 @@ fn run_numby_with_locale(locale: &str, expr: &str) -> (String, String, i32) {
 
 fn run_numby(expr: &str) -> (String, String, i32) {
     let output = Command::new("cargo")
-        .args(&["run", "--quiet", "--", expr])
+        .args(["run", "--quiet", "--", expr])
         .output()
         .expect("Failed to execute numby");
 
@@ -110,7 +110,7 @@ fn test_error_message_chinese() {
 #[test]
 fn test_version_english() {
     let output = Command::new("cargo")
-        .args(&["run", "--quiet", "--", "--locale", "en-US", "--version"])
+        .args(["run", "--quiet", "--", "--locale", "en-US", "--version"])
         .output()
         .expect("Failed to execute numby");
 
@@ -121,7 +121,7 @@ fn test_version_english() {
 #[test]
 fn test_version_spanish() {
     let output = Command::new("cargo")
-        .args(&["run", "--quiet", "--", "--locale", "es", "--version"])
+        .args(["run", "--quiet", "--", "--locale", "es", "--version"])
         .output()
         .expect("Failed to execute numby");
 
@@ -133,7 +133,7 @@ fn test_version_spanish() {
 #[test]
 fn test_version_chinese() {
     let output = Command::new("cargo")
-        .args(&["run", "--quiet", "--", "--locale", "zh-CN", "--version"])
+        .args(["run", "--quiet", "--", "--locale", "zh-CN", "--version"])
         .output()
         .expect("Failed to execute numby");
 

@@ -26,20 +26,31 @@ pub struct RenderContext<'a> {
 pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
     let show_status = ctx.show_status && !matches!(ctx.mode, Mode::Command(cmd) if !cmd.is_empty());
     let size = f.size();
-    let text_height = if show_status { size.height - 1 } else { size.height };
 
-    // Split screen into left (input) and right (results)
-    let left_width = size.width / 2;
+    let padding_top = ctx.config.padding_top;
+    let padding_bottom = ctx.config.padding_bottom;
+    let padding_left = ctx.config.padding_left;
+    let padding_right = ctx.config.padding_right;
+
+    let text_height = if show_status {
+        size.height.saturating_sub(1 + padding_top + padding_bottom)
+    } else {
+        size.height.saturating_sub(padding_top + padding_bottom)
+    };
+
+    // Split screen into left (input) and right (results) - 70/30 ratio
+    let available_width = size.width.saturating_sub(padding_left + padding_right);
+    let left_width = (available_width * 70) / 100;
     let left_rect = Rect {
-        x: 0,
-        y: 0,
+        x: padding_left,
+        y: padding_top,
         width: left_width,
         height: text_height,
     };
     let right_rect = Rect {
-        x: left_width,
-        y: 0,
-        width: size.width - left_width,
+        x: padding_left + left_width,
+        y: padding_top,
+        width: available_width - left_width,
         height: text_height,
     };
 
@@ -48,7 +59,23 @@ pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
         render_status_bar(f, ctx.state, size);
     }
 
-    // Render input and results
+    // Calculate cursor line for highlighting across both panels
+    let cursor_line = ctx.input.char_to_line(ctx.cursor_pos);
+
+    // Render full-width background for current line first (ignores padding, spans entire width)
+    if cursor_line >= *ctx.scroll_offset && cursor_line < *ctx.scroll_offset + text_height as usize {
+        let line_y = cursor_line - *ctx.scroll_offset;
+        let highlight_rect = Rect {
+            x: 0,
+            y: padding_top + line_y as u16,
+            width: size.width,
+            height: 1,
+        };
+        let bg_block = Block::default().style(Style::default().bg(Color::Black));
+        f.render_widget(bg_block, highlight_rect);
+    }
+
+    // Render input and results on top of the background
     render_input_panel(f, left_rect, &ctx);
     render_results_panel(f, right_rect, &ctx);
 
@@ -111,7 +138,11 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
 
         // Create cache key that includes variables state
         let vars = ctx.state.variables.read().expect("Failed to acquire read lock on variables");
-        let vars_hash = format!("{:?}", *vars); // Simple hash of variable state
+        // Use sorted BTreeMap for deterministic cache key generation
+        let vars_sorted: std::collections::BTreeMap<_, _> = vars.iter()
+            .map(|(k, v)| (k.as_str(), v))
+            .collect();
+        let vars_hash = format!("{:?}", vars_sorted);
         drop(vars); // Release read lock
 
         let cache_key = format!("{}::{}", line_trim, vars_hash);
@@ -160,12 +191,15 @@ fn render_cursor(f: &mut Frame, ctx: &mut RenderContext, text_height: u16, size:
     let cursor_y = line_idx - *ctx.scroll_offset;
     let cursor_x = col as u16;
 
+    let padding_left = ctx.config.padding_left;
+    let padding_top = ctx.config.padding_top;
+
     // Command mode UI
     if let Mode::Command(cmd) = ctx.mode {
         render_command_mode(f, cmd, size);
         f.set_cursor((cmd.len() + 1) as u16, size.height - 1);
     } else {
-        f.set_cursor(cursor_x, cursor_y as u16);
+        f.set_cursor(cursor_x + padding_left, cursor_y as u16 + padding_top);
     }
 }
 
