@@ -9,7 +9,12 @@
 import Foundation
 
 // MARK: - All Themes
+extension Theme {
     static let allThemes: [Theme] = [
+    CatppuccinTheme.latte.theme,
+    CatppuccinTheme.frappe.theme,
+    CatppuccinTheme.macchiato.theme,
+    CatppuccinTheme.mocha.theme,
     Theme(
         name: "0x96f",
         syntax: SyntaxColors(

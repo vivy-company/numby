@@ -1,0 +1,128 @@
+/* Settings - Language Section */
+"settings.language.section" = "Idioma";
+"settings.language.picker" = "Idioma";
+
+/* Settings - Appearance Section */
+"settings.appearance.section" = "Apariencia";
+"settings.appearance.theme" = "Tema";
+"settings.appearance.fontSize" = "Tamaño de fuente";
+"settings.appearance.font" = "Fuente";
+"settings.appearance.syntaxHighlighting" = "Resaltado de sintaxis";
+
+/* Settings - Behavior Section */
+"settings.behavior.section" = "Comportamiento";
+"settings.behavior.autoEvaluate" = "Evaluar automáticamente al escribir";
+"settings.behavior.splitRatio" = "Proporción de división predeterminada";
+
+/* Settings - Currency Rates Section */
+"settings.currency.section" = "Tasas de cambio";
+"settings.currency.lastUpdated" = "Última actualización:";
+"settings.currency.stale" = "(Antiguo)";
+"settings.currency.update" = "Actualizar tasas de cambio";
+"settings.currency.updating" = "Actualizando...";
+"settings.currency.description" = "Obtiene las últimas tasas de cambio para más de 300 monedas de API gratuita";
+"settings.currency.success" = "Tasas de cambio actualizadas correctamente";
+"settings.currency.failed" = "Error al actualizar tasas de cambio";
+"settings.currency.never" = "Nunca";
+
+/* Settings - CLI Section */
+"settings.cli.section" = "Herramienta de línea de comandos";
+"settings.cli.installViaHomebrew" = "Instalar vía Homebrew:";
+"settings.cli.copyTooltip" = "Copiar al portapapeles";
+"settings.cli.installHomebrew" = "Instalar Homebrew";
+"settings.cli.orDownload" = "O descargar desde las versiones de GitHub";
+"settings.cli.githubReleases" = "Versiones de GitHub";
+
+/* CLI Installer Window */
+"cliInstaller.title" = "Herramienta de línea de comandos";
+"cliInstaller.subtitle" = "Usa numby desde tu terminal";
+"cliInstaller.installViaHomebrew" = "Instalar vía Homebrew";
+"cliInstaller.runCommand" = "Ejecuta este comando en tu terminal:";
+"cliInstaller.noHomebrew" = "Si no tienes Homebrew instalado:";
+"cliInstaller.alternative" = "Alternativa: Instalación manual";
+"cliInstaller.downloadRelease" = "Descarga la última versión:";
+"cliInstaller.moveToPath" = "Luego muévelo a tu PATH:";
+"cliInstaller.openTerminal" = "Abrir Terminal";
+
+/* Menu Bar - App Menu */
+"menu.about" = "Acerca de Numby";
+"menu.settings" = "Ajustes...";
+"menu.installCLI" = "Instalar herramienta de línea de comandos...";
+"menu.hide" = "Ocultar Numby";
+"menu.hideOthers" = "Ocultar otros";
+"menu.showAll" = "Mostrar todo";
+"menu.quit" = "Salir de Numby";
+
+/* Menu Bar - File Menu */
+"menu.file" = "Archivo";
+"menu.newWindow" = "Nueva ventana";
+"menu.newTab" = "Nueva pestaña";
+"menu.openCalculator" = "Abrir calculadora...";
+"menu.exportCalculator" = "Exportar calculadora...";
+"menu.close" = "Cerrar";
+
+/* Menu Bar - Edit Menu */
+"menu.edit" = "Editar";
+"menu.undo" = "Deshacer";
+"menu.redo" = "Rehacer";
+"menu.cut" = "Cortar";
+"menu.copy" = "Copiar";
+"menu.paste" = "Pegar";
+"menu.selectAll" = "Seleccionar todo";
+
+/* Menu Bar - View Menu */
+"menu.view" = "Ver";
+"menu.toggleHistory" = "Alternar barra lateral de historial";
+"menu.splitHorizontally" = "Dividir horizontalmente";
+"menu.splitVertically" = "Dividir verticalmente";
+"menu.fullScreen" = "Entrar en pantalla completa";
+"menu.exitFullScreen" = "Salir de pantalla completa";
+
+/* Menu Bar - Window Menu */
+"menu.window" = "Ventana";
+"menu.minimize" = "Minimizar";
+"menu.zoom" = "Ampliar";
+"menu.bringAllToFront" = "Traer todo al frente";
+"menu.showAllTabs" = "Mostrar todas las pestañas";
+"menu.nextTab" = "Seleccionar pestaña siguiente";
+"menu.previousTab" = "Seleccionar pestaña anterior";
+"menu.showTab" = "Mostrar pestaña %d";
+
+/* Menu Bar - Help Menu */
+"menu.help" = "Ayuda";
+"menu.numbyHelp" = "Ayuda de Numby";
+
+/* Window Titles */
+"window.settings" = "Ajustes";
+"window.cliInstaller" = "Instalar herramienta de línea de comandos";
+
+/* Toolbar */
+"toolbar.newTab" = "Nueva pestaña";
+"toolbar.newTabTooltip" = "Abrir una nueva pestaña de calculadora";
+"toolbar.toggleSidebar" = "Alternar barra lateral";
+"toolbar.toggleSidebarTooltip" = "Mostrar u ocultar la barra lateral de historial";
+
+/* History Sidebar */
+"history.searchPlaceholder" = "Buscar en historial...";
+"history.noResults" = "No se encontraron resultados";
+"history.empty" = "Aún no hay historial";
+"history.emptyDescription" = "Sus sesiones de cálculo aparecerán aquí";
+"history.name" = "Nombre";
+"history.done" = "Hecho";
+"history.openInNewTab" = "Abrir en nueva pestaña";
+"history.rename" = "Renombrar";
+"history.delete" = "Eliminar";
+
+/* Calculator */
+"calculator.empty" = "Sin calculadoras";
+"calculator.notFound" = "Calculadora no encontrada";
+
+/* Alerts */
+"alert.nothingToExport" = "Nada que exportar";
+"alert.emptyCalculator" = "La calculadora actual está vacía. Agregue contenido antes de exportar.";
+"alert.ok" = "Aceptar";
+"alert.closeWithoutSaving" = "¿Cerrar sin guardar?";
+"alert.unsavedContent" = "Esta pestaña contiene contenido sin guardar. ¿Está seguro de que desea cerrarla?";
+"alert.saveAndClose" = "Guardar y cerrar";
+"alert.closeWithoutSavingButton" = "Cerrar sin guardar";
+"alert.cancel" = "Cancelar";

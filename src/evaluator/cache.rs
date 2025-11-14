@@ -1,7 +1,7 @@
+use super::events::{EventSubscriber, StateEvent};
 use ratatui::text::Span;
 use std::collections::HashMap;
 use std::sync::RwLock;
-use super::events::{EventSubscriber, StateEvent};
 
 const MAX_CACHE_SIZE: usize = 1000;
 
@@ -25,7 +25,8 @@ impl CacheManager {
     }
 
     fn evict_lru_display(&self) {
-        if let (Ok(mut cache), Ok(mut access)) = (self.display.write(), self.display_access.write()) {
+        if let (Ok(mut cache), Ok(mut access)) = (self.display.write(), self.display_access.write())
+        {
             if cache.len() >= MAX_CACHE_SIZE {
                 // Find LRU entry
                 if let Some((lru_key, _)) = access.iter().min_by_key(|(_, &v)| v) {
@@ -38,7 +39,9 @@ impl CacheManager {
     }
 
     fn evict_lru_highlight(&self) {
-        if let (Ok(mut cache), Ok(mut access)) = (self.highlight.write(), self.highlight_access.write()) {
+        if let (Ok(mut cache), Ok(mut access)) =
+            (self.highlight.write(), self.highlight_access.write())
+        {
             if cache.len() >= MAX_CACHE_SIZE {
                 // Find LRU entry
                 if let Some((lru_key, _)) = access.iter().min_by_key(|(_, &v)| v) {
@@ -54,7 +57,9 @@ impl CacheManager {
         let result = self.display.read().ok()?.get(key).cloned();
         if result.is_some() {
             // Update access time
-            if let (Ok(mut counter), Ok(mut access)) = (self.counter.write(), self.display_access.write()) {
+            if let (Ok(mut counter), Ok(mut access)) =
+                (self.counter.write(), self.display_access.write())
+            {
                 *counter += 1;
                 access.insert(key.to_string(), *counter);
             }
@@ -65,8 +70,11 @@ impl CacheManager {
     pub fn set_display(&self, key: String, value: Option<String>) {
         self.evict_lru_display();
 
-        if let (Ok(mut cache), Ok(mut counter), Ok(mut access)) =
-            (self.display.write(), self.counter.write(), self.display_access.write()) {
+        if let (Ok(mut cache), Ok(mut counter), Ok(mut access)) = (
+            self.display.write(),
+            self.counter.write(),
+            self.display_access.write(),
+        ) {
             *counter += 1;
             cache.insert(key.clone(), value);
             access.insert(key, *counter);
@@ -77,7 +85,9 @@ impl CacheManager {
         let result = self.highlight.read().ok()?.get(key).cloned();
         if result.is_some() {
             // Update access time
-            if let (Ok(mut counter), Ok(mut access)) = (self.counter.write(), self.highlight_access.write()) {
+            if let (Ok(mut counter), Ok(mut access)) =
+                (self.counter.write(), self.highlight_access.write())
+            {
                 *counter += 1;
                 access.insert(key.to_string(), *counter);
             }
@@ -88,8 +98,11 @@ impl CacheManager {
     pub fn set_highlight(&self, key: String, value: Vec<Span<'static>>) {
         self.evict_lru_highlight();
 
-        if let (Ok(mut cache), Ok(mut counter), Ok(mut access)) =
-            (self.highlight.write(), self.counter.write(), self.highlight_access.write()) {
+        if let (Ok(mut cache), Ok(mut counter), Ok(mut access)) = (
+            self.highlight.write(),
+            self.counter.write(),
+            self.highlight_access.write(),
+        ) {
             *counter += 1;
             cache.insert(key.clone(), value);
             access.insert(key, *counter);
@@ -112,11 +125,14 @@ impl CacheManager {
     }
 
     pub fn invalidate_prefix(&self, prefix: &str) {
-        if let (Ok(mut cache), Ok(mut access)) = (self.display.write(), self.display_access.write()) {
+        if let (Ok(mut cache), Ok(mut access)) = (self.display.write(), self.display_access.write())
+        {
             cache.retain(|k, _| !k.starts_with(prefix));
             access.retain(|k, _| !k.starts_with(prefix));
         }
-        if let (Ok(mut cache), Ok(mut access)) = (self.highlight.write(), self.highlight_access.write()) {
+        if let (Ok(mut cache), Ok(mut access)) =
+            (self.highlight.write(), self.highlight_access.write())
+        {
             cache.retain(|k, _| !k.starts_with(prefix));
             access.retain(|k, _| !k.starts_with(prefix));
         }

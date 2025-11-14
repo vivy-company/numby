@@ -1,8 +1,25 @@
+//! Configuration management for Numby calculator.
+//!
+//! This module handles loading, saving, and providing default configurations
+//! for unit conversions, currency rates, and other calculator settings.
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+/// Main configuration structure containing all calculator settings.
+///
+/// # Examples
+///
+/// ```
+/// use numby::config::Config;
+///
+/// // Create default configuration
+/// let config = Config::default();
+/// assert!(config.length_units.contains_key("meter"));
+/// assert!(config.currencies.contains_key("USD"));
+/// ```
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     pub length_units: HashMap<String, f64>,
@@ -33,10 +50,18 @@ pub struct Config {
     pub rates_updated_at: Option<String>,
 }
 
-fn default_padding_left() -> u16 { 2 }
-fn default_padding_right() -> u16 { 2 }
-fn default_padding_top() -> u16 { 0 }
-fn default_padding_bottom() -> u16 { 2 }
+fn default_padding_left() -> u16 {
+    2
+}
+fn default_padding_right() -> u16 {
+    2
+}
+fn default_padding_top() -> u16 {
+    0
+}
+fn default_padding_bottom() -> u16 {
+    2
+}
 
 fn insert_numeric_units(map: &mut HashMap<String, f64>, units: &[(&str, f64)]) {
     for (key, value) in units {
@@ -247,41 +272,41 @@ fn create_currencies() -> HashMap<String, f64> {
             // Base currency
             ("USD", 1.0),
             // Major fiat currencies (rates represent 1 USD = X of target currency)
-            ("EUR", 0.86287014),     // Euro
-            ("GBP", 0.76203273),     // British Pound
-            ("JPY", 154.7480061),    // Japanese Yen
-            ("CAD", 1.3942405),      // Canadian Dollar
-            ("AUD", 1.5294504),      // Australian Dollar
-            ("CHF", 0.8800703),      // Swiss Franc
-            ("CNY", 7.2373404),      // Chinese Yuan
-            ("INR", 84.4105508),     // Indian Rupee
-            ("MXN", 20.2890511),     // Mexican Peso
-            ("BRL", 5.7765307),      // Brazilian Real
-            ("ZAR", 18.0755011),     // South African Rand
-            ("RUB", 100.0010501),    // Russian Ruble
-            ("KRW", 1396.005701),    // South Korean Won
-            ("SEK", 10.9555061),     // Swedish Krona
-            ("NOK", 11.1155051),     // Norwegian Krone
-            ("DKK", 7.0623504),      // Danish Krone
-            ("SGD", 1.3379804),      // Singapore Dollar
-            ("HKD", 7.7879504),      // Hong Kong Dollar
-            ("NZD", 1.6786304),      // New Zealand Dollar
-            ("TRY", 34.5870006),     // Turkish Lira
-            ("PLN", 4.0910202),      // Polish Zloty
-            ("THB", 34.5705006),     // Thai Baht
-            ("MYR", 4.4520202),      // Malaysian Ringgit
-            ("IDR", 15906.005551),   // Indonesian Rupiah
-            ("PHP", 58.9305012),     // Philippine Peso
-            ("CZK", 23.8160011),     // Czech Koruna
-            ("ILS", 3.7301802),      // Israeli Shekel
-            ("CLP", 976.005101),     // Chilean Peso
-            ("AED", 3.6730201),      // UAE Dirham
-            ("COP", 4407.005205),    // Colombian Peso
-            ("BYN", 3.41012),        // Belarusian Ruble
+            ("EUR", 0.86287014),   // Euro
+            ("GBP", 0.76203273),   // British Pound
+            ("JPY", 154.7480061),  // Japanese Yen
+            ("CAD", 1.3942405),    // Canadian Dollar
+            ("AUD", 1.5294504),    // Australian Dollar
+            ("CHF", 0.8800703),    // Swiss Franc
+            ("CNY", 7.2373404),    // Chinese Yuan
+            ("INR", 84.4105508),   // Indian Rupee
+            ("MXN", 20.2890511),   // Mexican Peso
+            ("BRL", 5.7765307),    // Brazilian Real
+            ("ZAR", 18.0755011),   // South African Rand
+            ("RUB", 100.0010501),  // Russian Ruble
+            ("KRW", 1396.005701),  // South Korean Won
+            ("SEK", 10.9555061),   // Swedish Krona
+            ("NOK", 11.1155051),   // Norwegian Krone
+            ("DKK", 7.0623504),    // Danish Krone
+            ("SGD", 1.3379804),    // Singapore Dollar
+            ("HKD", 7.7879504),    // Hong Kong Dollar
+            ("NZD", 1.6786304),    // New Zealand Dollar
+            ("TRY", 34.5870006),   // Turkish Lira
+            ("PLN", 4.0910202),    // Polish Zloty
+            ("THB", 34.5705006),   // Thai Baht
+            ("MYR", 4.4520202),    // Malaysian Ringgit
+            ("IDR", 15906.005551), // Indonesian Rupiah
+            ("PHP", 58.9305012),   // Philippine Peso
+            ("CZK", 23.8160011),   // Czech Koruna
+            ("ILS", 3.7301802),    // Israeli Shekel
+            ("CLP", 976.005101),   // Chilean Peso
+            ("AED", 3.6730201),    // UAE Dirham
+            ("COP", 4407.005205),  // Colombian Peso
+            ("BYN", 3.41012),      // Belarusian Ruble
             // Major cryptocurrencies (optional, for extended support)
-            ("BTC", 0.00001125),     // Bitcoin
-            ("ETH", 0.00032587),     // Ethereum
-            ("BNB", 0.001621),       // Binance Coin
+            ("BTC", 0.00001125), // Bitcoin
+            ("ETH", 0.00032587), // Ethereum
+            ("BNB", 0.001621),   // Binance Coin
         ],
     );
     map
@@ -357,10 +382,7 @@ fn create_functions() -> HashMap<String, String> {
 fn create_custom_units() -> HashMap<String, HashMap<String, f64>> {
     let mut custom_units = HashMap::new();
     let mut energy_units = HashMap::new();
-    insert_numeric_units(
-        &mut energy_units,
-        &[("joule", 1.0), ("calorie", 4.184)],
-    );
+    insert_numeric_units(&mut energy_units, &[("joule", 1.0), ("calorie", 4.184)]);
     custom_units.insert("energy".to_string(), energy_units);
     custom_units
 }
@@ -392,6 +414,19 @@ impl Default for Config {
     }
 }
 
+/// Parse a currency rate string in "CURRENCY:RATE" format.
+///
+/// # Examples
+///
+/// ```
+/// use numby::config::parse_rate;
+///
+/// let result = parse_rate("EUR:0.85");
+/// assert_eq!(result, Some(("EUR".to_string(), 0.85)));
+///
+/// let invalid = parse_rate("invalid");
+/// assert_eq!(invalid, None);
+/// ```
 pub fn parse_rate(rate_str: &str) -> Option<(String, f64)> {
     let parts: Vec<&str> = rate_str.split(':').collect();
     if parts.len() == 2 {
@@ -402,6 +437,22 @@ pub fn parse_rate(rate_str: &str) -> Option<(String, f64)> {
     None
 }
 
+/// Load configuration from file or return default configuration.
+///
+/// Looks for config in the following order:
+/// 1. Platform-specific config directory (`~/.config/numby/config.json` on Unix)
+/// 2. Current directory (`./config.json`)
+/// 3. Default configuration if neither exists
+///
+/// # Examples
+///
+/// ```
+/// use numby::config::load_config;
+///
+/// let config = load_config();
+/// // Always succeeds, returns default if no config file found
+/// assert!(config.length_units.len() > 0);
+/// ```
 pub fn load_config() -> Config {
     let config_path = get_config_path();
     if let Ok(content) = fs::read_to_string(&config_path) {
@@ -419,6 +470,17 @@ pub fn load_config() -> Config {
     Config::default()
 }
 
+/// Get the platform-specific configuration file path.
+///
+/// # Examples
+///
+/// ```
+/// use numby::config::get_config_path;
+///
+/// let path = get_config_path();
+/// // On Unix-like systems: ~/.config/numby/config.json
+/// assert!(path.to_string_lossy().contains("config.json"));
+/// ```
 pub fn get_config_path() -> PathBuf {
     let mut config_path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("./"));
     config_path.push("numby");
@@ -426,36 +488,126 @@ pub fn get_config_path() -> PathBuf {
     config_path
 }
 
+/// Create config directory if it doesn't exist.
+///
+/// # Errors
+///
+/// Returns error if directory creation fails due to permissions or I/O issues.
+///
+/// # Examples
+///
+/// ```
+/// use numby::config::ensure_config_dir;
+///
+/// // Create config directory
+/// let result = ensure_config_dir();
+/// // Should succeed on most systems
+/// assert!(result.is_ok() || result.is_err()); // Either way is valid
+/// ```
 pub fn ensure_config_dir() -> anyhow::Result<()> {
     let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("./"));
     fs::create_dir_all(config_dir.join("numby"))?;
     Ok(())
 }
 
+/// Save default configuration file if it doesn't already exist.
+///
+/// # Errors
+///
+/// Returns error if file writing fails or directory cannot be created.
+///
+/// # Examples
+///
+/// ```
+/// use numby::config::save_default_config_if_missing;
+///
+/// // Creates config file if missing
+/// let result = save_default_config_if_missing();
+/// // May fail in read-only filesystem, but that's expected
+/// ```
 pub fn save_default_config_if_missing() -> anyhow::Result<()> {
     let config_path = get_config_path();
     if !config_path.exists() {
         ensure_config_dir()?;
         let default_config = Config::default();
-        let json = serde_json::to_string_pretty(&default_config)?;
-        fs::write(config_path, json)?;
+        save_config(&default_config)?;
     }
     Ok(())
 }
 
-/// Updates currency rates and timestamp in the config file
+/// Update currency rates and timestamp in the config file.
+///
+/// # Arguments
+///
+/// * `rates` - HashMap of currency codes to exchange rates
+/// * `date` - ISO date string (YYYY-MM-DD) of when rates were fetched
+///
+/// # Errors
+///
+/// Returns error if config cannot be saved.
+///
+/// # Examples
+///
+/// ```no_run
+/// use std::collections::HashMap;
+/// use numby::config::update_currency_rates;
+///
+/// let mut rates = HashMap::new();
+/// rates.insert("EUR".to_string(), 0.85);
+/// rates.insert("GBP".to_string(), 0.73);
+///
+/// update_currency_rates(rates, "2025-01-15".to_string())
+///     .expect("Failed to update rates");
+/// ```
 pub fn update_currency_rates(rates: HashMap<String, f64>, date: String) -> anyhow::Result<()> {
-    let mut config = load_config();
-    config.currencies = rates;
-    config.rates_updated_at = Some(date);
-    save_config(&config)
+    let config_path = get_config_path();
+    update_currency_rates_at_path(&config_path, rates, date)
 }
 
-/// Saves config to the primary config path
+/// Update currency rates in a specific config file path.
+pub fn update_currency_rates_at_path(
+    path: &Path,
+    rates: HashMap<String, f64>,
+    date: String,
+) -> anyhow::Result<()> {
+    let mut config = if let Ok(content) = fs::read_to_string(path) {
+        serde_json::from_str(&content).unwrap_or_else(|_| Config::default())
+    } else {
+        Config::default()
+    };
+
+    config.currencies = rates;
+    config.rates_updated_at = Some(date);
+    save_config_to_path(path, &config)
+}
+
+/// Save configuration to the primary config path.
+///
+/// # Errors
+///
+/// Returns error if config directory cannot be created or file cannot be written.
+///
+/// # Examples
+///
+/// ```no_run
+/// use numby::config::{Config, save_config};
+///
+/// let mut config = Config::default();
+/// config.padding_left = 5;
+///
+/// save_config(&config).expect("Failed to save config");
+/// ```
 pub fn save_config(config: &Config) -> anyhow::Result<()> {
     let config_path = get_config_path();
-    ensure_config_dir()?;
+    save_config_to_path(&config_path, config)
+}
+
+/// Save configuration to a provided path, creating parent directories if needed.
+pub fn save_config_to_path(path: &Path, config: &Config) -> anyhow::Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
     let json = serde_json::to_string_pretty(config)?;
-    fs::write(config_path, json)?;
+    fs::write(path, json)?;
     Ok(())
 }

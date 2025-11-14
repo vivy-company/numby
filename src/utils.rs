@@ -11,13 +11,27 @@ pub fn highlight_word_owned(
 ) -> Span<'static> {
     let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric());
     let lower = clean_word.to_lowercase();
-    if variables.read().expect("Failed to acquire read lock on variables").contains_key(clean_word) {
+    if variables
+        .read()
+        .expect("Failed to acquire read lock on variables")
+        .contains_key(clean_word)
+    {
         Span::styled(word.to_string(), Style::default().fg(Color::Blue).bold())
-    } else if config.operators.contains_key(clean_word) || config.functions.contains_key(clean_word) || config.scales.contains_key(clean_word) {
+    } else if config.operators.contains_key(clean_word)
+        || config.functions.contains_key(clean_word)
+        || config.scales.contains_key(clean_word)
+    {
         Span::styled(word.to_string(), Style::default().fg(Color::Green).bold())
-    } else if config.length_units.contains_key(&lower) || config.time_units.contains_key(&lower) || config.temperature_units.contains_key(&lower) ||
-              config.area_units.contains_key(&lower) || config.volume_units.contains_key(&lower) || config.weight_units.contains_key(&lower) ||
-              config.angular_units.contains_key(&lower) || config.data_units.contains_key(&lower) || config.speed_units.contains_key(&lower) {
+    } else if config.length_units.contains_key(&lower)
+        || config.time_units.contains_key(&lower)
+        || config.temperature_units.contains_key(&lower)
+        || config.area_units.contains_key(&lower)
+        || config.volume_units.contains_key(&lower)
+        || config.weight_units.contains_key(&lower)
+        || config.angular_units.contains_key(&lower)
+        || config.data_units.contains_key(&lower)
+        || config.speed_units.contains_key(&lower)
+    {
         Span::styled(word.to_string(), Style::default().fg(Color::Yellow).bold())
     } else if config.currencies.contains_key(&clean_word.to_uppercase()) {
         Span::styled(word.to_string(), Style::default().fg(Color::Magenta).bold())
@@ -30,11 +44,17 @@ pub fn copy_to_clipboard(text: &str) {
     match Clipboard::new() {
         Ok(mut clipboard) => {
             if let Err(e) = clipboard.set_text(text) {
-                eprintln!("{}", crate::fl!("clipboard-copy-failed", "error" => &e.to_string()));
+                eprintln!(
+                    "{}",
+                    crate::fl!("clipboard-copy-failed", "error" => &e.to_string())
+                );
             }
         }
         Err(e) => {
-            eprintln!("{}", crate::fl!("clipboard-not-available", "error" => &e.to_string()));
+            eprintln!(
+                "{}",
+                crate::fl!("clipboard-not-available", "error" => &e.to_string())
+            );
         }
     }
 }

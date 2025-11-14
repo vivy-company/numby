@@ -24,6 +24,128 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Configure app behavior
         setupMenus()
+
+        // Setup notification observers
+        setupNotificationObservers()
+    }
+
+    private func setupNotificationObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRestoreSessionInNewTab(_:)),
+            name: .restoreSessionInNewTab,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleLocaleChanged),
+            name: NSNotification.Name("LocaleChanged"),
+            object: nil
+        )
+    }
+
+    @objc private func handleLocaleChanged() {
+        updateAllMenuTitles()
+
+        // Refresh all window toolbars and titles
+        for window in NSApplication.shared.windows {
+            // Recreate toolbar to get fresh localized labels
+            if let numbyWindow = window as? NumbyWindow {
+                let oldToolbar = window.toolbar
+                let newToolbar = NSToolbar(identifier: oldToolbar?.identifier ?? NSToolbar.Identifier("NumbyToolbar"))
+                newToolbar.delegate = numbyWindow
+                newToolbar.displayMode = .iconOnly
+                window.toolbar = newToolbar
+            }
+
+            // Update window titles if they're settings or CLI installer windows
+            if let settingsWindow = settingsWindowController?.window, window == settingsWindow {
+                window.title = "window.settings".localized()
+            }
+            if let cliWindow = cliInstallerWindowController?.window, window == cliWindow {
+                window.title = "window.cliInstaller".localized()
+            }
+        }
+    }
+
+    private func updateAllMenuTitles() {
+        guard let mainMenu = NSApplication.shared.mainMenu else { return }
+
+        // Iterate through all menu items and update their titles
+        for (index, menuItem) in mainMenu.items.enumerated() {
+            guard let submenu = menuItem.submenu else { continue }
+
+            // Update submenu title based on index (menus are in fixed order)
+            switch index {
+            case 0: break // App menu (no title)
+            case 1: submenu.title = "menu.file".localized()
+            case 2: submenu.title = "menu.edit".localized()
+            case 3: submenu.title = "menu.view".localized()
+            case 4: submenu.title = "menu.window".localized()
+            case 5: submenu.title = "menu.help".localized()
+            default: break
+            }
+
+            // Update items within menu
+            for item in submenu.items {
+                if item.isSeparatorItem { continue }
+
+                // Update title based on action
+                if let action = item.action {
+                    item.title = localizedTitleForAction(action, tag: item.tag)
+                }
+            }
+        }
+    }
+
+    private func localizedTitleForAction(_ action: Selector, tag: Int = 0) -> String {
+        switch action {
+        // App menu
+        case #selector(NSApplication.orderFrontStandardAboutPanel(_:)): return "menu.about".localized()
+        case #selector(openSettings): return "menu.settings".localized()
+        case #selector(openCLIInstaller): return "menu.installCLI".localized()
+        case #selector(NSApplication.hide(_:)): return "menu.hide".localized()
+        case #selector(NSApplication.hideOtherApplications(_:)): return "menu.hideOthers".localized()
+        case #selector(NSApplication.unhideAllApplications(_:)): return "menu.showAll".localized()
+        case #selector(NSApplication.terminate(_:)): return "menu.quit".localized()
+
+        // File menu
+        case #selector(createNewWindow): return "menu.newWindow".localized()
+        case #selector(createNewTab): return "menu.newTab".localized()
+        case #selector(openCalculator): return "menu.openCalculator".localized()
+        case #selector(exportCalculator): return "menu.exportCalculator".localized()
+        case #selector(NumbyWindow.closeSplit): return "menu.close".localized()
+
+        // Edit menu
+        case #selector(UndoManager.undo): return "menu.undo".localized()
+        case #selector(UndoManager.redo): return "menu.redo".localized()
+        case #selector(NSText.cut(_:)): return "menu.cut".localized()
+        case #selector(NSText.copy(_:)): return "menu.copy".localized()
+        case #selector(NSText.paste(_:)): return "menu.paste".localized()
+        case #selector(NSText.selectAll(_:)): return "menu.selectAll".localized()
+
+        // View menu
+        case #selector(toggleHistorySidebar): return "menu.toggleHistory".localized()
+        case #selector(NumbyWindow.splitHorizontally): return "menu.splitHorizontally".localized()
+        case #selector(NumbyWindow.splitVertically): return "menu.splitVertically".localized()
+        case #selector(NSWindow.toggleFullScreen(_:)): return "menu.fullScreen".localized()
+
+        // Window menu
+        case #selector(NSWindow.miniaturize(_:)): return "menu.minimize".localized()
+        case #selector(NSWindow.zoom(_:)): return "menu.zoom".localized()
+        case #selector(NSApplication.arrangeInFront(_:)): return "menu.bringAllToFront".localized()
+        case #selector(NSWindow.toggleTabBar(_:)): return "menu.showAllTabs".localized()
+        case #selector(NSWindow.selectNextTab(_:)): return "menu.nextTab".localized()
+        case #selector(NSWindow.selectPreviousTab(_:)): return "menu.previousTab".localized()
+        case #selector(NumbyWindow.selectTab(_:)):
+            return tag > 0 ? String(format: "menu.showTab".localized(), tag) : ""
+
+        // Help menu
+        case #selector(NSApplication.showHelp(_:)): return "menu.numbyHelp".localized()
+
+        default: return ""
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -32,7 +154,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
-        return false
+        return true
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -117,10 +239,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let content = calculator.inputText
         if content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
             let alert = NSAlert()
-            alert.messageText = "Nothing to Export"
-            alert.informativeText = "The current calculator is empty. Add some content before exporting."
+            alert.messageText = "alert.nothingToExport".localized()
+            alert.informativeText = "alert.emptyCalculator".localized()
             alert.alertStyle = .informational
-            alert.addButton(withTitle: "OK")
+            alert.addButton(withTitle: "alert.ok".localized())
             alert.runModal()
             return
         }
@@ -146,6 +268,48 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc func toggleHistorySidebar() {
+        // Toggle sidebar in the key window
+        if let keyWindow = NSApplication.shared.keyWindow as? NumbyWindow {
+            keyWindow.toggleSidebar()
+        }
+    }
+
+    @objc func saveCurrentSession() {
+        NotificationCenter.default.post(name: .saveCurrentSession, object: nil)
+    }
+
+    @objc func handleRestoreSessionInNewTab(_ notification: Notification) {
+        guard let snapshot = notification.object as? CalculatorSessionSnapshot else {
+            return
+        }
+
+        // Create new tab with restored session
+        guard let keyWindow = NSApplication.shared.keyWindow else {
+            createNewWindow(withSnapshot: snapshot)
+            return
+        }
+
+        let controller = CalculatorWindowController(withSnapshot: snapshot)
+        windowControllers.append(controller)
+
+        if let newWindow = controller.window {
+            keyWindow.addTabbedWindow(newWindow, ordered: .above)
+            controller.showWindow(nil)
+        }
+    }
+
+    func createNewWindow(withSnapshot snapshot: CalculatorSessionSnapshot? = nil) {
+        let controller: CalculatorWindowController
+        if let snapshot = snapshot {
+            controller = CalculatorWindowController(withSnapshot: snapshot)
+        } else {
+            controller = CalculatorWindowController()
+        }
+        windowControllers.append(controller)
+        controller.showWindow(nil)
+    }
+
     // MARK: - Menu Setup
 
     private func setupMenus() {
@@ -156,100 +320,106 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenuItem = NSMenuItem()
         appMenuItem.submenu = appMenu
 
-        appMenu.addItem(withTitle: "About Numby", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "menu.about".localized(), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
+        appMenu.addItem(withTitle: "menu.settings".localized(), action: #selector(openSettings), keyEquivalent: ",")
 
         // CLI Installation menu item
-        let cliMenuItem = NSMenuItem(title: "Install Command Line Tool...", action: #selector(openCLIInstaller), keyEquivalent: "")
+        let cliMenuItem = NSMenuItem(title: "menu.installCLI".localized(), action: #selector(openCLIInstaller), keyEquivalent: "")
         cliMenuItem.target = self
         appMenu.addItem(cliMenuItem)
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "Hide Numby", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "menu.hide".localized(), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem({ () -> NSMenuItem in
-            let item = NSMenuItem(title: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+            let item = NSMenuItem(title: "menu.hideOthers".localized(), action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
             item.keyEquivalentModifierMask = [.command, .option]
             return item
         }())
-        appMenu.addItem(withTitle: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "menu.showAll".localized(), action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "Quit Numby", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "menu.quit".localized(), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         mainMenu.addItem(appMenuItem)
 
         // File Menu
-        let fileMenu = NSMenu(title: "File")
+        let fileMenu = NSMenu(title: "menu.file".localized())
         let fileMenuItem = NSMenuItem()
         fileMenuItem.submenu = fileMenu
 
-        fileMenu.addItem(withTitle: "New Window", action: #selector(createNewWindow), keyEquivalent: "n")
-        fileMenu.addItem(withTitle: "New Tab", action: #selector(createNewTab), keyEquivalent: "t")
+        fileMenu.addItem(withTitle: "menu.newWindow".localized(), action: #selector(createNewWindow), keyEquivalent: "n")
+        fileMenu.addItem(withTitle: "menu.newTab".localized(), action: #selector(createNewTab), keyEquivalent: "t")
         fileMenu.addItem(NSMenuItem.separator())
 
-        let openItem = NSMenuItem(title: "Open Calculator...", action: #selector(openCalculator), keyEquivalent: "o")
+        let openItem = NSMenuItem(title: "menu.openCalculator".localized(), action: #selector(openCalculator), keyEquivalent: "o")
         openItem.target = self
         fileMenu.addItem(openItem)
 
-        let exportItem = NSMenuItem(title: "Export Calculator...", action: #selector(exportCalculator), keyEquivalent: "s")
+        let exportItem = NSMenuItem(title: "menu.exportCalculator".localized(), action: #selector(exportCalculator), keyEquivalent: "s")
         exportItem.target = self
         fileMenu.addItem(exportItem)
 
         fileMenu.addItem(NSMenuItem.separator())
         // Cmd+W handled by closeSplit - closes pane or tab if last pane
-        fileMenu.addItem(withTitle: "Close", action: #selector(NumbyWindow.closeSplit), keyEquivalent: "w")
+        fileMenu.addItem(withTitle: "menu.close".localized(), action: #selector(NumbyWindow.closeSplit), keyEquivalent: "w")
 
         mainMenu.addItem(fileMenuItem)
 
         // Edit Menu
-        let editMenu = NSMenu(title: "Edit")
+        let editMenu = NSMenu(title: "menu.edit".localized())
         let editMenuItem = NSMenuItem()
         editMenuItem.submenu = editMenu
 
-        editMenu.addItem(withTitle: "Undo", action: #selector(UndoManager.undo), keyEquivalent: "z")
-        editMenu.addItem(withTitle: "Redo", action: #selector(UndoManager.redo), keyEquivalent: "Z")
+        editMenu.addItem(withTitle: "menu.undo".localized(), action: #selector(UndoManager.undo), keyEquivalent: "z")
+        editMenu.addItem(withTitle: "menu.redo".localized(), action: #selector(UndoManager.redo), keyEquivalent: "Z")
         editMenu.addItem(NSMenuItem.separator())
-        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(withTitle: "menu.cut".localized(), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "menu.copy".localized(), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "menu.paste".localized(), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "menu.selectAll".localized(), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
 
         mainMenu.addItem(editMenuItem)
 
         // View Menu
-        let viewMenu = NSMenu(title: "View")
+        let viewMenu = NSMenu(title: "menu.view".localized())
         let viewMenuItem = NSMenuItem()
         viewMenuItem.submenu = viewMenu
 
-        viewMenu.addItem(withTitle: "Split Horizontally", action: #selector(NumbyWindow.splitHorizontally), keyEquivalent: "d")
-        viewMenu.addItem(withTitle: "Split Vertically", action: #selector(NumbyWindow.splitVertically), keyEquivalent: "D")
+        let toggleHistoryItem = NSMenuItem(title: "menu.toggleHistory".localized(), action: #selector(toggleHistorySidebar), keyEquivalent: "h")
+        toggleHistoryItem.keyEquivalentModifierMask = [.command, .shift]
+        toggleHistoryItem.target = self
+        viewMenu.addItem(toggleHistoryItem)
+
         viewMenu.addItem(NSMenuItem.separator())
-        viewMenu.addItem(withTitle: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
+        viewMenu.addItem(withTitle: "menu.splitHorizontally".localized(), action: #selector(NumbyWindow.splitHorizontally), keyEquivalent: "d")
+        viewMenu.addItem(withTitle: "menu.splitVertically".localized(), action: #selector(NumbyWindow.splitVertically), keyEquivalent: "D")
+        viewMenu.addItem(NSMenuItem.separator())
+        viewMenu.addItem(withTitle: "menu.fullScreen".localized(), action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
 
         mainMenu.addItem(viewMenuItem)
 
         // Window Menu
-        let windowMenu = NSMenu(title: "Window")
+        let windowMenu = NSMenu(title: "menu.window".localized())
         let windowMenuItem = NSMenuItem()
         windowMenuItem.submenu = windowMenu
 
-        windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m")
-        windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.zoom(_:)), keyEquivalent: "")
+        windowMenu.addItem(withTitle: "menu.minimize".localized(), action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(withTitle: "menu.zoom".localized(), action: #selector(NSWindow.zoom(_:)), keyEquivalent: "")
         windowMenu.addItem(NSMenuItem.separator())
-        windowMenu.addItem(withTitle: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
+        windowMenu.addItem(withTitle: "menu.bringAllToFront".localized(), action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
         windowMenu.addItem(NSMenuItem.separator())
 
         // Show Tabs
-        let showTabsItem = NSMenuItem(title: "Show All Tabs", action: #selector(NSWindow.toggleTabBar(_:)), keyEquivalent: "")
+        let showTabsItem = NSMenuItem(title: "menu.showAllTabs".localized(), action: #selector(NSWindow.toggleTabBar(_:)), keyEquivalent: "")
         windowMenu.addItem(showTabsItem)
 
         windowMenu.addItem(NSMenuItem.separator())
 
         // Tab navigation shortcuts (these will show on tabs)
-        let nextTabItem = NSMenuItem(title: "Select Next Tab", action: #selector(NSWindow.selectNextTab(_:)), keyEquivalent: "\t")
+        let nextTabItem = NSMenuItem(title: "menu.nextTab".localized(), action: #selector(NSWindow.selectNextTab(_:)), keyEquivalent: "\t")
         nextTabItem.keyEquivalentModifierMask = [.control]
         windowMenu.addItem(nextTabItem)
 
-        let prevTabItem = NSMenuItem(title: "Select Previous Tab", action: #selector(NSWindow.selectPreviousTab(_:)), keyEquivalent: "\t")
+        let prevTabItem = NSMenuItem(title: "menu.previousTab".localized(), action: #selector(NSWindow.selectPreviousTab(_:)), keyEquivalent: "\t")
         prevTabItem.keyEquivalentModifierMask = [.control, .shift]
         windowMenu.addItem(prevTabItem)
 
@@ -257,7 +427,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Add Cmd+1 through Cmd+9 for switching to specific tabs
         for i in 1...9 {
-            let tabItem = NSMenuItem(title: "Show Tab \(i)", action: #selector(NumbyWindow.selectTab(_:)), keyEquivalent: "\(i)")
+            let tabItem = NSMenuItem(title: String(format: "menu.showTab".localized(), i), action: #selector(NumbyWindow.selectTab(_:)), keyEquivalent: "\(i)")
             tabItem.tag = i
             windowMenu.addItem(tabItem)
         }
@@ -266,11 +436,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.windowsMenu = windowMenu
 
         // Help Menu
-        let helpMenu = NSMenu(title: "Help")
+        let helpMenu = NSMenu(title: "menu.help".localized())
         let helpMenuItem = NSMenuItem()
         helpMenuItem.submenu = helpMenu
 
-        helpMenu.addItem(withTitle: "Numby Help", action: #selector(NSApplication.showHelp(_:)), keyEquivalent: "?")
+        helpMenu.addItem(withTitle: "menu.numbyHelp".localized(), action: #selector(NSApplication.showHelp(_:)), keyEquivalent: "?")
 
         mainMenu.addItem(helpMenuItem)
 
@@ -282,6 +452,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 class CalculatorWindowController: NSWindowController, NSWindowDelegate {
     private var calculatorController: CalculatorController?
+    private var restoredSnapshot: CalculatorSessionSnapshot?
 
     convenience init() {
         let window = NumbyWindow()
@@ -289,7 +460,17 @@ class CalculatorWindowController: NSWindowController, NSWindowDelegate {
         window.delegate = self
 
         // Setup content after window is fully initialized
-        window.setupContent()
+        window.setupContent(withSnapshot: nil)
+    }
+
+    convenience init(withSnapshot snapshot: CalculatorSessionSnapshot) {
+        let window = NumbyWindow()
+        self.init(window: window)
+        window.delegate = self
+        self.restoredSnapshot = snapshot
+
+        // Setup content after window is fully initialized
+        window.setupContent(withSnapshot: snapshot)
     }
 
     override func windowDidLoad() {
@@ -314,14 +495,26 @@ class CalculatorWindowController: NSWindowController, NSWindowDelegate {
         if hasContent {
             // Show confirmation dialog
             let alert = NSAlert()
-            alert.messageText = "Close without saving?"
-            alert.informativeText = "This tab contains unsaved content. Are you sure you want to close it?"
+            alert.messageText = "alert.closeWithoutSaving".localized()
+            alert.informativeText = "alert.unsavedContent".localized()
             alert.alertStyle = .warning
-            alert.addButton(withTitle: "Close")
-            alert.addButton(withTitle: "Cancel")
+            alert.addButton(withTitle: "alert.saveAndClose".localized())
+            alert.addButton(withTitle: "alert.closeWithoutSavingButton".localized())
+            alert.addButton(withTitle: "alert.cancel".localized())
 
             let response = alert.runModal()
-            return response == .alertFirstButtonReturn
+
+            if response == .alertFirstButtonReturn {
+                // Save and close
+                saveCurrentSession(controller: controller)
+                return true
+            } else if response == .alertSecondButtonReturn {
+                // Close without saving
+                return true
+            } else {
+                // Cancel
+                return false
+            }
         }
 
         return true
@@ -336,6 +529,15 @@ class CalculatorWindowController: NSWindowController, NSWindowDelegate {
         calculatorController?.cleanup()
         calculatorController = nil
     }
+
+    private func saveCurrentSession(controller: CalculatorController) {
+        let historyManager = HistoryManager()
+        historyManager.saveSession(
+            splitTree: controller.splitTree,
+            calculators: controller.calculators,
+            customName: nil
+        )
+    }
 }
 
 // MARK: - Custom Window Class
@@ -343,12 +545,10 @@ class CalculatorWindowController: NSWindowController, NSWindowDelegate {
 class NumbyWindow: NSWindow, NSToolbarDelegate {
     var controller: CalculatorController?
     private weak var windowButtonsBackdrop: NSView?
-    private var tabBarIdentifier: NSUserInterfaceItemIdentifier?
-
-    private var tabBarConstraintObserver: NSObjectProtocol?
-    private weak var tabBarAccessorySuperview: NSView?
-    private var tabBarConstraints: [NSLayoutConstraint] = []
+    private let windowInstanceId = UUID().uuidString
     private var centeredTitleItem: NSToolbarItem?
+    private let windowButtonsBackdropWidth: CGFloat = 78
+    private weak var lastTextViewResponder: NSTextView?
 
     override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
         super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
@@ -357,8 +557,8 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
 
     convenience init() {
         self.init(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -369,7 +569,7 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
         title = StoneNameGenerator.shared.getRandomName()
 
         // Set minimum window size
-        minSize = NSSize(width: 400, height: 300)
+        minSize = NSSize(width: 1200, height: 800)
 
         center()
 
@@ -377,24 +577,26 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
         tabbingMode = .preferred
         tabbingIdentifier = "calculator" // Group calculator windows together
 
-        // Hide native title - we'll use custom toolbar item
+        // Configure for full-height sidebar
+        titlebarAppearsTransparent = true
         titleVisibility = .hidden
 
         // Create a toolbar with custom title
         let toolbar = NSToolbar(identifier: "NumbyToolbar")
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly
+        toolbar.showsBaselineSeparator = false
         self.toolbar = toolbar
-        toolbarStyle = .unifiedCompact
+        toolbarStyle = .unified
         titlebarSeparatorStyle = .none
 
-        // Show title when single tab
-        updateTitleVisibility()
+        // Center the title relative to window width, not toolbar available space
+        toolbar.centeredItemIdentifiers = Set([NSToolbarItem.Identifier("CenteredTitle")])
 
         // Observe tab changes
         setupTabObserver()
 
-        // Make window background transparent for theme control
+        // Make window background clear for transparent titlebar
         backgroundColor = .clear
         isOpaque = false
 
@@ -404,23 +606,62 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
 
     }
 
-    private func hasMultipleTabs() -> Bool {
-        return tabGroup?.windows.count ?? 1 > 1
-    }
+    override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
+        var target = responder
 
-    private func updateTitleVisibility() {
-        guard let toolbar = self.toolbar else { return }
-
-        if hasMultipleTabs() {
-            // Multiple tabs - hide custom title
-            toolbar.centeredItemIdentifiers.remove(NSToolbarItem.Identifier("CenteredTitle"))
-        } else {
-            // Single tab - show centered title
-            toolbar.centeredItemIdentifiers.insert(NSToolbarItem.Identifier("CenteredTitle"))
+        if let responder = responder,
+           String(describing: type(of: responder)).contains("KeyViewProxy"),
+           let textView = preferredTextView {
+            target = textView
         }
 
-        // Rebuild toolbar items
-        toolbar.validateVisibleItems()
+        if let textView = target as? NSTextView {
+            lastTextViewResponder = textView
+        }
+
+        return super.makeFirstResponder(target)
+    }
+
+    override func selectNextKeyView(_ sender: Any?) {
+        guard let textView = preferredTextView else {
+            super.selectNextKeyView(sender)
+            return
+        }
+        _ = makeFirstResponder(textView)
+    }
+
+    override func selectPreviousKeyView(_ sender: Any?) {
+        guard let textView = preferredTextView else {
+            super.selectPreviousKeyView(sender)
+            return
+        }
+        _ = makeFirstResponder(textView)
+    }
+
+    override func becomeKey() {
+        super.becomeKey()
+        if let textView = preferredTextView {
+            _ = makeFirstResponder(textView)
+        }
+    }
+
+    private var preferredTextView: NSTextView? {
+        if let textView = lastTextViewResponder {
+            return textView
+        }
+
+        if let custom = contentView?.firstDescendant(ofType: CustomNSTextView.self) ??
+            contentView?.firstDescendant(ofType: NSTextView.self) {
+            lastTextViewResponder = custom
+            return custom
+        }
+
+        return nil
+    }
+
+    private func hasMultipleTabs() -> Bool {
+        let count = tabGroup?.windows.count ?? 1
+        return count > 1
     }
 
     // MARK: - NSToolbarDelegate
@@ -429,9 +670,9 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
         if itemIdentifier.rawValue == "CenteredTitle" {
             let item = NSToolbarItem(itemIdentifier: itemIdentifier)
 
-            // Create centered title label
-            let label = NSTextField(labelWithString: title)
-            label.font = .systemFont(ofSize: 13)
+            // Create centered title label - always show "Numby"
+            let label = NSTextField(labelWithString: "Numby")
+            label.font = .systemFont(ofSize: 13, weight: .medium)
             label.alignment = .center
             label.textColor = .labelColor
             label.isBezeled = false
@@ -440,30 +681,57 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
             label.isSelectable = false
             label.lineBreakMode = .byTruncatingTail
 
+            // Size the label to fit its content
+            label.sizeToFit()
+
+            // Use the label directly as the view
             item.view = label
-            item.visibilityPriority = .user
+            item.visibilityPriority = .high
             centeredTitleItem = item
+            return item
+        } else if itemIdentifier == .toggleSidebar {
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            let label = "toolbar.toggleSidebar".localized()
+            item.label = label
+            item.paletteLabel = label
+            item.toolTip = "toolbar.toggleSidebarTooltip".localized()
+            item.isBordered = true
+            item.image = NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: label)
+            item.target = self
+            item.action = #selector(toggleSidebar)
+            return item
+        } else if itemIdentifier.rawValue == "NewTab" {
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            let label = "toolbar.newTab".localized()
+            item.label = label
+            item.paletteLabel = label
+            item.toolTip = "toolbar.newTabTooltip".localized()
+            item.isBordered = true
+            item.image = NSImage(systemSymbolName: "plus", accessibilityDescription: label)
+            item.target = NSApp.delegate
+            item.action = #selector(AppDelegate.createNewTab)
             return item
         }
         return nil
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        if hasMultipleTabs() {
-            return []
-        } else {
-            return [
-                .flexibleSpace,
-                NSToolbarItem.Identifier("CenteredTitle"),
-                .flexibleSpace
-            ]
-        }
+        return [
+            .toggleSidebar,
+            .flexibleSpace,
+            NSToolbarItem.Identifier("CenteredTitle"),
+            .flexibleSpace,
+            NSToolbarItem.Identifier("NewTab")
+            
+        ]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         return [
+            .toggleSidebar,
             .flexibleSpace,
-            NSToolbarItem.Identifier("CenteredTitle")
+            NSToolbarItem.Identifier("CenteredTitle"),
+            NSToolbarItem.Identifier("NewTab")
         ]
     }
 
@@ -474,8 +742,8 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
             object: self,
             queue: .main
         ) { [weak self] _ in
-            self?.updateTitleVisibility()
-            self?.updateTabShortcuts()
+            guard let self = self else { return }
+            self.updateTabShortcuts()
         }
 
         // Observe when tabs are added/removed
@@ -484,31 +752,33 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
             object: self,
             queue: .main
         ) { [weak self] _ in
-            DispatchQueue.main.async {
-                self?.updateTitleVisibility()
-                self?.updateTabShortcuts()
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.updateTabShortcuts()
             }
         }
     }
 
-    func setupContent() {
+    func setupContent(withSnapshot snapshot: CalculatorSessionSnapshot? = nil) {
         // Create controller and view
         controller = CalculatorController()
 
-        // Use NSHostingController for proper ViewBridge lifecycle management
-        let rootView = CalculatorRootView(controller: controller!)
-            .environmentObject(ThemeManager.shared)
-            .environmentObject(ConfigurationManager.shared)
-        let hostingController = NSHostingController(rootView: rootView)
+        // Restore from snapshot if provided
+        if let snapshot = snapshot {
+            restoreFromSnapshot(snapshot)
+        }
 
-        // CRITICAL: Set initial frame from window's content rect
-        // After setting contentViewController, AppKit will manage sizing automatically
-        let initialFrame = NSRect(origin: .zero, size: frame.size)
-        hostingController.view.frame = initialFrame
-        hostingController.view.autoresizingMask = [.width, .height]
+        // Use native split view controller with sidebar
+        // Use window's tabGroup identifier to group tabs in same window
+        let windowGroupId = self.tabGroup?.identifier ?? (self.identifier?.rawValue ?? UUID().uuidString)
+        let splitViewController = MainSplitViewController(
+            calculatorController: controller!,
+            windowId: windowGroupId,
+            windowInstanceId: windowInstanceId
+        )
 
         // Set contentViewController
-        contentViewController = hostingController
+        contentViewController = splitViewController
 
         // Sync titlebar appearance after window is shown
         DispatchQueue.main.async { [weak self] in
@@ -516,43 +786,50 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
         }
     }
 
+    @objc func toggleSidebar() {
+        if let splitVC = contentViewController as? MainSplitViewController {
+            splitVC.toggleSidebar()
+        }
+    }
+
+    private func restoreFromSnapshot(_ snapshot: CalculatorSessionSnapshot) {
+        guard let controller = controller else { return }
+
+        // Restore split tree
+        controller.splitTree = snapshot.splitTree
+
+        // Restore calculator states
+        let leafIds = snapshot.splitTree.getAllLeafIds()
+        for leafId in leafIds {
+            let key = leafId.uuid.uuidString
+            if let state = snapshot.calculatorStates[key] {
+                let calculator = CalculatorInstance()
+                calculator.inputText = state.inputText
+                calculator.cursorPosition = state.cursorPosition
+                calculator.results = state.results
+                controller.calculators[leafId] = calculator
+            } else {
+                controller.calculators[leafId] = CalculatorInstance()
+            }
+        }
+
+        // Set focus to first leaf
+        controller.focusedLeafId = leafIds.first
+    }
+
     func cleanupContent() {
         // Clean up resources
         controller?.cleanup()
         controller = nil
         contentViewController = nil
-        removeTabBarConstraintObservation()
     }
 
     deinit {
-        removeTabBarConstraintObservation()
     }
 
     private func syncTitlebarAppearance() {
-        guard let themeFrame = contentView?.superview else { return }
-        guard let titlebarView = themeFrame.value(forKey: "titlebarView") as? NSView else { return }
-
-        // Get background color from configuration (defaults to system background)
-        let bgColor = ConfigurationManager.shared.config.backgroundColor ?? NSColor.textBackgroundColor
-
-        // Set titlebar background to match configured color
-        titlebarView.wantsLayer = true
-        titlebarView.layer?.backgroundColor = bgColor.cgColor
-
-        // Apply same background to toolbar
-        if let toolbarView = titlebarView.subviews.first(where: {
-            String(describing: type(of: $0)).contains("NSToolbarView")
-        }) {
-            toolbarView.wantsLayer = true
-            toolbarView.layer?.backgroundColor = bgColor.cgColor
-        }
-
-        // Hide the titlebar background view
-        if let titlebarBackgroundView = titlebarView.subviews.first(where: {
-            String(describing: type(of: $0)).contains("TitlebarBackgroundView")
-        }) {
-            titlebarBackgroundView.isHidden = true
-        }
+        // With full-height sidebar and transparent titlebar, don't manually set backgrounds
+        // Let the sidebar and content views show through naturally
     }
 
     /// Update background color (call this when theme changes)
@@ -564,99 +841,7 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
 
     // MARK: - Tab Bar Positioning
 
-    override func addTitlebarAccessoryViewController(_ childViewController: NSTitlebarAccessoryViewController) {
-        super.addTitlebarAccessoryViewController(childViewController)
-
-        if isTabBar(childViewController) {
-            tabBarIdentifier = NSUserInterfaceItemIdentifier(rawValue: "NumbyTabBar")
-            childViewController.identifier = tabBarIdentifier
-            positionTabBar(childViewController)
-        }
-    }
-
-    private func isTabBar(_ controller: NSTitlebarAccessoryViewController) -> Bool {
-        if controller.identifier == tabBarIdentifier {
-            return true
-        }
-
-        if controller.identifier == nil && controller.view.contains(className: "NSTabBar") {
-            return true
-        }
-
-        return false
-    }
-
-    private func positionTabBar(_ tabBarController: NSTitlebarAccessoryViewController) {
-        // Position tab bar to the right
-        tabBarController.layoutAttribute = .right
-        tabBarController.fullScreenMinHeight = 0
-
-        // Wait a tick to avoid edge cases during startup
-        DispatchQueue.main.async { [weak self] in
-            self?.setupTabBarConstraints(tabBarController)
-        }
-    }
-
-    private func setupTabBarConstraints(_ tabBarController: NSTitlebarAccessoryViewController) {
-        guard let accessoryView = tabBarController.view.superview else { return }
-        guard let titlebarView = accessoryView.superview else { return }
-        guard titlebarView.swiftClassName.contains("NSTitlebarView") else { return }
-        guard let toolbarView = titlebarView.subviews.first(where: {
-            $0.swiftClassName.contains("NSToolbarView")
-        }) else { return }
-
-        tabBarAccessorySuperview = accessoryView
-        accessoryView.layoutSubtreeIfNeeded()
-
-        if accessoryView.bounds.width <= 1 {
-            deferTabBarConstraints(for: accessoryView, controller: tabBarController)
-            return
-        }
-
-        removeTabBarConstraintObservation()
-
-        // Create backdrop for traffic lights
-        addWindowButtonsBackdrop(titlebarView: titlebarView, toolbarView: toolbarView)
-        guard let backdrop = windowButtonsBackdrop else { return }
-
-        // Position tab bar accessory with 2pt vertical offset for traffic light alignment
-        accessoryView.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.deactivate(tabBarConstraints)
-        tabBarConstraints = [
-            accessoryView.leadingAnchor.constraint(equalTo: backdrop.trailingAnchor),
-            accessoryView.trailingAnchor.constraint(equalTo: toolbarView.trailingAnchor),
-            accessoryView.topAnchor.constraint(equalTo: toolbarView.topAnchor, constant: 2),
-            accessoryView.heightAnchor.constraint(equalTo: toolbarView.heightAnchor),
-        ]
-
-        NSLayoutConstraint.activate(tabBarConstraints)
-    }
-
-    private func deferTabBarConstraints(for accessoryView: NSView, controller: NSTitlebarAccessoryViewController) {
-        accessoryView.postsFrameChangedNotifications = true
-
-        guard tabBarConstraintObserver == nil else { return }
-
-        tabBarConstraintObserver = NotificationCenter.default.addObserver(
-            forName: NSView.frameDidChangeNotification,
-            object: accessoryView,
-            queue: .main
-        ) { [weak self, weak controller] _ in
-            guard let self = self, let controller = controller else { return }
-            self.setupTabBarConstraints(controller)
-        }
-    }
-
-    private func removeTabBarConstraintObservation() {
-        if let observer = tabBarConstraintObserver {
-            NotificationCenter.default.removeObserver(observer)
-            tabBarConstraintObserver = nil
-        }
-
-        tabBarAccessorySuperview?.postsFrameChangedNotifications = false
-        tabBarAccessorySuperview = nil
-    }
+    // Let AppKit handle tab bar positioning naturally without any overrides
 
     private func addWindowButtonsBackdrop(titlebarView: NSView, toolbarView: NSView) {
         // Check if already exists
@@ -671,7 +856,7 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
 
         NSLayoutConstraint.activate([
             backdrop.leadingAnchor.constraint(equalTo: titlebarView.leadingAnchor),
-            backdrop.widthAnchor.constraint(equalToConstant: 78),
+            backdrop.widthAnchor.constraint(equalToConstant: windowButtonsBackdropWidth),
             backdrop.topAnchor.constraint(equalTo: toolbarView.topAnchor),
             backdrop.heightAnchor.constraint(equalTo: toolbarView.heightAnchor),
         ])
@@ -721,11 +906,11 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
 
     // MARK: - Tab Support
 
-    override func newWindowForTab(_ sender: Any?) {
-        // This enables the "+" button in tab bar
-        let appDelegate = NSApplication.shared.delegate as? AppDelegate
-        appDelegate?.createNewTab()
-    }
+    // Removed to disable the + button in tab bar since we have it in toolbar
+    // override func newWindowForTab(_ sender: Any?) {
+    //     let appDelegate = NSApplication.shared.delegate as? AppDelegate
+    //     appDelegate?.createNewTab()
+    // }
 
     @objc func selectTab(_ sender: NSMenuItem) {
         let tabIndex = sender.tag - 1 // Convert 1-based to 0-based
@@ -734,7 +919,9 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
         let windows = tabGroup.windows
         guard tabIndex >= 0 && tabIndex < windows.count else { return }
 
-        windows[tabIndex].makeKeyAndOrderFront(nil)
+        let targetWindow = windows[tabIndex]
+        targetWindow.makeKeyAndOrderFront(nil)
+
     }
 
     // Update tab labels with keyboard shortcuts
@@ -774,10 +961,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     var cleanupHandler: (() -> Void)?
 
     init() {
-        let hostingController = NSHostingController(rootView: SettingsView())
+        let hostingController = FocuslessHostingController(rootView: SettingsView())
         let window = NSWindow(contentViewController: hostingController)
         window.setContentSize(NSSize(width: 500, height: 400))
-        window.title = "Settings"
+        window.title = "window.settings".localized()
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.center()
         window.isReleasedWhenClosed = false
@@ -791,6 +978,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         super.init(window: window)
         window.delegate = self
+
+        // Listen for locale changes to update window title
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("LocaleChanged"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.window?.title = "window.settings".localized()
+        }
     }
 
     @available(*, unavailable)
@@ -815,10 +1011,10 @@ final class CLIInstallerWindowController: NSWindowController, NSWindowDelegate {
     var cleanupHandler: (() -> Void)?
 
     init() {
-        let hostingController = NSHostingController(rootView: CLIInstallerView())
+        let hostingController = FocuslessHostingController(rootView: CLIInstallerView())
         let window = NSWindow(contentViewController: hostingController)
         window.setContentSize(NSSize(width: 500, height: 600))
-        window.title = "Install Command Line Tool"
+        window.title = "window.cliInstaller".localized()
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.center()
         window.isReleasedWhenClosed = false
@@ -832,6 +1028,15 @@ final class CLIInstallerWindowController: NSWindowController, NSWindowDelegate {
 
         super.init(window: window)
         window.delegate = self
+
+        // Listen for locale changes to update window title
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("LocaleChanged"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.window?.title = "window.cliInstaller".localized()
+        }
     }
 
     @available(*, unavailable)

@@ -14,6 +14,7 @@ struct CalculatorRootView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var configManager: ConfigurationManager
     @FocusedValue(\.calculatorLeafId) private var focusedLeafId: SplitLeafID?
+    @State private var localeVersion: Int = 0
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -21,7 +22,7 @@ struct CalculatorRootView: View {
             if let root = controller.splitTree.root {
                 NodeView(node: root, controller: controller)
             } else {
-                Text("No calculators")
+                Text(localizedEmpty)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
@@ -45,6 +46,14 @@ struct CalculatorRootView: View {
                 controller.focusedLeafId = newFocusedId
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LocaleChanged"))) { _ in
+            localeVersion += 1
+        }
+    }
+
+    private var localizedEmpty: String {
+        _ = localeVersion
+        return "calculator.empty".localized()
     }
 }
 
@@ -53,6 +62,7 @@ struct CalculatorRootView: View {
 struct NodeView: View {
     let node: SplitTree.Node
     @ObservedObject var controller: CalculatorController
+    @State private var localeVersion: Int = 0
 
     var body: some View {
         switch node {
@@ -66,8 +76,11 @@ struct NodeView: View {
                 )
                 .id(leafId.uuid) // Stable identity for SwiftUI
             } else {
-                Text("Calculator not found")
+                Text(localizedNotFound)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LocaleChanged"))) { _ in
+                        localeVersion += 1
+                    }
             }
 
         case .split(let direction, let ratio, let left, let right):
@@ -82,5 +95,10 @@ struct NodeView: View {
                 right: { NodeView(node: right, controller: controller) }
             )
         }
+    }
+
+    private var localizedNotFound: String {
+        _ = localeVersion
+        return "calculator.notFound".localized()
     }
 }

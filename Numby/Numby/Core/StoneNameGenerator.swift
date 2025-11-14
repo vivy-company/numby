@@ -38,17 +38,11 @@ class StoneNameGenerator {
     ]
 
     private var usedNames: Set<String> = []
-    private var isFirstWindow = true
 
     private init() {}
 
     /// Get a random unused stone name
     func getRandomName() -> String {
-        // First window is always "Numby"
-        if isFirstWindow {
-            isFirstWindow = false
-            return "Numby"
-        }
         // If all names are used, reset
         if usedNames.count >= stones.count {
             usedNames.removeAll()

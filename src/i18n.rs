@@ -79,6 +79,29 @@ pub fn fl(message_id: &str, args: Option<&HashMap<String, String>>) -> String {
     })
 }
 
+/// Get list of available locales
+pub fn get_available_locales() -> Vec<&'static str> {
+    vec![
+        "en-US", "es", "zh-CN", "zh-TW", "fr", "de", "ja", "ru", "be",
+    ]
+}
+
+/// Get display name for a locale
+pub fn get_locale_display_name(locale: &str) -> &'static str {
+    match locale {
+        "en-US" => "English",
+        "es" => "Español",
+        "zh-CN" => "简体中文",
+        "zh-TW" => "繁體中文",
+        "fr" => "Français",
+        "de" => "Deutsch",
+        "ja" => "日本語",
+        "ru" => "Русский",
+        "be" => "Беларуская",
+        _ => "Unknown",
+    }
+}
+
 /// Macro for easy localization without arguments
 #[macro_export]
 macro_rules! fl {

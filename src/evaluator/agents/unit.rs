@@ -1,26 +1,53 @@
-use crate::models::{Agent, AppState};
-use crate::evaluator::{evaluate_expr, evaluate_unit_conversion, EvalContext, preprocess_input};
 use crate::evaluator::agents::PRIORITY_UNIT;
+use crate::evaluator::{evaluate_expr, evaluate_unit_conversion, preprocess_input, EvalContext};
+use crate::models::{Agent, AppState};
 
 pub struct UnitAgent;
 
 impl Agent for UnitAgent {
-    fn priority(&self) -> i32 { PRIORITY_UNIT }
+    fn priority(&self) -> i32 {
+        PRIORITY_UNIT
+    }
 
     fn can_handle(&self, input: &str, _state: &AppState) -> bool {
         input.contains(" in ") || input.contains(" to ")
     }
 
-    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool, Option<f64>)> {
-        let conversion_keyword = input.find(" in ").map(|pos| (" in ", pos)).or_else(|| input.find(" to ").map(|pos| (" to ", pos)));
+    fn process(
+        &self,
+        input: &str,
+        state: &mut AppState,
+        config: &crate::config::Config,
+    ) -> Option<(String, bool, Option<f64>)> {
+        let conversion_keyword = input
+            .find(" in ")
+            .map(|pos| (" in ", pos))
+            .or_else(|| input.find(" to ").map(|pos| (" to ", pos)));
         if let Some((kw, pos)) = conversion_keyword {
             let left = input[..pos].trim();
             let right = input[pos + kw.len()..].trim();
 
             // Try direct conversion first (e.g., "100 m in km")
-            if let Some(val) = evaluate_unit_conversion(left, right, &state.length_units, &state.time_units, &state.temperature_units, &state.area_units, &state.volume_units, &state.weight_units, &state.angular_units, &state.data_units, &state.speed_units, &state.rates, &config.custom_units) {
+            if let Some(val) = evaluate_unit_conversion(
+                left,
+                right,
+                &state.length_units,
+                &state.time_units,
+                &state.temperature_units,
+                &state.area_units,
+                &state.volume_units,
+                &state.weight_units,
+                &state.angular_units,
+                &state.data_units,
+                &state.speed_units,
+                &state.rates,
+                &config.custom_units,
+            ) {
                 // Extract numeric value from result string for history
-                let numeric_value = val.split_whitespace().next().and_then(|s| s.parse::<f64>().ok());
+                let numeric_value = val
+                    .split_whitespace()
+                    .next()
+                    .and_then(|s| s.parse::<f64>().ok());
                 return Some((val, true, numeric_value));
             }
 
@@ -55,9 +82,26 @@ impl Agent for UnitAgent {
                     left_result.value.to_string()
                 };
                 // Now try conversion with the evaluated result
-                if let Some(val) = evaluate_unit_conversion(&left_result_str, right, &config.length_units, &config.time_units, &config.temperature_units, &config.area_units, &config.volume_units, &config.weight_units, &config.angular_units, &config.data_units, &config.speed_units, &config.currencies, &config.custom_units) {
+                if let Some(val) = evaluate_unit_conversion(
+                    &left_result_str,
+                    right,
+                    &config.length_units,
+                    &config.time_units,
+                    &config.temperature_units,
+                    &config.area_units,
+                    &config.volume_units,
+                    &config.weight_units,
+                    &config.angular_units,
+                    &config.data_units,
+                    &config.speed_units,
+                    &config.currencies,
+                    &config.custom_units,
+                ) {
                     // Extract numeric value from result string for history
-                    let numeric_value = val.split_whitespace().next().and_then(|s| s.parse::<f64>().ok());
+                    let numeric_value = val
+                        .split_whitespace()
+                        .next()
+                        .and_then(|s| s.parse::<f64>().ok());
                     return Some((val, true, numeric_value));
                 }
             }

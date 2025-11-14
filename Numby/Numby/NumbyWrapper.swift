@@ -13,6 +13,7 @@ typealias NumbyContext = OpaquePointer
 class NumbyWrapper: ObservableObject {
     @Published var lastResult: String = ""
     var context: NumbyContext?
+    private var resolvedConfigPath: String?
 
     init() {
         context = libnumby_context_new()
@@ -20,20 +21,67 @@ class NumbyWrapper: ObservableObject {
     }
 
     private func setup() {
-        // Load config.json (copy from Rust root to your app's Resources if desired)
-        if let configPath = Bundle.main.path(forResource: "config", ofType: "json") {
+        let configPath = loadOrSeedConfigPath() ?? Bundle.main.path(forResource: "config", ofType: "json")
+        if let configPath {
             configPath.withCString { cPath in
                 _ = libnumby_load_config(context, cPath)
             }
         }
-        // Set locale
-        let locale = Locale.current.language.languageCode?.identifier ?? "en-US"
+        // Set locale (prioritize saved config, then system locale)
+        let configManager = ConfigurationManager.shared
+        let locale = configManager.config.locale ?? Locale.current.language.languageCode?.identifier ?? "en-US"
         locale.withCString { cLocale in
             _ = libnumby_set_locale(context, cLocale)
         }
 
         // Check if rates are stale and update in background if needed
         updateCurrencyRatesIfStale()
+    }
+
+    private func loadOrSeedConfigPath() -> String? {
+        if let cached = resolvedConfigPath {
+            return cached
+        }
+
+        guard let defaultPathPointer = libnumby_get_default_config_path() else {
+            return nil
+        }
+        defer { libnumby_free_string(defaultPathPointer) }
+
+        let path = String(cString: defaultPathPointer)
+        if seedConfigFile(atPath: path) {
+            resolvedConfigPath = path
+            return path
+        }
+        return nil
+    }
+
+    private func seedConfigFile(atPath path: String) -> Bool {
+        let fm = FileManager.default
+        let configURL = URL(fileURLWithPath: path)
+        let directory = configURL.deletingLastPathComponent()
+
+        do {
+            try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        } catch {
+            print("Failed to create config directory: \(error.localizedDescription)")
+            return false
+        }
+
+        if !fm.fileExists(atPath: configURL.path) {
+            guard let bundledURL = Bundle.main.url(forResource: "config", withExtension: "json") else {
+                print("Bundled config.json missing")
+                return false
+            }
+            do {
+                try fm.copyItem(at: bundledURL, to: configURL)
+            } catch {
+                print("Failed to copy bundled config: \(error.localizedDescription)")
+                return false
+            }
+        }
+
+        return fm.fileExists(atPath: configURL.path)
     }
 
     /// Updates currency rates if they are stale (>24 hours old)
@@ -80,6 +128,48 @@ class NumbyWrapper: ObservableObject {
         }
         defer { libnumby_free_string(cString) }
         return String(cString: cString)
+    }
+
+    // MARK: - Localization
+
+    /// Get current locale
+    func getCurrentLocale() -> String {
+        guard let cString = libnumby_get_locale() else {
+            return "en-US"
+        }
+        defer { libnumby_free_string(cString) }
+        return String(cString: cString)
+    }
+
+    /// Set current locale
+    func setLocale(_ locale: String) -> Bool {
+        guard let ctx = context else { return false }
+        return locale.withCString { cLocale in
+            libnumby_set_locale(ctx, cLocale) == 0
+        }
+    }
+
+    /// Get list of available locales
+    func getAvailableLocales() -> [(code: String, name: String)] {
+        let count = libnumby_get_locales_count()
+        var locales: [(String, String)] = []
+
+        for i in 0..<count {
+            guard let codePtr = libnumby_get_locale_code(i),
+                  let namePtr = libnumby_get_locale_name(i) else {
+                continue
+            }
+            defer {
+                libnumby_free_string(codePtr)
+                libnumby_free_string(namePtr)
+            }
+
+            let code = String(cString: codePtr)
+            let name = String(cString: namePtr)
+            locales.append((code, name))
+        }
+
+        return locales
     }
 
     func evaluate(_ input: String) -> (value: Double, formatted: String?, unit: String?, error: String?) {

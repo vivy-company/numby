@@ -69,8 +69,7 @@ fn main() -> Result<()> {
     let mut config = config::load_config();
 
     // Initialize locale from CLI arg, config, or system default
-    let locale_str = args.locale.as_deref()
-        .or(config.locale.as_deref());
+    let locale_str = args.locale.as_deref().or(config.locale.as_deref());
     i18n::init_locale(locale_str);
 
     // Handle currency rate updates
@@ -90,26 +89,22 @@ fn main() -> Result<()> {
         }
     } else if !args.no_update {
         // Automatic background update if rates are stale
-        if let Some(date) = &config.rates_updated_at {
-            if currency_fetcher::are_rates_stale(date) {
-                eprintln!("Currency rates are stale, updating in background...");
-                std::thread::spawn(move || {
-                    if let Ok((rates, date)) = currency_fetcher::fetch_latest_rates() {
-                        let count = rates.len();
-                        if config::update_currency_rates(rates, date.clone()).is_ok() {
-                            eprintln!("Currency rates updated in background ({} currencies, date: {})", count, date);
-                        }
-                    }
-                });
-            }
+        let should_update = if let Some(date) = &config.rates_updated_at {
+            currency_fetcher::are_rates_stale(date)
         } else {
-            // No timestamp = first run or old config, try to update
-            eprintln!("No currency rate timestamp found, updating...");
-            std::thread::spawn(move || {
+            true // No timestamp = first run or old config
+        };
+
+        if should_update {
+            eprintln!("Currency rates are stale, updating in background...");
+            std::thread::spawn(|| {
                 if let Ok((rates, date)) = currency_fetcher::fetch_latest_rates() {
                     let count = rates.len();
                     if config::update_currency_rates(rates, date.clone()).is_ok() {
-                        eprintln!("Currency rates updated ({} currencies, date: {})", count, date);
+                        eprintln!(
+                            "Currency rates updated in background ({} currencies, date: {})",
+                            count, date
+                        );
                     }
                 }
             });
@@ -127,8 +122,8 @@ fn main() -> Result<()> {
 
     let current_filename = determine_filename(args.file, args.expression.as_ref());
 
-    let registry = crate::evaluator::AgentRegistry::new(&config)
-        .expect("Failed to initialize agent registry");
+    let registry =
+        crate::evaluator::AgentRegistry::new(&config).expect("Failed to initialize agent registry");
     let mut state = AppState::builder(&config).build();
     state.current_filename = current_filename;
 

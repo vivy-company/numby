@@ -1,14 +1,14 @@
 use ratatui::{
-    Frame,
     layout::{Alignment, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
     widgets::{Block, Paragraph},
+    Frame,
 };
 use ropey::Rope;
 
-use crate::models::{AppState, Mode};
 use super::syntax;
+use crate::models::{AppState, Mode};
 
 /// Context for rendering to reduce parameter count
 pub struct RenderContext<'a> {
@@ -55,15 +55,14 @@ pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
     };
 
     // Render status bar if needed
-    if show_status {
-        render_status_bar(f, ctx.state, size);
-    }
+    render_status_bar(f, ctx.state, size, show_status);
 
     // Calculate cursor line for highlighting across both panels
     let cursor_line = ctx.input.char_to_line(ctx.cursor_pos);
 
     // Render full-width background for current line first (ignores padding, spans entire width)
-    if cursor_line >= *ctx.scroll_offset && cursor_line < *ctx.scroll_offset + text_height as usize {
+    if cursor_line >= *ctx.scroll_offset && cursor_line < *ctx.scroll_offset + text_height as usize
+    {
         let line_y = cursor_line - *ctx.scroll_offset;
         let highlight_rect = Rect {
             x: 0,
@@ -84,25 +83,42 @@ pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
 }
 
 /// Renders the status bar at the bottom
-fn render_status_bar(f: &mut Frame, state: &AppState, size: Rect) {
-    let status_text = state.status.read().expect("Failed to acquire read lock on status").clone();
-    if !status_text.is_empty() {
-        let status_rect = Rect {
-            x: 0,
-            y: size.height - 1,
-            width: size.width,
-            height: 1,
-        };
-        let status_paragraph = Paragraph::new(status_text).style(Style::default().fg(Color::Green));
-        f.render_widget(status_paragraph, status_rect);
+fn render_status_bar(f: &mut Frame, state: &AppState, size: Rect, show_status: bool) {
+    if !show_status {
+        return;
     }
+
+    let status_text = state
+        .status
+        .read()
+        .expect("Failed to acquire read lock on status")
+        .clone();
+
+    if status_text.is_empty() {
+        return;
+    }
+
+    let status_rect = Rect {
+        x: 0,
+        y: size.height - 1,
+        width: size.width,
+        height: 1,
+    };
+
+    let status_paragraph = Paragraph::new(status_text).style(Style::default().fg(Color::Green));
+    f.render_widget(status_paragraph, status_rect);
 }
 
 /// Renders the left panel with syntax-highlighted input
 fn render_input_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
     let mut left_text = Text::default();
 
-    for line in ctx.input.lines().skip(*ctx.scroll_offset).take(rect.height as usize) {
+    for line in ctx
+        .input
+        .lines()
+        .skip(*ctx.scroll_offset)
+        .take(rect.height as usize)
+    {
         let line_str = line.to_string();
 
         // Check highlight cache first
@@ -127,7 +143,12 @@ fn render_input_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
 fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
     let mut right_text = Text::default();
 
-    for line in ctx.input.lines().skip(*ctx.scroll_offset).take(rect.height as usize) {
+    for line in ctx
+        .input
+        .lines()
+        .skip(*ctx.scroll_offset)
+        .take(rect.height as usize)
+    {
         let line_str = line.to_string();
         let line_trim = line_str.trim();
 
@@ -137,11 +158,14 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
         }
 
         // Create cache key that includes variables state
-        let vars = ctx.state.variables.read().expect("Failed to acquire read lock on variables");
+        let vars = ctx
+            .state
+            .variables
+            .read()
+            .expect("Failed to acquire read lock on variables");
         // Use sorted BTreeMap for deterministic cache key generation
-        let vars_sorted: std::collections::BTreeMap<_, _> = vars.iter()
-            .map(|(k, v)| (k.as_str(), v))
-            .collect();
+        let vars_sorted: std::collections::BTreeMap<_, _> =
+            vars.iter().map(|(k, v)| (k.as_str(), v)).collect();
         let vars_hash = format!("{:?}", vars_sorted);
         drop(vars); // Release read lock
 
@@ -152,7 +176,10 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
             cached
         } else {
             // Evaluate and cache
-            let eval_result = ctx.registry.evaluate_for_display(line_trim, ctx.state).map(|(r, _)| r);
+            let eval_result = ctx
+                .registry
+                .evaluate_for_display(line_trim, ctx.state)
+                .map(|(r, _)| r);
             if let Some(ref res) = eval_result {
                 ctx.state.cache.set_display(cache_key, Some(res.clone()));
             } else {

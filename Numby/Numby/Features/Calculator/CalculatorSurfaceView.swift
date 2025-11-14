@@ -22,30 +22,30 @@ struct CalculatorSurfaceView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            HStack(spacing: 0) {
-                // Left panel - Input (80%)
-                ZStack {
-                    Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
-                        .ignoresSafeArea()
+            ScrollView {
+                HStack(spacing: 0) {
+                    // Left panel - Input (80%)
+                    ZStack {
+                        Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
+                            .ignoresSafeArea()
 
-                    InputTextView(
-                        text: $instance.inputText,
-                        backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
-                        textColor: themeManager.syntaxColor(for: .text),
-                        fontSize: configManager.config.fontSize,
-                        fontName: configManager.config.fontName ?? "SFMono-Regular",
-                        syntaxHighlighting: configManager.config.syntaxHighlighting,
-                        updateTrigger: updateTrigger
-                    )
-                }
-                .frame(width: geometry.size.width * 0.8)
+                        InputTextView(
+                            text: $instance.inputText,
+                            backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
+                            textColor: themeManager.syntaxColor(for: .text),
+                            fontSize: configManager.config.fontSize,
+                            fontName: configManager.config.fontName ?? "SFMono-Regular",
+                            syntaxHighlighting: configManager.config.syntaxHighlighting,
+                            updateTrigger: updateTrigger
+                        )
+                    }
+                    .frame(width: geometry.size.width * 0.8)
 
-                // Right panel - Results (20%)
-                ZStack(alignment: .topTrailing) {
-                    Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
-                        .ignoresSafeArea()
+                    // Right panel - Results (20%)
+                    ZStack(alignment: .topTrailing) {
+                        Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
+                            .ignoresSafeArea()
 
-                    ScrollView {
                         VStack(alignment: .trailing, spacing: 0) {
                             ForEach(Array(instance.results.enumerated()), id: \.offset) { index, result in
                                 Text(result ?? "")
@@ -59,8 +59,9 @@ struct CalculatorSurfaceView: View {
                         .padding(16)
                         .frame(maxWidth: .infinity)
                     }
+                    .frame(width: geometry.size.width * 0.20)
                 }
-                .frame(width: geometry.size.width * 0.20)
+                .frame(minHeight: geometry.size.height)
             }
             .focusable()
             .focused($isViewFocused)
@@ -190,19 +191,13 @@ struct InputTextView: NSViewRepresentable {
     let syntaxHighlighting: Bool
     let updateTrigger: Int
 
-    func makeNSView(context: Context) -> NSScrollView {
+    func makeNSView(context: Context) -> CustomNSTextView {
         let textView = CustomNSTextView()
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
-        textView.autoresizingMask = [.width]
+        textView.autoresizingMask = [.width, .height]
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
-
-        let scrollView = NSScrollView()
-        scrollView.documentView = textView
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
-        scrollView.autohidesScrollers = true
 
         let font = NSFont(name: fontName, size: fontSize) ?? .monospacedSystemFont(ofSize: fontSize, weight: .regular)
 
@@ -231,18 +226,10 @@ struct InputTextView: NSViewRepresentable {
             .paragraphStyle: paragraph
         ]
 
-        // Set scroll view background using layers
-        scrollView.wantsLayer = true
-        scrollView.layer?.backgroundColor = backgroundColor.cgColor
-        scrollView.drawsBackground = false
-        scrollView.backgroundColor = backgroundColor
-
-        return scrollView
+        return textView
     }
 
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        let textView = scrollView.documentView as! NSTextView
-
+    func updateNSView(_ textView: CustomNSTextView, context: Context) {
         // Update font
         let font = NSFont(name: fontName, size: fontSize) ?? .monospacedSystemFont(ofSize: fontSize, weight: .regular)
         if textView.font != font {
@@ -266,27 +253,17 @@ struct InputTextView: NSViewRepresentable {
         textView.layer?.backgroundColor = backgroundColor.cgColor
         textView.drawsBackground = false
 
-        scrollView.wantsLayer = true
-        scrollView.layer?.backgroundColor = backgroundColor.cgColor
-        scrollView.backgroundColor = backgroundColor
-        scrollView.drawsBackground = false
-
-        // Update NSClipView to be transparent
-        let clipView = scrollView.contentView
-        clipView.drawsBackground = false
-
         // Update text and reapply highlighting
         if textView.string != text {
             textView.string = text
         }
         applySyntaxHighlighting(to: textView)
     }
-    
-    static func dismantleNSView(_ scrollView: NSScrollView, coordinator: Coordinator) {
+
+    static func dismantleNSView(_ textView: CustomNSTextView, coordinator: Coordinator) {
         // Clean up NSTextView delegate to prevent ViewBridge issues
-        let textView = scrollView.documentView as? NSTextView
-        textView?.delegate = nil
-        textView?.string = ""  // Clear text content
+        textView.delegate = nil
+        textView.string = ""  // Clear text content
     }
 
     func makeCoordinator() -> Coordinator {

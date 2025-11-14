@@ -1,0 +1,128 @@
+/* Settings - Language Section */
+"settings.language.section" = "语言";
+"settings.language.picker" = "语言";
+
+/* Settings - Appearance Section */
+"settings.appearance.section" = "外观";
+"settings.appearance.theme" = "主题";
+"settings.appearance.fontSize" = "字体大小";
+"settings.appearance.font" = "字体";
+"settings.appearance.syntaxHighlighting" = "语法高亮";
+
+/* Settings - Behavior Section */
+"settings.behavior.section" = "行为";
+"settings.behavior.autoEvaluate" = "输入时自动计算";
+"settings.behavior.splitRatio" = "默认分割比例";
+
+/* Settings - Currency Rates Section */
+"settings.currency.section" = "汇率";
+"settings.currency.lastUpdated" = "上次更新:";
+"settings.currency.stale" = "(过期)";
+"settings.currency.update" = "更新汇率";
+"settings.currency.updating" = "更新中...";
+"settings.currency.description" = "从免费API获取300多种货币的最新汇率";
+"settings.currency.success" = "汇率更新成功";
+"settings.currency.failed" = "更新汇率失败";
+"settings.currency.never" = "从未";
+
+/* Settings - CLI Section */
+"settings.cli.section" = "命令行工具";
+"settings.cli.installViaHomebrew" = "通过Homebrew安装:";
+"settings.cli.copyTooltip" = "复制到剪贴板";
+"settings.cli.installHomebrew" = "安装Homebrew";
+"settings.cli.orDownload" = "或从GitHub发布页面下载";
+"settings.cli.githubReleases" = "GitHub发布";
+
+/* CLI Installer Window */
+"cliInstaller.title" = "命令行工具";
+"cliInstaller.subtitle" = "在终端中使用numby";
+"cliInstaller.installViaHomebrew" = "通过Homebrew安装";
+"cliInstaller.runCommand" = "在终端中运行此命令:";
+"cliInstaller.noHomebrew" = "如果您没有安装Homebrew:";
+"cliInstaller.alternative" = "替代方案: 手动安装";
+"cliInstaller.downloadRelease" = "下载最新版本:";
+"cliInstaller.moveToPath" = "然后移动到您的PATH:";
+"cliInstaller.openTerminal" = "打开终端";
+
+/* Menu Bar - App Menu */
+"menu.about" = "关于 Numby";
+"menu.settings" = "设置...";
+"menu.installCLI" = "安装命令行工具...";
+"menu.hide" = "隐藏 Numby";
+"menu.hideOthers" = "隐藏其他";
+"menu.showAll" = "全部显示";
+"menu.quit" = "退出 Numby";
+
+/* Menu Bar - File Menu */
+"menu.file" = "文件";
+"menu.newWindow" = "新建窗口";
+"menu.newTab" = "新建标签页";
+"menu.openCalculator" = "打开计算器...";
+"menu.exportCalculator" = "导出计算器...";
+"menu.close" = "关闭";
+
+/* Menu Bar - Edit Menu */
+"menu.edit" = "编辑";
+"menu.undo" = "撤销";
+"menu.redo" = "重做";
+"menu.cut" = "剪切";
+"menu.copy" = "复制";
+"menu.paste" = "粘贴";
+"menu.selectAll" = "全选";
+
+/* Menu Bar - View Menu */
+"menu.view" = "视图";
+"menu.toggleHistory" = "切换历史记录侧边栏";
+"menu.splitHorizontally" = "水平分割";
+"menu.splitVertically" = "垂直分割";
+"menu.fullScreen" = "进入全屏";
+"menu.exitFullScreen" = "退出全屏";
+
+/* Menu Bar - Window Menu */
+"menu.window" = "窗口";
+"menu.minimize" = "最小化";
+"menu.zoom" = "缩放";
+"menu.bringAllToFront" = "全部前置";
+"menu.showAllTabs" = "显示所有标签页";
+"menu.nextTab" = "选择下一个标签页";
+"menu.previousTab" = "选择上一个标签页";
+"menu.showTab" = "显示标签页 %d";
+
+/* Menu Bar - Help Menu */
+"menu.help" = "帮助";
+"menu.numbyHelp" = "Numby 帮助";
+
+/* Window Titles */
+"window.settings" = "设置";
+"window.cliInstaller" = "安装命令行工具";
+
+/* Toolbar */
+"toolbar.newTab" = "新建标签页";
+"toolbar.newTabTooltip" = "打开新的计算器标签页";
+"toolbar.toggleSidebar" = "切换侧边栏";
+"toolbar.toggleSidebarTooltip" = "显示或隐藏历史记录侧边栏";
+
+/* History Sidebar */
+"history.searchPlaceholder" = "搜索历史记录...";
+"history.noResults" = "未找到结果";
+"history.empty" = "暂无历史记录";
+"history.emptyDescription" = "您的计算会话将显示在这里";
+"history.name" = "名称";
+"history.done" = "完成";
+"history.openInNewTab" = "在新标签页中打开";
+"history.rename" = "重命名";
+"history.delete" = "删除";
+
+/* Calculator */
+"calculator.empty" = "无计算器";
+"calculator.notFound" = "未找到计算器";
+
+/* Alerts */
+"alert.nothingToExport" = "无内容可导出";
+"alert.emptyCalculator" = "当前计算器为空。导出前请添加内容。";
+"alert.ok" = "确定";
+"alert.closeWithoutSaving" = "不保存而关闭？";
+"alert.unsavedContent" = "此标签页包含未保存的内容。确定要关闭吗？";
+"alert.saveAndClose" = "保存并关闭";
+"alert.closeWithoutSavingButton" = "不保存并关闭";
+"alert.cancel" = "取消";

@@ -1,26 +1,65 @@
-mod core;
-mod preprocessing;
-pub mod agents;
-pub mod error;
-pub mod cache;
-pub mod events;
+//! Expression evaluation and agent registry.
+//!
+//! This module coordinates different evaluation agents (math, units, variables, etc.)
+//! to process user input and return results.
 
-pub use core::{evaluate_expr, evaluate_unit_conversion, EvalContext};
-pub use preprocessing::{preprocess, preprocess_input};
-pub use error::{EvaluatorError, Result};
+pub mod agents;
+pub mod cache;
+mod core;
+pub mod error;
+pub mod events;
+mod preprocessing;
+
 pub use cache::CacheManager;
-pub use events::{StateEvent, EventSubscriber};
+pub use core::{evaluate_expr, evaluate_unit_conversion, EvalContext};
+pub use error::{EvaluatorError, Result};
+pub use events::{EventSubscriber, StateEvent};
+pub use preprocessing::{preprocess, preprocess_input};
 
 use crate::config::Config;
 use crate::models::{Agent, AppState};
 use crate::security::validate_input_size;
 
+/// Registry of evaluation agents that process user input.
+///
+/// Agents are checked in priority order until one can handle the input.
+///
+/// # Examples
+///
+/// ```
+/// use numby::config::Config;
+/// use numby::evaluator::AgentRegistry;
+/// use numby::models::AppState;
+///
+/// let config = Config::default();
+/// let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+/// let mut state = AppState::builder(&config).build();
+///
+/// // Evaluate basic math
+/// let result = registry.evaluate("2 + 2", &mut state);
+/// assert!(result.is_some());
+/// ```
 pub struct AgentRegistry {
     agents: Vec<Box<dyn Agent>>,
     config: std::sync::Arc<Config>,
 }
 
 impl AgentRegistry {
+    /// Create a new agent registry with default agents.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if agent priorities conflict or no agents registered.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::evaluator::AgentRegistry;
+    ///
+    /// let config = Config::default();
+    /// let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+    /// ```
     pub fn new(config: &Config) -> Result<Self> {
         let mut agents: Vec<Box<dyn Agent>> = vec![
             Box::new(agents::HistoryAgent),
@@ -33,7 +72,10 @@ impl AgentRegistry {
         Self::validate_agents(&agents)?;
 
         agents.sort_by_key(|a| a.priority());
-        Ok(Self { agents, config: std::sync::Arc::new(config.clone()) })
+        Ok(Self {
+            agents,
+            config: std::sync::Arc::new(config.clone()),
+        })
     }
 
     fn validate_agents(agents: &[Box<dyn Agent>]) -> Result<()> {
@@ -42,22 +84,48 @@ impl AgentRegistry {
         for agent in agents {
             let priority = agent.priority();
             if priorities.contains_key(&priority) {
-                return Err(EvaluatorError::ConfigError(
-                    format!("Priority conflict: {} has same priority as another agent", priority)
-                ));
+                return Err(EvaluatorError::ConfigError(format!(
+                    "Priority conflict: {} has same priority as another agent",
+                    priority
+                )));
             }
             priorities.insert(priority, ());
         }
 
         if agents.is_empty() {
             return Err(EvaluatorError::ConfigError(
-                "No agents registered".to_string()
+                "No agents registered".to_string(),
             ));
         }
 
         Ok(())
     }
 
+    /// Evaluate an expression and modify state (e.g., add to history).
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Expression to evaluate
+    /// * `state` - Mutable application state
+    ///
+    /// # Returns
+    ///
+    /// Returns Some((result_string, should_add_to_history)) or None if no agent could handle input.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::evaluator::AgentRegistry;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
+    /// let registry = AgentRegistry::new(&config).unwrap();
+    /// let mut state = AppState::builder(&config).build();
+    ///
+    /// let result = registry.evaluate("10 + 5", &mut state);
+    /// assert!(result.is_some());
+    /// ```
     pub fn evaluate(&self, input: &str, state: &mut AppState) -> Option<(String, bool)> {
         // Validate input size
         if let Err(e) = validate_input_size(input) {
@@ -68,6 +136,34 @@ impl AgentRegistry {
         self.evaluate_with_history(input, state, true)
     }
 
+    /// Evaluate expression for display only (does not modify state).
+    ///
+    /// Used for showing live preview of what would happen without committing changes.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Expression to evaluate
+    /// * `state` - Read-only application state
+    ///
+    /// # Returns
+    ///
+    /// Returns Some((result_string, should_add_to_history)) or None if no agent could handle input.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::evaluator::AgentRegistry;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
+    /// let registry = AgentRegistry::new(&config).unwrap();
+    /// let state = AppState::builder(&config).build();
+    ///
+    /// // Preview without modifying state
+    /// let result = registry.evaluate_for_display("x = 100", &state);
+    /// // State remains unchanged
+    /// ```
     pub fn evaluate_for_display(&self, input: &str, state: &AppState) -> Option<(String, bool)> {
         // Validate input size
         if let Err(e) = validate_input_size(input) {
@@ -79,10 +175,18 @@ impl AgentRegistry {
         self.evaluate_with_history(input, &mut temp_state, false)
     }
 
-    fn evaluate_with_history(&self, input: &str, state: &mut AppState, modify_history: bool) -> Option<(String, bool)> {
+    fn evaluate_with_history(
+        &self,
+        input: &str,
+        state: &mut AppState,
+        modify_history: bool,
+    ) -> Option<(String, bool)> {
         let preprocessed = preprocess(input, state, &self.config);
         // Check if this is a history command (don't add history command results to history)
-        let is_history_command = matches!(preprocessed.trim(), "sum" | "total" | "average" | "avg" | "prev");
+        let is_history_command = matches!(
+            preprocessed.trim(),
+            "sum" | "total" | "average" | "avg" | "prev"
+        );
 
         for agent in &self.agents {
             if agent.can_handle(&preprocessed, state) {
@@ -152,7 +256,12 @@ mod tests {
         let result1 = registry.evaluate("hause = 100000 USD", &mut state);
         assert!(result1.is_some());
         let (val1, _) = result1.unwrap();
-        assert!(val1.contains("100") || val1.contains("100000") || val1.contains("100,000") || val1.contains("100k"));
+        assert!(
+            val1.contains("100")
+                || val1.contains("100000")
+                || val1.contains("100,000")
+                || val1.contains("100k")
+        );
 
         // Verify variable was stored
         let vars = state.variables.read().unwrap();
@@ -167,7 +276,12 @@ mod tests {
         let result2 = registry.evaluate("salary = 4000 USD", &mut state);
         assert!(result2.is_some());
         let (val2, _) = result2.unwrap();
-        assert!(val2.contains("4") || val2.contains("4000") || val2.contains("4,000") || val2.contains("4k"));
+        assert!(
+            val2.contains("4")
+                || val2.contains("4000")
+                || val2.contains("4,000")
+                || val2.contains("4k")
+        );
 
         // Verify both variables exist
         let vars = state.variables.read().unwrap();

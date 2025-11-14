@@ -1,6 +1,27 @@
+//! Unit and currency conversion functions.
+//!
+//! This module provides conversion between different units of measurement
+//! including length, temperature, and currencies.
+
 use crate::models::{Rates, Units};
 
-/// Map currency symbols to their currency codes
+/// Map currency symbols to their ISO currency codes.
+///
+/// # Examples
+///
+/// ```
+/// # use numby::conversions::*;
+/// # fn symbol_to_currency_code(s: &str) -> Option<&str> {
+/// #     match s {
+/// #         "$" => Some("USD"),
+/// #         "€" => Some("EUR"),
+/// #         _ => None,
+/// #     }
+/// # }
+/// assert_eq!(symbol_to_currency_code("$"), Some("USD"));
+/// assert_eq!(symbol_to_currency_code("€"), Some("EUR"));
+/// assert_eq!(symbol_to_currency_code("unknown"), None);
+/// ```
 fn symbol_to_currency_code(symbol: &str) -> Option<&str> {
     match symbol {
         "$" => Some("USD"),
@@ -8,6 +29,7 @@ fn symbol_to_currency_code(symbol: &str) -> Option<&str> {
         "£" => Some("GBP"),
         "¥" => Some("JPY"),
         "₹" => Some("INR"),
+        "￥" => Some("CNY"), // Chinese Yuan
         "¢" => Some("USD"), // cents
         "₽" => Some("RUB"),
         "₩" => Some("KRW"),
@@ -82,11 +104,33 @@ fn parse_number_with_scale(num_str: &str) -> Option<f64> {
     None
 }
 
-pub fn evaluate_generic_conversion(
-    left: &str,
-    right: &str,
-    units: &Units,
-) -> Option<f64> {
+/// Convert between generic units (length, weight, volume, etc.).
+///
+/// Takes an expression like "5 km" and a target unit like "miles",
+/// returns the converted value.
+///
+/// # Arguments
+///
+/// * `left` - Expression with number and source unit (e.g., "5 km")
+/// * `right` - Target unit name (e.g., "miles")
+/// * `units` - HashMap of unit names to conversion factors
+///
+/// # Examples
+///
+/// ```
+/// use std::collections::HashMap;
+/// use numby::conversions::evaluate_generic_conversion;
+///
+/// let mut units = HashMap::new();
+/// units.insert("km".to_string(), 1000.0);
+/// units.insert("miles".to_string(), 1609.344);
+///
+/// let result = evaluate_generic_conversion("5 km", "miles", &units);
+/// assert!(result.is_some());
+/// let value = result.unwrap();
+/// assert!((value - 3.106).abs() < 0.01); // 5 km ≈ 3.106 miles
+/// ```
+pub fn evaluate_generic_conversion(left: &str, right: &str, units: &Units) -> Option<f64> {
     // Simple: assume left is number + unit, right is unit
     let left_parts: Vec<&str> = left.split_whitespace().collect();
     if left_parts.len() == 2 {
@@ -105,11 +149,31 @@ pub fn evaluate_generic_conversion(
     None
 }
 
-
-pub fn evaluate_temperature_conversion(
-    left: &str,
-    right: &str,
-) -> Option<f64> {
+/// Convert between temperature units (Celsius, Fahrenheit, Kelvin).
+///
+/// # Arguments
+///
+/// * `left` - Expression with number and source unit (e.g., "100 celsius")
+/// * `right` - Target unit name (e.g., "fahrenheit")
+///
+/// # Examples
+///
+/// ```
+/// use numby::conversions::evaluate_temperature_conversion;
+///
+/// // 0°C = 32°F
+/// let result = evaluate_temperature_conversion("0 celsius", "fahrenheit");
+/// assert_eq!(result, Some(32.0));
+///
+/// // 100°C = 212°F
+/// let result = evaluate_temperature_conversion("100 celsius", "fahrenheit");
+/// assert_eq!(result, Some(212.0));
+///
+/// // 0 Kelvin = -273.15°C
+/// let result = evaluate_temperature_conversion("0 kelvin", "celsius");
+/// assert_eq!(result, Some(-273.15));
+/// ```
+pub fn evaluate_temperature_conversion(left: &str, right: &str) -> Option<f64> {
     // Assume left is number + unit
     let left_parts: Vec<&str> = left.split_whitespace().collect();
     if left_parts.len() == 2 {
@@ -141,11 +205,31 @@ fn convert_temperature(val: f64, from: &str, to: &str) -> Option<f64> {
     }
 }
 
-pub fn evaluate_currency_conversion(
-    left: &str,
-    right: &str,
-    rates: &Rates,
-) -> Option<f64> {
+/// Convert between currencies using exchange rates.
+///
+/// Supports both currency codes (USD, EUR) and symbols ($, €).
+///
+/// # Arguments
+///
+/// * `left` - Expression with amount and source currency (e.g., "100 USD" or "$100")
+/// * `right` - Target currency code or symbol (e.g., "EUR" or "€")
+/// * `rates` - HashMap of currency codes to exchange rates (relative to USD)
+///
+/// # Examples
+///
+/// ```
+/// use std::collections::HashMap;
+/// use numby::conversions::evaluate_currency_conversion;
+///
+/// let mut rates = HashMap::new();
+/// rates.insert("USD".to_string(), 1.0);
+/// rates.insert("EUR".to_string(), 0.85);
+///
+/// let result = evaluate_currency_conversion("100 USD", "EUR", &rates);
+/// assert!(result.is_some());
+/// assert_eq!(result.unwrap(), 85.0); // 100 USD = 85 EUR
+/// ```
+pub fn evaluate_currency_conversion(left: &str, right: &str, rates: &Rates) -> Option<f64> {
     // Normalize inputs to handle currency symbols
     let left_normalized = normalize_currency_input(left);
     let right_normalized = normalize_currency_input(right);

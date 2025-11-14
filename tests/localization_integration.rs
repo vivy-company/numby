@@ -187,3 +187,62 @@ fn test_percentage_calculation_all_locales() {
         );
     }
 }
+
+// Tests for newly added languages
+
+#[test]
+fn test_basic_calculation_french() {
+    let (stdout, _stderr, exit_code) = run_numby_with_locale("fr", "2 + 2");
+    assert_eq!(exit_code, 0);
+    assert!(stdout.contains("4"));
+}
+
+#[test]
+fn test_basic_calculation_german() {
+    let (stdout, _stderr, exit_code) = run_numby_with_locale("de", "2 + 2");
+    assert_eq!(exit_code, 0);
+    assert!(stdout.contains("4"));
+}
+
+#[test]
+fn test_basic_calculation_japanese() {
+    let (stdout, _stderr, exit_code) = run_numby_with_locale("ja", "2 + 2");
+    assert_eq!(exit_code, 0);
+    assert!(stdout.contains("4"));
+}
+
+#[test]
+fn test_basic_calculation_russian() {
+    let (stdout, _stderr, exit_code) = run_numby_with_locale("ru", "2 + 2");
+    assert_eq!(exit_code, 0);
+    assert!(stdout.contains("4"));
+}
+
+#[test]
+fn test_basic_calculation_belarusian() {
+    let (stdout, _stderr, exit_code) = run_numby_with_locale("be", "2 + 2");
+    assert_eq!(exit_code, 0);
+    assert!(stdout.contains("4"));
+}
+
+#[test]
+fn test_basic_calculation_chinese_traditional() {
+    let (stdout, _stderr, exit_code) = run_numby_with_locale("zh-TW", "2 + 2");
+    assert_eq!(exit_code, 0);
+    assert!(stdout.contains("4"));
+}
+
+#[test]
+fn test_all_nine_locales() {
+    let locales = vec!["en-US", "es", "zh-CN", "zh-TW", "fr", "de", "ja", "ru", "be"];
+
+    for locale in locales {
+        let (stdout, _stderr, exit_code) = run_numby_with_locale(locale, "10 * 5");
+        assert_eq!(exit_code, 0, "Failed for locale: {}", locale);
+        assert!(
+            stdout.contains("50"),
+            "Incorrect result for locale: {}",
+            locale
+        );
+    }
+}

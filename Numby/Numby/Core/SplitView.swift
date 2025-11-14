@@ -17,18 +17,18 @@ struct SplitView<Left: View, Right: View>: NSViewRepresentable {
     let right: () -> Right
 
     func makeNSView(context: Context) -> NSSplitView {
-        let splitView = NSSplitView()
+        let splitView = FocuslessSplitView()
         splitView.isVertical = (direction == .horizontal)
         splitView.dividerStyle = .thin
         splitView.delegate = context.coordinator
 
         // Create left pane
-        let leftHosting = NSHostingController(rootView: left())
+        let leftHosting = FocuslessHostingController(rootView: left())
         leftHosting.view.translatesAutoresizingMaskIntoConstraints = false
         splitView.addArrangedSubview(leftHosting.view)
 
         // Create right pane
-        let rightHosting = NSHostingController(rootView: right())
+        let rightHosting = FocuslessHostingController(rootView: right())
         rightHosting.view.translatesAutoresizingMaskIntoConstraints = false
         splitView.addArrangedSubview(rightHosting.view)
 
@@ -59,8 +59,8 @@ struct SplitView<Left: View, Right: View>: NSViewRepresentable {
 
     class Coordinator: NSObject, NSSplitViewDelegate {
         var parent: SplitView
-        var leftController: NSHostingController<Left>?
-        var rightController: NSHostingController<Right>?
+        var leftController: FocuslessHostingController<Left>?
+        var rightController: FocuslessHostingController<Right>?
         var isUserDragging = false
         var hasSetInitialPosition = false
 
@@ -108,5 +108,26 @@ struct SplitView<Left: View, Right: View>: NSViewRepresentable {
             let totalSize = parent.direction == .horizontal ? splitView.bounds.width : splitView.bounds.height
             return totalSize * 0.9
         }
+    }
+}
+
+// MARK: - Focus Management Helpers
+
+/// Prevents AppKit from drawing an exterior focus ring around the split view when the window title is clicked.
+final class FocuslessSplitView: NSSplitView {
+    override var acceptsFirstResponder: Bool {
+        return false
+    }
+
+    override var focusRingType: NSFocusRingType {
+        get { .none }
+        set { }
+    }
+
+    override func drawFocusRingMask() {
+    }
+
+    override var focusRingMaskBounds: NSRect {
+        .zero
     }
 }

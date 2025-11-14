@@ -1,0 +1,128 @@
+/* Settings - Language Section */
+"settings.language.section" = "言語";
+"settings.language.picker" = "言語";
+
+/* Settings - Appearance Section */
+"settings.appearance.section" = "外観";
+"settings.appearance.theme" = "テーマ";
+"settings.appearance.fontSize" = "フォントサイズ";
+"settings.appearance.font" = "フォント";
+"settings.appearance.syntaxHighlighting" = "構文の強調表示";
+
+/* Settings - Behavior Section */
+"settings.behavior.section" = "動作";
+"settings.behavior.autoEvaluate" = "入力時に自動評価";
+"settings.behavior.splitRatio" = "デフォルト分割比率";
+
+/* Settings - Currency Rates Section */
+"settings.currency.section" = "為替レート";
+"settings.currency.lastUpdated" = "最終更新:";
+"settings.currency.stale" = "(古い)";
+"settings.currency.update" = "為替レートを更新";
+"settings.currency.updating" = "更新中...";
+"settings.currency.description" = "無料APIから300以上の通貨の最新為替レートを取得";
+"settings.currency.success" = "為替レートの更新に成功しました";
+"settings.currency.failed" = "為替レートの更新に失敗しました";
+"settings.currency.never" = "なし";
+
+/* Settings - CLI Section */
+"settings.cli.section" = "コマンドラインツール";
+"settings.cli.installViaHomebrew" = "Homebrew経由でインストール:";
+"settings.cli.copyTooltip" = "クリップボードにコピー";
+"settings.cli.installHomebrew" = "Homebrewをインストール";
+"settings.cli.orDownload" = "またはGitHubリリースからダウンロード";
+"settings.cli.githubReleases" = "GitHubリリース";
+
+/* CLI Installer Window */
+"cliInstaller.title" = "コマンドラインツール";
+"cliInstaller.subtitle" = "ターミナルでnumbyを使用";
+"cliInstaller.installViaHomebrew" = "Homebrew経由でインストール";
+"cliInstaller.runCommand" = "ターミナルでこのコマンドを実行:";
+"cliInstaller.noHomebrew" = "Homebrewがインストールされていない場合:";
+"cliInstaller.alternative" = "代替方法: 手動インストール";
+"cliInstaller.downloadRelease" = "最新リリースをダウンロード:";
+"cliInstaller.moveToPath" = "その後PATHに移動:";
+"cliInstaller.openTerminal" = "ターミナルを開く";
+
+/* Menu Bar - App Menu */
+"menu.about" = "Numbyについて";
+"menu.settings" = "設定...";
+"menu.installCLI" = "コマンドラインツールをインストール...";
+"menu.hide" = "Numbyを隠す";
+"menu.hideOthers" = "他を隠す";
+"menu.showAll" = "すべて表示";
+"menu.quit" = "Numbyを終了";
+
+/* Menu Bar - File Menu */
+"menu.file" = "ファイル";
+"menu.newWindow" = "新規ウィンドウ";
+"menu.newTab" = "新規タブ";
+"menu.openCalculator" = "計算機を開く...";
+"menu.exportCalculator" = "計算機を書き出す...";
+"menu.close" = "閉じる";
+
+/* Menu Bar - Edit Menu */
+"menu.edit" = "編集";
+"menu.undo" = "取り消す";
+"menu.redo" = "やり直す";
+"menu.cut" = "カット";
+"menu.copy" = "コピー";
+"menu.paste" = "ペースト";
+"menu.selectAll" = "すべて選択";
+
+/* Menu Bar - View Menu */
+"menu.view" = "表示";
+"menu.toggleHistory" = "履歴サイドバーを切り替え";
+"menu.splitHorizontally" = "水平に分割";
+"menu.splitVertically" = "垂直に分割";
+"menu.fullScreen" = "フルスクリーンにする";
+"menu.exitFullScreen" = "フルスクリーンを解除";
+
+/* Menu Bar - Window Menu */
+"menu.window" = "ウィンドウ";
+"menu.minimize" = "しまう";
+"menu.zoom" = "拡大/縮小";
+"menu.bringAllToFront" = "すべてを手前に移動";
+"menu.showAllTabs" = "すべてのタブを表示";
+"menu.nextTab" = "次のタブを選択";
+"menu.previousTab" = "前のタブを選択";
+"menu.showTab" = "タブ%dを表示";
+
+/* Menu Bar - Help Menu */
+"menu.help" = "ヘルプ";
+"menu.numbyHelp" = "Numbyヘルプ";
+
+/* Window Titles */
+"window.settings" = "設定";
+"window.cliInstaller" = "コマンドラインツールをインストール";
+
+/* Toolbar */
+"toolbar.newTab" = "新しいタブ";
+"toolbar.newTabTooltip" = "新しい計算機タブを開く";
+"toolbar.toggleSidebar" = "サイドバーを切り替え";
+"toolbar.toggleSidebarTooltip" = "履歴サイドバーの表示/非表示";
+
+/* History Sidebar */
+"history.searchPlaceholder" = "履歴を検索...";
+"history.noResults" = "結果が見つかりません";
+"history.empty" = "履歴はまだありません";
+"history.emptyDescription" = "計算セッションがここに表示されます";
+"history.name" = "名前";
+"history.done" = "完了";
+"history.openInNewTab" = "新しいタブで開く";
+"history.rename" = "名前を変更";
+"history.delete" = "削除";
+
+/* Calculator */
+"calculator.empty" = "計算機がありません";
+"calculator.notFound" = "計算機が見つかりません";
+
+/* Alerts */
+"alert.nothingToExport" = "エクスポートするものがありません";
+"alert.emptyCalculator" = "現在の計算機は空です。エクスポート前に内容を追加してください。";
+"alert.ok" = "OK";
+"alert.closeWithoutSaving" = "保存せずに閉じますか？";
+"alert.unsavedContent" = "このタブには未保存のコンテンツがあります。本当に閉じますか？";
+"alert.saveAndClose" = "保存して閉じる";
+"alert.closeWithoutSavingButton" = "保存せずに閉じる";
+"alert.cancel" = "キャンセル";

@@ -99,12 +99,7 @@ pub fn run(
                         }
                     }
                     Mode::Command(_) => {
-                        let should_quit = input::handle_command_mode(
-                            key,
-                            &mut mode,
-                            state,
-                            &input,
-                        );
+                        let should_quit = input::handle_command_mode(key, &mut mode, state, &input);
 
                         if should_quit {
                             break;
@@ -112,7 +107,7 @@ pub fn run(
 
                         // Set status timer after command execution
                         if matches!(mode, Mode::Normal) {
-                            status_timer = 300; // 30 seconds for save messages
+                            status_timer = 30; // 3 seconds for messages
                         }
                     }
                 }

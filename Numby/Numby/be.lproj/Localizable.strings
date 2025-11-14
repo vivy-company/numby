@@ -1,0 +1,128 @@
+/* Settings - Language Section */
+"settings.language.section" = "Мова";
+"settings.language.picker" = "Мова";
+
+/* Settings - Appearance Section */
+"settings.appearance.section" = "Знешні выгляд";
+"settings.appearance.theme" = "Тэма";
+"settings.appearance.fontSize" = "Памер шрыфту";
+"settings.appearance.font" = "Шрыфт";
+"settings.appearance.syntaxHighlighting" = "Падсвятленне сінтаксісу";
+
+/* Settings - Behavior Section */
+"settings.behavior.section" = "Паводзіны";
+"settings.behavior.autoEvaluate" = "Аўтаматычна вылічваць пры ўводзе";
+"settings.behavior.splitRatio" = "Суадносіны падзелу па змаўчанні";
+
+/* Settings - Currency Rates Section */
+"settings.currency.section" = "Курсы валют";
+"settings.currency.lastUpdated" = "Апошняе абнаўленне:";
+"settings.currency.stale" = "(Састарэлы)";
+"settings.currency.update" = "Абнавіць курсы валют";
+"settings.currency.updating" = "Абнаўленне...";
+"settings.currency.description" = "Атрымлівае апошнія курсы абмену для больш за 300 валют з бясплатнага API";
+"settings.currency.success" = "Курсы валют паспяхова абноўлены";
+"settings.currency.failed" = "Не атрымалася абнавіць курсы валют";
+"settings.currency.never" = "Ніколі";
+
+/* Settings - CLI Section */
+"settings.cli.section" = "Інструмент каманднага радка";
+"settings.cli.installViaHomebrew" = "Усталяваць праз Homebrew:";
+"settings.cli.copyTooltip" = "Капіяваць у буфер абмену";
+"settings.cli.installHomebrew" = "Усталяваць Homebrew";
+"settings.cli.orDownload" = "Або спампаваць з GitHub releases";
+"settings.cli.githubReleases" = "Рэлізы GitHub";
+
+/* CLI Installer Window */
+"cliInstaller.title" = "Інструмент каманднага радка";
+"cliInstaller.subtitle" = "Выкарыстоўвайце numby з тэрмінала";
+"cliInstaller.installViaHomebrew" = "Усталяваць праз Homebrew";
+"cliInstaller.runCommand" = "Выканайце гэту каманду ў тэрмінале:";
+"cliInstaller.noHomebrew" = "Калі ў вас не ўсталяваны Homebrew:";
+"cliInstaller.alternative" = "Альтэрнатыва: Ручная ўсталёўка";
+"cliInstaller.downloadRelease" = "Спампуйце апошнюю версію:";
+"cliInstaller.moveToPath" = "Затым перамясціце ў ваш PATH:";
+"cliInstaller.openTerminal" = "Адкрыць Тэрмінал";
+
+/* Menu Bar - App Menu */
+"menu.about" = "Пра праграму Numby";
+"menu.settings" = "Налады...";
+"menu.installCLI" = "Усталяваць інструмент каманднага радка...";
+"menu.hide" = "Схаваць Numby";
+"menu.hideOthers" = "Схаваць іншыя";
+"menu.showAll" = "Паказаць усё";
+"menu.quit" = "Завяршыць Numby";
+
+/* Menu Bar - File Menu */
+"menu.file" = "Файл";
+"menu.newWindow" = "Новае акно";
+"menu.newTab" = "Новая укладка";
+"menu.openCalculator" = "Адкрыць калькулятар...";
+"menu.exportCalculator" = "Экспартаваць калькулятар...";
+"menu.close" = "Зачыніць";
+
+/* Menu Bar - Edit Menu */
+"menu.edit" = "Праўка";
+"menu.undo" = "Адмяніць";
+"menu.redo" = "Паўтарыць";
+"menu.cut" = "Выразаць";
+"menu.copy" = "Капіяваць";
+"menu.paste" = "Уставіць";
+"menu.selectAll" = "Выбраць усё";
+
+/* Menu Bar - View Menu */
+"menu.view" = "Выгляд";
+"menu.toggleHistory" = "Пераключыць бакавую панэль гісторыі";
+"menu.splitHorizontally" = "Падзяліць гарызантальна";
+"menu.splitVertically" = "Падзяліць вертыкальна";
+"menu.fullScreen" = "Увайсці ў поўнаэкранны рэжым";
+"menu.exitFullScreen" = "Выйсці з поўнаэкраннага рэжыму";
+
+/* Menu Bar - Window Menu */
+"menu.window" = "Акно";
+"menu.minimize" = "Згарнуць";
+"menu.zoom" = "Маштаб";
+"menu.bringAllToFront" = "Усе вокны наперад";
+"menu.showAllTabs" = "Паказаць усе ўкладкі";
+"menu.nextTab" = "Наступная ўкладка";
+"menu.previousTab" = "Папярэдняя ўкладка";
+"menu.showTab" = "Паказаць укладку %d";
+
+/* Menu Bar - Help Menu */
+"menu.help" = "Даведка";
+"menu.numbyHelp" = "Даведка Numby";
+
+/* Window Titles */
+"window.settings" = "Налады";
+"window.cliInstaller" = "Усталяваць інструмент каманднага радка";
+
+/* Toolbar */
+"toolbar.newTab" = "Новая ўкладка";
+"toolbar.newTabTooltip" = "Адкрыць новую ўкладку калькулятара";
+"toolbar.toggleSidebar" = "Пераключыць бакавую панэль";
+"toolbar.toggleSidebarTooltip" = "Паказаць або схаваць бакавую панэль гісторыі";
+
+/* History Sidebar */
+"history.searchPlaceholder" = "Пошук у гісторыі...";
+"history.noResults" = "Вынікі не знойдзены";
+"history.empty" = "Гісторыя пакуль пустая";
+"history.emptyDescription" = "Вашы сеансы вылічэнняў будуць адлюстроўвацца тут";
+"history.name" = "Назва";
+"history.done" = "Гатова";
+"history.openInNewTab" = "Адкрыць у новай укладцы";
+"history.rename" = "Перайменаваць";
+"history.delete" = "Выдаліць";
+
+/* Calculator */
+"calculator.empty" = "Няма калькулятараў";
+"calculator.notFound" = "Калькулятар не знойдзены";
+
+/* Alerts */
+"alert.nothingToExport" = "Няма чаго экспартаваць";
+"alert.emptyCalculator" = "Бягучы калькулятар пусты. Дадайце змесціва перад экспартам.";
+"alert.ok" = "Добра";
+"alert.closeWithoutSaving" = "Зачыніць без захавання?";
+"alert.unsavedContent" = "Гэтая ўкладка змяшчае незахаванае змесціва. Вы ўпэўнены, што хочаце яе зачыніць?";
+"alert.saveAndClose" = "Захаваць і зачыніць";
+"alert.closeWithoutSavingButton" = "Зачыніць без захавання";
+"alert.cancel" = "Адмяніць";

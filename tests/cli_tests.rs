@@ -2,8 +2,23 @@ use regex::Regex;
 use std::process::Command;
 
 fn run_command(args: &[&str]) -> (String, String) {
+    // Insert --locale en-US after "--" to force English error messages
+    let mut full_args = Vec::new();
+    let mut after_separator = false;
+    let has_locale = args.iter().any(|&a| a == "--locale");
+
+    for &arg in args {
+        full_args.push(arg);
+        if arg == "--" && !after_separator && !has_locale {
+            // Insert locale right after the separator
+            full_args.push("--locale");
+            full_args.push("en-US");
+            after_separator = true;
+        }
+    }
+
     let output = Command::new("cargo")
-        .args(args)
+        .args(&full_args)
         .output()
         .expect("Failed to run command");
 
@@ -21,7 +36,14 @@ fn test_simple_arithmetic() {
 #[test]
 fn test_currency_conversion() {
     // Use fixed rates for deterministic testing: 1 USD = 0.85 EUR
-    let (stdout, _) = run_command(&["run", "--", "--no-update", "--rate", "EUR:0.85", "10 usd in eur"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "10 usd in eur",
+    ]);
     assert!(stdout.contains("eur"));
     // Exact: 10 * 0.85 = 8.50 EUR
     let re = Regex::new(r"8\.50 eur").unwrap();
@@ -31,7 +53,14 @@ fn test_currency_conversion() {
 #[test]
 fn test_currency_symbol_dollar_to_eur() {
     // Test: 100$ to EUR with $ symbol
-    let (stdout, _) = run_command(&["run", "--", "--no-update", "--rate", "EUR:0.85", "100$ to eur"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "100$ to eur",
+    ]);
     assert!(stdout.contains("eur"));
     // 100 * 0.85 = 85.00 EUR
     let re = Regex::new(r"85\.00 eur").unwrap();
@@ -41,7 +70,14 @@ fn test_currency_symbol_dollar_to_eur() {
 #[test]
 fn test_currency_symbol_euro_to_usd() {
     // Test: €50 to USD with € symbol
-    let (stdout, _) = run_command(&["run", "--", "--no-update", "--rate", "EUR:0.85", "€50 to usd"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "€50 to usd",
+    ]);
     assert!(stdout.contains("usd"));
     // 50 / 0.85 = 58.82... USD
     assert!(stdout.contains("58.82"));
@@ -50,7 +86,14 @@ fn test_currency_symbol_euro_to_usd() {
 #[test]
 fn test_currency_symbol_prefix() {
     // Test: $100 (prefix style)
-    let (stdout, _) = run_command(&["run", "--", "--no-update", "--rate", "EUR:0.85", "$100 to eur"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "$100 to eur",
+    ]);
     assert!(stdout.contains("eur"));
     let re = Regex::new(r"85\.00 eur").unwrap();
     assert!(re.is_match(stdout.trim()));
@@ -59,7 +102,14 @@ fn test_currency_symbol_prefix() {
 #[test]
 fn test_byn_conversion() {
     // Test: 100 USD to BYN
-    let (stdout, _) = run_command(&["run", "--", "--no-update", "--rate", "BYN:3.41", "100 usd to byn"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "BYN:3.41",
+        "100 usd to byn",
+    ]);
     assert!(stdout.contains("byn"));
     // 100 * 3.41 = 341 BYN (no decimals for round numbers)
     let re = Regex::new(r"341 byn").unwrap();
@@ -69,7 +119,14 @@ fn test_byn_conversion() {
 #[test]
 fn test_dollar_symbol_to_byn() {
     // Test: 100$ to BYN (original failing case)
-    let (stdout, _) = run_command(&["run", "--", "--no-update", "--rate", "BYN:3.41", "100$ to byn"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "BYN:3.41",
+        "100$ to byn",
+    ]);
     assert!(stdout.contains("byn"));
     // 100 * 3.41 = 341 BYN (no decimals for round numbers)
     let re = Regex::new(r"341 byn").unwrap();
@@ -157,7 +214,14 @@ fn test_unit_conversions() {
 #[test]
 fn test_currency_conversions() {
     // Use fixed rate: 1 USD = 0.85 EUR
-    let (stdout, _) = run_command(&["run", "--", "--no-update", "--rate", "EUR:0.85", "100 usd in eur"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "100 usd in eur",
+    ]);
     assert!(stdout.contains("eur"));
     // 100 * 0.85 = 85.00 eur
     let re = Regex::new(r"85\.00 eur").unwrap();
@@ -277,7 +341,14 @@ fn test_only_spaces() {
 #[test]
 fn test_complex_currency_conversion() {
     // Use fixed rate: 1 USD = 154 JPY
-    let (stdout, _) = run_command(&["run", "--release", "--", "--no-update", "--rate", "JPY:154", "10 + 200000 usd in jpy"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "JPY:154",
+        "10 + 200000 usd in jpy",
+    ]);
     assert!(stdout.contains("jpy"));
     // (10 + 200000) * 154 = 30,801,540 = 30.8M jpy
     let re = Regex::new(r"30\.8M jpy").unwrap();
@@ -296,7 +367,14 @@ fn test_complex_length_conversion() {
 #[test]
 fn test_large_number_with_unit_conversion() {
     // Use fixed rate: 1 USD = 0.85 EUR
-    let (stdout, _) = run_command(&["run", "--", "--no-update", "--rate", "EUR:0.85", "1M usd in eur"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "1M usd in eur",
+    ]);
     assert!(stdout.contains("eur"));
     // 1000000 * 0.85 = 850000 = 850.0k eur
     let re = Regex::new(r"850\.0k eur").unwrap();
@@ -306,7 +384,14 @@ fn test_large_number_with_unit_conversion() {
 #[test]
 fn test_mixed_operations_with_conversion() {
     // Use fixed rate: 1 USD = 154 JPY
-    let (stdout, _) = run_command(&["run", "--release", "--", "--no-update", "--rate", "JPY:154", "100 usd * 2 in jpy"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "JPY:154",
+        "100 usd * 2 in jpy",
+    ]);
     assert!(stdout.contains("jpy"));
     // 200 * 154 = 30800 = 30.8k jpy
     let re = Regex::new(r"30\.8k jpy").unwrap();
@@ -316,7 +401,14 @@ fn test_mixed_operations_with_conversion() {
 #[test]
 fn test_negative_with_conversion() {
     // Use fixed rate: 1 USD = 0.85 EUR
-    let (stdout, _) = run_command(&["run", "--release", "--", "--no-update", "--rate", "EUR:0.85", "-100 usd in eur"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "-100 usd in eur",
+    ]);
     assert!(stdout.contains("eur"));
     // -100 * 0.85 = -85.00 eur
     let re = Regex::new(r"-85\.00 eur").unwrap();
@@ -326,8 +418,8 @@ fn test_negative_with_conversion() {
 #[test]
 fn test_history_commands_dont_add_to_history() {
     let config = numby::config::Config::default();
-    let registry = numby::evaluator::AgentRegistry::new(&config)
-        .expect("Failed to initialize agent registry");
+    let registry =
+        numby::evaluator::AgentRegistry::new(&config).expect("Failed to initialize agent registry");
     let mut state = numby::models::AppState::builder(&config).build();
     *state.history.write().unwrap() = vec![10.0, 20.0, 30.0];
 
@@ -429,8 +521,8 @@ fn test_percentage_expressions() {
 #[test]
 fn test_tui_display_doesnt_modify_history() {
     let config = numby::config::Config::default();
-    let registry = numby::evaluator::AgentRegistry::new(&config)
-        .expect("Failed to initialize agent registry");
+    let registry =
+        numby::evaluator::AgentRegistry::new(&config).expect("Failed to initialize agent registry");
     let mut state = numby::models::AppState::builder(&config).build();
     *state.history.write().unwrap() = vec![40.0, 50.0];
 
@@ -501,7 +593,11 @@ fn test_compound_interest() {
 #[test]
 fn test_mortgage_payment() {
     // 250000 * (0.045/12) * (1 + 0.045/12)^(30*12) / ((1 + 0.045/12)^(30*12) - 1)
-    let (stdout, _) = run_command(&["run", "--", "250000 * (0.045/12) * (1 + 0.045/12)^(30*12) / ((1 + 0.045/12)^(30*12) - 1)"]);
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "250000 * (0.045/12) * (1 + 0.045/12)^(30*12) / ((1 + 0.045/12)^(30*12) - 1)",
+    ]);
     // Result: 1266.71 ≈ 1.3k
     assert!(stdout.contains("1.2k") || stdout.contains("1.3k"));
 }

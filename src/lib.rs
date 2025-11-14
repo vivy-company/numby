@@ -14,22 +14,22 @@
 //! - `i18n`: Internationalization and localization support.
 
 pub mod config;
-pub mod models;
-pub mod prettify;
-pub mod parser;
 pub mod conversions;
-pub mod evaluator;
-pub mod security;
-pub mod i18n;
 pub mod currency_fetcher;
+pub mod evaluator;
+pub mod i18n;
+pub mod models;
+pub mod parser;
+pub mod prettify;
+pub mod security;
 
 #[cfg(test)]
 mod event_tests {
-    use crate::evaluator::{StateEvent, EventSubscriber};
-    use crate::models::AppState;
     use crate::config::Config;
-    use std::sync::Arc;
+    use crate::evaluator::{EventSubscriber, StateEvent};
+    use crate::models::AppState;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
 
     struct TestSubscriber {
         event_count: Arc<AtomicUsize>,
@@ -65,7 +65,9 @@ mod event_tests {
         let state = AppState::builder(&config).build();
 
         // Set a cache value
-        state.cache.set_display("test_key".to_string(), Some("cached_value".to_string()));
+        state
+            .cache
+            .set_display("test_key".to_string(), Some("cached_value".to_string()));
 
         // Verify it's cached
         assert_eq!(
@@ -78,10 +80,14 @@ mod event_tests {
 
         // Cache should be invalidated for prefix "test"
         // Keys that don't start with "test" should still be there
-        state.cache.set_display("other_key".to_string(), Some("other_value".to_string()));
+        state
+            .cache
+            .set_display("other_key".to_string(), Some("other_value".to_string()));
 
         // Set a cache with "test" prefix
-        state.cache.set_display("test_key".to_string(), Some("new_value".to_string()));
+        state
+            .cache
+            .set_display("test_key".to_string(), Some("new_value".to_string()));
 
         // Trigger event
         state.publish_event(StateEvent::VariableChanged("test".to_string()));
@@ -159,8 +165,26 @@ mod event_tests {
 
 // C FFI API for Swift integration
 
-use std::ffi::{CString, CStr};
+use once_cell::sync::Lazy;
+use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+static CONFIG_OVERRIDE_PATH: Lazy<Mutex<Option<PathBuf>>> = Lazy::new(|| Mutex::new(None));
+
+fn set_config_override_path(path: PathBuf) {
+    if let Ok(mut guard) = CONFIG_OVERRIDE_PATH.lock() {
+        *guard = Some(path);
+    }
+}
+
+fn get_config_override_path() -> Option<PathBuf> {
+    CONFIG_OVERRIDE_PATH
+        .lock()
+        .ok()
+        .and_then(|guard| guard.clone())
+}
 
 type NumbyContext = crate::models::AppState; // Use AppState as context
 
@@ -182,7 +206,12 @@ pub unsafe extern "C" fn libnumby_evaluate(
     out_error: *mut *mut c_char,
 ) -> f64 {
     // Validate all pointers
-    if ctx.is_null() || input.is_null() || out_formatted.is_null() || out_unit.is_null() || out_error.is_null() {
+    if ctx.is_null()
+        || input.is_null()
+        || out_formatted.is_null()
+        || out_unit.is_null()
+        || out_error.is_null()
+    {
         if !out_error.is_null() {
             if let Ok(s) = CString::new("Invalid null pointer") {
                 *out_error = s.into_raw();
@@ -227,7 +256,10 @@ pub unsafe extern "C" fn libnumby_evaluate(
         Some((result_str, _)) => {
             // Parse result_str, e.g., "3.11 miles" -> value=3.11, formatted="3.11 miles", unit="miles"
             let parts: Vec<&str> = result_str.split_whitespace().collect();
-            let value = parts.first().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+            let value = parts
+                .first()
+                .and_then(|s| s.parse::<f64>().ok())
+                .unwrap_or(0.0);
 
             // Safe string conversion
             if let Ok(formatted_cstr) = CString::new(result_str.clone()) {
@@ -331,6 +363,7 @@ pub unsafe extern "C" fn libnumby_load_config(ctx: *mut NumbyContext, path: *con
                     context.data_units = config.data_units;
                     context.speed_units = config.speed_units;
                     context.rates = config.currencies;
+                    set_config_override_path(validated_path);
                     0
                 }
                 Err(_) => -1,
@@ -359,6 +392,66 @@ pub unsafe extern "C" fn libnumby_set_locale(ctx: *mut NumbyContext, locale: *co
         Ok(_) => 0,
         Err(_) => -1,
     }
+}
+
+/// Get the current locale
+///
+/// # Safety
+///
+/// Returns a C string that must be freed with libnumby_free_string
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_get_locale() -> *mut c_char {
+    let locale = crate::i18n::get_locale();
+    CString::new(locale.to_string())
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
+}
+
+/// Get the number of available locales
+///
+/// # Safety
+///
+/// This function is safe to call
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_get_locales_count() -> i32 {
+    crate::i18n::get_available_locales().len() as i32
+}
+
+/// Get locale code at index
+///
+/// # Safety
+///
+/// Returns a C string that must be freed with libnumby_free_string
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_get_locale_code(index: i32) -> *mut c_char {
+    let locales = crate::i18n::get_available_locales();
+    if index < 0 || index >= locales.len() as i32 {
+        return std::ptr::null_mut();
+    }
+
+    let locale = locales[index as usize];
+    CString::new(locale)
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
+}
+
+/// Get locale display name at index
+///
+/// # Safety
+///
+/// Returns a C string that must be freed with libnumby_free_string
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_get_locale_name(index: i32) -> *mut c_char {
+    let locales = crate::i18n::get_available_locales();
+    if index < 0 || index >= locales.len() as i32 {
+        return std::ptr::null_mut();
+    }
+
+    let locale = locales[index as usize];
+    let display_name = crate::i18n::get_locale_display_name(locale);
+    CString::new(display_name)
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
 }
 
 /// # Safety
@@ -436,16 +529,52 @@ pub unsafe extern "C" fn libnumby_update_currency_rates(ctx: *mut NumbyContext) 
         Err(_) => return -1,
     };
 
-    // Update config file with new rates
-    if crate::config::update_currency_rates(rates.clone(), date).is_err() {
-        return -1;
+    // Determine candidate paths (override first, fallback to default)
+    let mut candidate_paths = Vec::new();
+    if let Some(path) = get_config_override_path() {
+        candidate_paths.push(path);
     }
+    let default_path = crate::config::get_config_path();
+    if candidate_paths
+        .first()
+        .map(|p| p != &default_path)
+        .unwrap_or(true)
+    {
+        candidate_paths.push(default_path);
+    }
+
+    let mut persisted_path: Option<PathBuf> = None;
+    for path in candidate_paths {
+        match crate::config::update_currency_rates_at_path(&path, rates.clone(), date.clone()) {
+            Ok(_) => {
+                persisted_path = Some(path);
+                break;
+            }
+            Err(_) => continue,
+        }
+    }
+
+    let Some(saved_path) = persisted_path else {
+        return -1;
+    };
+
+    set_config_override_path(saved_path.clone());
 
     // Update context with new rates
     let context = &mut *ctx;
     context.rates = rates;
 
     0
+}
+
+/// Returns the default config path used by the Rust core.
+#[no_mangle]
+pub extern "C" fn libnumby_get_default_config_path() -> *mut c_char {
+    let path = crate::config::get_config_path();
+    match CString::new(path.to_string_lossy().to_string()) {
+        Ok(cstr) => cstr.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
 }
 
 /// Checks if currency rates are stale (older than 24 hours)
@@ -572,7 +701,11 @@ mod i18n_tests {
         assert_eq!(i18n::get_locale().to_string(), "en-US");
         let msg1 = crate::fl!("path-traversal-detected");
         let msg2 = crate::fl!("invalid-path");
-        assert_eq!(msg1, "Path traversal detected", "Expected English, got: {}", msg1);
+        assert_eq!(
+            msg1, "Path traversal detected",
+            "Expected English, got: {}",
+            msg1
+        );
         assert_eq!(msg2, "Invalid path", "Expected English, got: {}", msg2);
     }
 
@@ -582,7 +715,11 @@ mod i18n_tests {
         assert_eq!(i18n::get_locale().to_string(), "es");
         let msg1 = crate::fl!("path-traversal-detected");
         let msg2 = crate::fl!("invalid-path");
-        assert_eq!(msg1, "Traversal de ruta detectado", "Expected Spanish, got: {}", msg1);
+        assert_eq!(
+            msg1, "Traversal de ruta detectado",
+            "Expected Spanish, got: {}",
+            msg1
+        );
         assert_eq!(msg2, "Ruta inválida", "Expected Spanish, got: {}", msg2);
     }
 
@@ -601,8 +738,16 @@ mod i18n_tests {
         i18n::init_locale(Some("en-US"));
         assert_eq!(i18n::get_locale().to_string(), "en-US");
         let msg = crate::fl!("commands-help");
-        assert!(msg.contains("quit"), "Expected 'quit' in English message, got: {}", msg);
-        assert!(msg.contains("save"), "Expected 'save' in English message, got: {}", msg);
+        assert!(
+            msg.contains("quit"),
+            "Expected 'quit' in English message, got: {}",
+            msg
+        );
+        assert!(
+            msg.contains("save"),
+            "Expected 'save' in English message, got: {}",
+            msg
+        );
     }
 
     #[test]
@@ -610,8 +755,16 @@ mod i18n_tests {
         i18n::init_locale(Some("es"));
         assert_eq!(i18n::get_locale().to_string(), "es");
         let msg = crate::fl!("commands-help");
-        assert!(msg.contains("salir"), "Expected 'salir' in Spanish message, got: {}", msg);
-        assert!(msg.contains("guardar"), "Expected 'guardar' in Spanish message, got: {}", msg);
+        assert!(
+            msg.contains("salir"),
+            "Expected 'salir' in Spanish message, got: {}",
+            msg
+        );
+        assert!(
+            msg.contains("guardar"),
+            "Expected 'guardar' in Spanish message, got: {}",
+            msg
+        );
     }
 
     #[test]
@@ -619,8 +772,16 @@ mod i18n_tests {
         i18n::init_locale(Some("zh-CN"));
         assert_eq!(i18n::get_locale().to_string(), "zh-CN");
         let msg = crate::fl!("commands-help");
-        assert!(msg.contains("退出"), "Expected '退出' in Chinese message, got: {}", msg);
-        assert!(msg.contains("保存"), "Expected '保存' in Chinese message, got: {}", msg);
+        assert!(
+            msg.contains("退出"),
+            "Expected '退出' in Chinese message, got: {}",
+            msg
+        );
+        assert!(
+            msg.contains("保存"),
+            "Expected '保存' in Chinese message, got: {}",
+            msg
+        );
     }
 
     #[test]
@@ -630,7 +791,11 @@ mod i18n_tests {
         let msg = crate::fl!("input-too-long", "actual" => "150000", "max" => "100000");
         assert!(msg.contains("150000"));
         assert!(msg.contains("100000"));
-        assert!(msg.contains("chars"), "Expected 'chars' in English message, got: {}", msg);
+        assert!(
+            msg.contains("chars"),
+            "Expected 'chars' in English message, got: {}",
+            msg
+        );
     }
 
     #[test]
@@ -640,7 +805,11 @@ mod i18n_tests {
         let msg = crate::fl!("input-too-long", "actual" => "150000", "max" => "100000");
         assert!(msg.contains("150000"));
         assert!(msg.contains("100000"));
-        assert!(msg.contains("caracteres"), "Expected 'caracteres' in Spanish message, got: {}", msg);
+        assert!(
+            msg.contains("caracteres"),
+            "Expected 'caracteres' in Spanish message, got: {}",
+            msg
+        );
     }
 
     #[test]
@@ -650,7 +819,11 @@ mod i18n_tests {
         let msg = crate::fl!("input-too-long", "actual" => "150000", "max" => "100000");
         assert!(msg.contains("150000"));
         assert!(msg.contains("100000"));
-        assert!(msg.contains("字符"), "Expected '字符' in Chinese message, got: {}", msg);
+        assert!(
+            msg.contains("字符"),
+            "Expected '字符' in Chinese message, got: {}",
+            msg
+        );
     }
 
     #[test]

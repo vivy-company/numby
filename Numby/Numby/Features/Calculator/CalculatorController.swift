@@ -131,7 +131,8 @@ class CalculatorController: ObservableObject {
     /// Navigate focus in a direction
     func navigateFocus(direction: FocusDirection) {
         // TODO: Implement spatial navigation based on visual position
-        // For now, just cycle through leaves
+        // Current implementation cycles through leaves in order
+        // Improvement: Calculate leaf positions and move focus based on direction
         let leafIds = splitTree.getAllLeafIds()
         guard !leafIds.isEmpty, let currentId = focusedLeafId else { return }
 

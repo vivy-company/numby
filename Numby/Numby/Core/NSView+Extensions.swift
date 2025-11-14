@@ -37,4 +37,16 @@ extension NSView {
         }
         return nil
     }
+
+    func firstDescendant<T: NSView>(ofType type: T.Type) -> T? {
+        if let view = self as? T {
+            return view
+        }
+        for subview in subviews {
+            if let found: T = subview.firstDescendant(ofType: type) {
+                return found
+            }
+        }
+        return nil
+    }
 }

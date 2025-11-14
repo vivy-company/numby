@@ -8,6 +8,22 @@
 import SwiftUI
 
 struct CLIInstallerView: View {
+    @ObservedObject var configManager = ConfigurationManager.shared
+    @State private var localeVersion: Int = 0
+
+    private var localizedTitle: String { _ = localeVersion; return configManager.localizedString("cliInstaller.title") }
+    private var localizedSubtitle: String { _ = localeVersion; return configManager.localizedString("cliInstaller.subtitle") }
+    private var localizedInstallViaHomebrew: String { _ = localeVersion; return configManager.localizedString("cliInstaller.installViaHomebrew") }
+    private var localizedRunCommand: String { _ = localeVersion; return configManager.localizedString("cliInstaller.runCommand") }
+    private var localizedNoHomebrew: String { _ = localeVersion; return configManager.localizedString("cliInstaller.noHomebrew") }
+    private var localizedInstallHomebrew: String { _ = localeVersion; return configManager.localizedString("settings.cli.installHomebrew") }
+    private var localizedAlternative: String { _ = localeVersion; return configManager.localizedString("cliInstaller.alternative") }
+    private var localizedDownloadRelease: String { _ = localeVersion; return configManager.localizedString("cliInstaller.downloadRelease") }
+    private var localizedGithubReleases: String { _ = localeVersion; return configManager.localizedString("settings.cli.githubReleases") }
+    private var localizedMoveToPath: String { _ = localeVersion; return configManager.localizedString("cliInstaller.moveToPath") }
+    private var localizedOpenTerminal: String { _ = localeVersion; return configManager.localizedString("cliInstaller.openTerminal") }
+    private var localizedCopyTooltip: String { _ = localeVersion; return configManager.localizedString("settings.cli.copyTooltip") }
+
     var body: some View {
         VStack(spacing: 20) {
             // Header
@@ -16,11 +32,11 @@ struct CLIInstallerView: View {
                     .font(.system(size: 48))
                     .foregroundColor(.accentColor)
 
-                Text("Command Line Tool")
+                Text(localizedTitle)
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("Use numby from your terminal")
+                Text(localizedSubtitle)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -31,11 +47,11 @@ struct CLIInstallerView: View {
 
             // Installation instructions
             VStack(alignment: .leading, spacing: 16) {
-                Text("Install via Homebrew")
+                Text(localizedInstallViaHomebrew)
                     .font(.headline)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Run this command in your terminal:")
+                    Text(localizedRunCommand)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
 
@@ -56,10 +72,10 @@ struct CLIInstallerView: View {
                                 .font(.title2)
                         }
                         .buttonStyle(.plain)
-                        .help("Copy to clipboard")
+                        .help(localizedCopyTooltip)
                     }
 
-                    Text("If you don't have Homebrew installed:")
+                    Text(localizedNoHomebrew)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 8)
@@ -69,7 +85,7 @@ struct CLIInstallerView: View {
                     }) {
                         HStack {
                             Image(systemName: "arrow.up.right.square")
-                            Text("Install Homebrew")
+                            Text(localizedInstallHomebrew)
                         }
                     }
                     .buttonStyle(.link)
@@ -81,11 +97,11 @@ struct CLIInstallerView: View {
                 Divider()
                     .padding(.vertical, 8)
 
-                Text("Alternative: Manual Installation")
+                Text(localizedAlternative)
                     .font(.headline)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Download the latest release:")
+                    Text(localizedDownloadRelease)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
 
@@ -94,12 +110,12 @@ struct CLIInstallerView: View {
                     }) {
                         HStack {
                             Image(systemName: "arrow.down.circle")
-                            Text("GitHub Releases")
+                            Text(localizedGithubReleases)
                         }
                     }
                     .buttonStyle(.link)
 
-                    Text("Then move to your PATH:")
+                    Text(localizedMoveToPath)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 8)
@@ -121,7 +137,7 @@ struct CLIInstallerView: View {
             Spacer()
 
             // Quick action button
-            Button("Open Terminal") {
+            Button(localizedOpenTerminal) {
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"))
             }
             .buttonStyle(.bordered)
@@ -129,5 +145,8 @@ struct CLIInstallerView: View {
             .padding(.bottom, 20)
         }
         .frame(width: 500, height: 600)
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LocaleChanged"))) { _ in
+            localeVersion += 1
+        }
     }
 }

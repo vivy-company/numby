@@ -16,7 +16,11 @@ impl fmt::Display for EvaluatorError {
                 write!(f, "{}", crate::fl!("error-lock", "details" => details))
             }
             EvaluatorError::InvalidExpression(details) => {
-                write!(f, "{}", crate::fl!("error-invalid-expression", "details" => details))
+                write!(
+                    f,
+                    "{}",
+                    crate::fl!("error-invalid-expression", "details" => details)
+                )
             }
             EvaluatorError::ParseError(details) => {
                 write!(f, "{}", crate::fl!("error-parse", "details" => details))
@@ -25,7 +29,11 @@ impl fmt::Display for EvaluatorError {
                 write!(f, "{}", crate::fl!("error-config", "details" => details))
             }
             EvaluatorError::EvaluationError(details) => {
-                write!(f, "{}", crate::fl!("error-evaluation", "details" => details))
+                write!(
+                    f,
+                    "{}",
+                    crate::fl!("error-evaluation", "details" => details)
+                )
             }
         }
     }

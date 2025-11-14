@@ -1,0 +1,128 @@
+/* Settings - Language Section */
+"settings.language.section" = "Sprache";
+"settings.language.picker" = "Sprache";
+
+/* Settings - Appearance Section */
+"settings.appearance.section" = "Erscheinungsbild";
+"settings.appearance.theme" = "Design";
+"settings.appearance.fontSize" = "Schriftgröße";
+"settings.appearance.font" = "Schriftart";
+"settings.appearance.syntaxHighlighting" = "Syntaxhervorhebung";
+
+/* Settings - Behavior Section */
+"settings.behavior.section" = "Verhalten";
+"settings.behavior.autoEvaluate" = "Automatisch bei Eingabe auswerten";
+"settings.behavior.splitRatio" = "Standard-Teilungsverhältnis";
+
+/* Settings - Currency Rates Section */
+"settings.currency.section" = "Wechselkurse";
+"settings.currency.lastUpdated" = "Zuletzt aktualisiert:";
+"settings.currency.stale" = "(Veraltet)";
+"settings.currency.update" = "Wechselkurse aktualisieren";
+"settings.currency.updating" = "Aktualisierung...";
+"settings.currency.description" = "Ruft die neuesten Wechselkurse für über 300 Währungen von kostenloser API ab";
+"settings.currency.success" = "Wechselkurse erfolgreich aktualisiert";
+"settings.currency.failed" = "Fehler beim Aktualisieren der Wechselkurse";
+"settings.currency.never" = "Nie";
+
+/* Settings - CLI Section */
+"settings.cli.section" = "Kommandozeilentool";
+"settings.cli.installViaHomebrew" = "Installation über Homebrew:";
+"settings.cli.copyTooltip" = "In Zwischenablage kopieren";
+"settings.cli.installHomebrew" = "Homebrew installieren";
+"settings.cli.orDownload" = "Oder von GitHub-Releases herunterladen";
+"settings.cli.githubReleases" = "GitHub-Releases";
+
+/* CLI Installer Window */
+"cliInstaller.title" = "Kommandozeilentool";
+"cliInstaller.subtitle" = "Verwenden Sie numby in Ihrem Terminal";
+"cliInstaller.installViaHomebrew" = "Installation über Homebrew";
+"cliInstaller.runCommand" = "Führen Sie diesen Befehl in Ihrem Terminal aus:";
+"cliInstaller.noHomebrew" = "Wenn Sie Homebrew nicht installiert haben:";
+"cliInstaller.alternative" = "Alternative: Manuelle Installation";
+"cliInstaller.downloadRelease" = "Laden Sie die neueste Version herunter:";
+"cliInstaller.moveToPath" = "Dann in Ihren PATH verschieben:";
+"cliInstaller.openTerminal" = "Terminal öffnen";
+
+/* Menu Bar - App Menu */
+"menu.about" = "Über Numby";
+"menu.settings" = "Einstellungen...";
+"menu.installCLI" = "Kommandozeilentool installieren...";
+"menu.hide" = "Numby ausblenden";
+"menu.hideOthers" = "Andere ausblenden";
+"menu.showAll" = "Alle einblenden";
+"menu.quit" = "Numby beenden";
+
+/* Menu Bar - File Menu */
+"menu.file" = "Ablage";
+"menu.newWindow" = "Neues Fenster";
+"menu.newTab" = "Neuer Tab";
+"menu.openCalculator" = "Rechner öffnen...";
+"menu.exportCalculator" = "Rechner exportieren...";
+"menu.close" = "Schließen";
+
+/* Menu Bar - Edit Menu */
+"menu.edit" = "Bearbeiten";
+"menu.undo" = "Widerrufen";
+"menu.redo" = "Wiederholen";
+"menu.cut" = "Ausschneiden";
+"menu.copy" = "Kopieren";
+"menu.paste" = "Einsetzen";
+"menu.selectAll" = "Alle auswählen";
+
+/* Menu Bar - View Menu */
+"menu.view" = "Ansicht";
+"menu.toggleHistory" = "Verlaufsseitenleiste umschalten";
+"menu.splitHorizontally" = "Horizontal teilen";
+"menu.splitVertically" = "Vertikal teilen";
+"menu.fullScreen" = "Vollbild aktivieren";
+"menu.exitFullScreen" = "Vollbild beenden";
+
+/* Menu Bar - Window Menu */
+"menu.window" = "Fenster";
+"menu.minimize" = "Minimieren";
+"menu.zoom" = "Zoomen";
+"menu.bringAllToFront" = "Alle nach vorne bringen";
+"menu.showAllTabs" = "Alle Tabs anzeigen";
+"menu.nextTab" = "Nächsten Tab auswählen";
+"menu.previousTab" = "Vorherigen Tab auswählen";
+"menu.showTab" = "Tab %d anzeigen";
+
+/* Menu Bar - Help Menu */
+"menu.help" = "Hilfe";
+"menu.numbyHelp" = "Numby-Hilfe";
+
+/* Window Titles */
+"window.settings" = "Einstellungen";
+"window.cliInstaller" = "Kommandozeilentool installieren";
+
+/* Toolbar */
+"toolbar.newTab" = "Neuer Tab";
+"toolbar.newTabTooltip" = "Einen neuen Rechner-Tab öffnen";
+"toolbar.toggleSidebar" = "Seitenleiste umschalten";
+"toolbar.toggleSidebarTooltip" = "Verlaufsseitenleiste ein- oder ausblenden";
+
+/* History Sidebar */
+"history.searchPlaceholder" = "Verlauf durchsuchen...";
+"history.noResults" = "Keine Ergebnisse gefunden";
+"history.empty" = "Noch kein Verlauf";
+"history.emptyDescription" = "Ihre Berechnungssitzungen werden hier angezeigt";
+"history.name" = "Name";
+"history.done" = "Fertig";
+"history.openInNewTab" = "In neuem Tab öffnen";
+"history.rename" = "Umbenennen";
+"history.delete" = "Löschen";
+
+/* Calculator */
+"calculator.empty" = "Keine Rechner";
+"calculator.notFound" = "Rechner nicht gefunden";
+
+/* Alerts */
+"alert.nothingToExport" = "Nichts zu exportieren";
+"alert.emptyCalculator" = "Der aktuelle Rechner ist leer. Fügen Sie Inhalte hinzu, bevor Sie exportieren.";
+"alert.ok" = "OK";
+"alert.closeWithoutSaving" = "Ohne Speichern schließen?";
+"alert.unsavedContent" = "Dieser Tab enthält nicht gespeicherte Inhalte. Möchten Sie ihn wirklich schließen?";
+"alert.saveAndClose" = "Speichern und schließen";
+"alert.closeWithoutSavingButton" = "Ohne Speichern schließen";
+"alert.cancel" = "Abbrechen";

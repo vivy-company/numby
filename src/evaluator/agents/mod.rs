@@ -1,14 +1,14 @@
 mod history;
-mod variable;
+mod math;
 mod percentage;
 mod unit;
-mod math;
+mod variable;
 
 pub use history::HistoryAgent;
-pub use variable::VariableAgent;
+pub use math::MathAgent;
 pub use percentage::PercentageAgent;
 pub use unit::UnitAgent;
-pub use math::MathAgent;
+pub use variable::VariableAgent;
 
 /// Agent priority constants. Lower priority values run first.
 /// The order is designed to process high-specificity agents before fallback math evaluation.

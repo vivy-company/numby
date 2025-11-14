@@ -1,18 +1,25 @@
-use crate::models::{Agent, AppState};
-use crate::evaluator::{evaluate_expr, EvalContext, preprocess_input};
 use crate::evaluator::agents::PRIORITY_VARIABLE;
+use crate::evaluator::{evaluate_expr, preprocess_input, EvalContext};
+use crate::models::{Agent, AppState};
 use crate::prettify::prettify_number;
 
 pub struct VariableAgent;
 
 impl Agent for VariableAgent {
-    fn priority(&self) -> i32 { PRIORITY_VARIABLE }
+    fn priority(&self) -> i32 {
+        PRIORITY_VARIABLE
+    }
 
     fn can_handle(&self, input: &str, _state: &AppState) -> bool {
         input.contains('=')
     }
 
-    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool, Option<f64>)> {
+    fn process(
+        &self,
+        input: &str,
+        state: &mut AppState,
+        config: &crate::config::Config,
+    ) -> Option<(String, bool, Option<f64>)> {
         let parts: Vec<&str> = input.split('=').collect();
         if parts.len() == 2 {
             let var = parts[0].trim();
@@ -53,14 +60,19 @@ impl Agent for VariableAgent {
                 }
 
                 // Insert directly since we already have the lock
-                vars_guard.insert(var.to_string(), (eval_result.value, eval_result.unit.clone()));
+                vars_guard.insert(
+                    var.to_string(),
+                    (eval_result.value, eval_result.unit.clone()),
+                );
 
                 // Drop locks before calling methods that might need them
                 drop(vars_guard);
                 drop(history_guard);
 
                 // Publish event - CacheManager subscriber will handle invalidation
-                state.publish_event(crate::evaluator::StateEvent::VariableChanged(var.to_string()));
+                state.publish_event(crate::evaluator::StateEvent::VariableChanged(
+                    var.to_string(),
+                ));
 
                 // Format the result string for display
                 let formatted = prettify_number(eval_result.value);

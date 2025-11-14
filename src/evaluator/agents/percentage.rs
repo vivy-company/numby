@@ -1,14 +1,16 @@
-use regex::Regex;
+use crate::evaluator::agents::PRIORITY_PERCENTAGE;
+use crate::evaluator::{evaluate_expr, preprocess_input, EvalContext};
 use crate::models::{Agent, AppState};
-use crate::evaluator::{evaluate_expr, EvalContext, preprocess_input};
 use crate::parser::parse_percentage_op;
 use crate::prettify::prettify_number;
-use crate::evaluator::agents::PRIORITY_PERCENTAGE;
+use regex::Regex;
 
 pub struct PercentageAgent;
 
 impl Agent for PercentageAgent {
-    fn priority(&self) -> i32 { PRIORITY_PERCENTAGE }
+    fn priority(&self) -> i32 {
+        PRIORITY_PERCENTAGE
+    }
 
     fn can_handle(&self, input: &str, _state: &AppState) -> bool {
         // Only handle percentage operations like "X + Y%" or "X% of Y"
@@ -18,13 +20,20 @@ impl Agent for PercentageAgent {
         }
         // Check if it's a percentage operation (% appears after a digit with optional whitespace before it)
         // and NOT a modulo operation (% appears between two numbers with spaces around it)
-        let percent_op_pattern = Regex::new(r"\d+(?:\.\d+)?%").expect("Invalid regex pattern for percentage detection");
+        let percent_op_pattern =
+            Regex::new(r"\d+(?:\.\d+)?%").expect("Invalid regex pattern for percentage detection");
         percent_op_pattern.is_match(input)
     }
 
-    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool, Option<f64>)> {
+    fn process(
+        &self,
+        input: &str,
+        state: &mut AppState,
+        config: &crate::config::Config,
+    ) -> Option<(String, bool, Option<f64>)> {
         // Handle "X% of Y" pattern
-        let percent_of_re = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(.+)").expect("Invalid regex pattern for percent-of expression");
+        let percent_of_re = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(.+)")
+            .expect("Invalid regex pattern for percent-of expression");
         if let Some(caps) = percent_of_re.captures(input) {
             if let (Some(percent_str), Some(base_str)) = (caps.get(1), caps.get(2)) {
                 if let Ok(percent) = percent_str.as_str().parse::<f64>() {
@@ -56,7 +65,11 @@ impl Agent for PercentageAgent {
 
                         // Preserve unit from base if present
                         if let Some(unit) = base_result.unit {
-                            return Some((format!("{} {}", pretty_result, unit), true, Some(result)));
+                            return Some((
+                                format!("{} {}", pretty_result, unit),
+                                true,
+                                Some(result),
+                            ));
                         } else {
                             return Some((pretty_result, true, Some(result)));
                         }
@@ -68,7 +81,10 @@ impl Agent for PercentageAgent {
         // Handle "X + Y%" pattern
         if let Some(result) = parse_percentage_op(input) {
             // Extract numeric value from result string
-            let numeric_value = result.split_whitespace().next().and_then(|s| s.parse::<f64>().ok());
+            let numeric_value = result
+                .split_whitespace()
+                .next()
+                .and_then(|s| s.parse::<f64>().ok());
             return Some((result, true, numeric_value));
         }
         None

@@ -62,14 +62,22 @@ fn tokenize_with_highlight(
             while pos < chars.len() && chars[pos].0 < end && chars[pos].1.is_whitespace() {
                 pos += 1;
             }
-            let end_byte = if pos < chars.len() { chars[pos].0 } else { text.len() };
+            let end_byte = if pos < chars.len() {
+                chars[pos].0
+            } else {
+                text.len()
+            };
             spans.push(Span::raw(text[start..end_byte].to_string()));
         } else {
             let start = chars[pos].0;
             while pos < chars.len() && chars[pos].0 < end && !chars[pos].1.is_whitespace() {
                 pos += 1;
             }
-            let end_byte = if pos < chars.len() { chars[pos].0 } else { text.len() };
+            let end_byte = if pos < chars.len() {
+                chars[pos].0
+            } else {
+                text.len()
+            };
             let word = &text[start..end_byte];
             spans.push(utils::highlight_word_owned(word, &state.variables, config));
         }

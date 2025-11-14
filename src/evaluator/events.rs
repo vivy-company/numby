@@ -8,40 +8,50 @@ pub enum StateEvent {
     /// A variable was changed or created. Contains the variable name.
     ///
     /// # Example
-    /// ```ignore
-    /// state.publish_event(StateEvent::VariableChanged("x".to_string()));
+    /// ```
+    /// use numby::evaluator::StateEvent;
+    ///
+    /// let event = StateEvent::VariableChanged("x".to_string());
     /// ```
     VariableChanged(String),
 
     /// A variable was deleted. Contains the variable name.
     ///
     /// # Example
-    /// ```ignore
-    /// state.publish_event(StateEvent::VariableDeleted("x".to_string()));
+    /// ```
+    /// use numby::evaluator::StateEvent;
+    ///
+    /// let event = StateEvent::VariableDeleted("x".to_string());
     /// ```
     VariableDeleted(String),
 
     /// A value was added to history. Contains the value.
     ///
     /// # Example
-    /// ```ignore
-    /// state.publish_event(StateEvent::HistoryAdded(42.0));
+    /// ```
+    /// use numby::evaluator::StateEvent;
+    ///
+    /// let event = StateEvent::HistoryAdded(42.0);
     /// ```
     HistoryAdded(f64),
 
     /// Configuration was reloaded.
     ///
     /// # Example
-    /// ```ignore
-    /// state.publish_event(StateEvent::ConfigReloaded);
+    /// ```
+    /// use numby::evaluator::StateEvent;
+    ///
+    /// let event = StateEvent::ConfigReloaded;
     /// ```
     ConfigReloaded,
 
     /// All variables were cleared.
     ///
     /// # Example
-    /// ```ignore
-    /// state.publish_event(StateEvent::AllVariablesCleared);
+    /// ```
+    /// use numby::evaluator::StateEvent;
+    ///
+    /// let event = StateEvent::AllVariablesCleared;
     /// ```
     AllVariablesCleared,
 }
@@ -51,7 +61,9 @@ pub enum StateEvent {
 /// Implement this trait to create custom subscribers that respond to `StateEvent`s.
 ///
 /// # Example
-/// ```ignore
+/// ```
+/// use numby::evaluator::{StateEvent, EventSubscriber};
+///
 /// struct Logger;
 ///
 /// impl EventSubscriber for Logger {

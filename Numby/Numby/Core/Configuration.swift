@@ -47,6 +47,9 @@ struct AppConfiguration: Codable {
     /// Auto-evaluate on input
     var autoEvaluate: Bool = true
 
+    /// Preferred locale (language code like "en-US", "fr", etc.)
+    var locale: String? = nil
+
     enum TabBarStyle: String, Codable {
         case automatic = "automatic"
         case unified = "unified"
@@ -85,9 +88,11 @@ class ConfigurationManager: ObservableObject {
     static let shared = ConfigurationManager()
 
     @Published var config: AppConfiguration
+    @Published var currentLocale: String = "en-US"
 
     private init() {
         self.config = AppConfiguration.load()
+        self.currentLocale = config.locale ?? "en-US"
     }
 
     func save() {
@@ -129,6 +134,78 @@ class ConfigurationManager: ObservableObject {
             // These would be applied per-window
             break
         }
+    }
+
+    /// Update locale and trigger UI refresh
+    func updateLocale(_ newLocale: String) {
+        // Map Rust locale to Swift locale
+        let swiftLocale: String
+        switch newLocale {
+        case "zh-CN":
+            swiftLocale = "zh-Hans"
+        case "zh-TW":
+            swiftLocale = "zh-Hant"
+        case "en-US":
+            swiftLocale = "en"
+        default:
+            swiftLocale = newLocale
+        }
+
+        // Update UserDefaults
+        UserDefaults.standard.set([swiftLocale], forKey: "AppleLanguages")
+        UserDefaults.standard.synchronize()
+
+        // Update published property to trigger UI refresh
+        self.currentLocale = newLocale
+        self.objectWillChange.send()
+    }
+
+    /// Get localized string that reacts to locale changes
+    func localizedString(_ key: String, comment: String = "") -> String {
+        // Map Rust locale to Swift locale
+        let swiftLocale: String
+        switch currentLocale {
+        case "zh-CN":
+            swiftLocale = "zh-Hans"
+        case "zh-TW":
+            swiftLocale = "zh-Hant"
+        case "en-US":
+            swiftLocale = "en"
+        default:
+            swiftLocale = currentLocale
+        }
+
+        // Get the appropriate bundle path for the locale
+        guard let bundlePath = Bundle.main.path(forResource: swiftLocale, ofType: "lproj"),
+              let bundle = Bundle(path: bundlePath) else {
+            // Fallback to English
+            if let enPath = Bundle.main.path(forResource: "en", ofType: "lproj"),
+               let enBundle = Bundle(path: enPath) {
+                return enBundle.localizedString(forKey: key, value: key, table: nil)
+            }
+            return key
+        }
+
+        // Get localized string from the locale-specific bundle
+        let localized = bundle.localizedString(forKey: key, value: nil, table: nil)
+        // If the key wasn't found in this locale, the bundle returns the key itself
+        // In that case, fall back to English
+        if localized == key {
+            if let enPath = Bundle.main.path(forResource: "en", ofType: "lproj"),
+               let enBundle = Bundle(path: enPath) {
+                return enBundle.localizedString(forKey: key, value: key, table: nil)
+            }
+        }
+        return localized
+    }
+}
+
+// MARK: - Localization Helper
+
+extension String {
+    /// Get localized string using current app locale
+    func localized(comment: String = "") -> String {
+        return ConfigurationManager.shared.localizedString(self, comment: comment)
     }
 }
 

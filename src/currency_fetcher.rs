@@ -1,9 +1,19 @@
+//! Currency exchange rate fetching from external APIs.
+//!
+//! This module fetches live currency exchange rates from free APIs
+//! and checks for stale rates.
+
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::time::Duration;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
-/// Response format from fawazahmed0/currency-api
+/// Rate limiter to prevent API spam
+static LAST_REQUEST: Mutex<Option<Instant>> = Mutex::new(None);
+const MIN_REQUEST_INTERVAL: Duration = Duration::from_secs(60);
+
+/// Response format from fawazahmed0/currency-api.
 #[derive(Debug, Deserialize)]
 struct CurrencyApiResponse {
     date: String,
@@ -13,17 +23,55 @@ struct CurrencyApiResponse {
 /// Primary and fallback URLs for currency API
 const PRIMARY_URL: &str =
     "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json";
-const FALLBACK_URL: &str =
-    "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
+const FALLBACK_URL: &str = "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
 
 /// Timeout for HTTP requests (5 seconds)
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// Fetches latest currency exchange rates from the API
+/// Fetch latest currency exchange rates from the API.
 ///
 /// Uses USD as base currency. Returns rates where 1 USD = X units of target currency.
 /// Tries primary URL first, falls back to secondary if primary fails.
+///
+/// # Returns
+///
+/// Returns a tuple of (rates_map, date_string) on success.
+///
+/// # Errors
+///
+/// Returns error if both primary and fallback URLs fail.
+///
+/// # Examples
+///
+/// ```no_run
+/// use numby::currency_fetcher::fetch_latest_rates;
+///
+/// let result = fetch_latest_rates();
+/// match result {
+///     Ok((rates, date)) => {
+///         println!("Fetched rates from {}", date);
+///         assert!(rates.contains_key("EUR"));
+///         assert!(rates.contains_key("GBP"));
+///     }
+///     Err(e) => eprintln!("Failed to fetch rates: {}", e),
+/// }
+/// ```
 pub fn fetch_latest_rates() -> Result<(HashMap<String, f64>, String)> {
+    // Rate limiting check
+    {
+        let mut last_req = LAST_REQUEST.lock().unwrap();
+        if let Some(last_time) = *last_req {
+            let elapsed = last_time.elapsed();
+            if elapsed < MIN_REQUEST_INTERVAL {
+                anyhow::bail!(
+                    "Rate limit: Please wait {} seconds before requesting again",
+                    (MIN_REQUEST_INTERVAL - elapsed).as_secs()
+                );
+            }
+        }
+        *last_req = Some(Instant::now());
+    }
+
     // Try primary URL first
     match fetch_from_url(PRIMARY_URL) {
         Ok(result) => return Ok(result),
@@ -67,10 +115,29 @@ fn fetch_from_url(url: &str) -> Result<(HashMap<String, f64>, String)> {
     Ok((rates, api_response.date))
 }
 
-/// Checks if rates are stale (older than 24 hours from today)
+/// Check if currency rates are stale (older than 24 hours).
 ///
 /// Compares the stored date (YYYY-MM-DD) with today's date.
 /// Returns true if the rates are from yesterday or earlier.
+///
+/// # Arguments
+///
+/// * `stored_date` - ISO date string in YYYY-MM-DD format
+///
+/// # Examples
+///
+/// ```
+/// use numby::currency_fetcher::are_rates_stale;
+///
+/// // Old date is stale
+/// assert!(are_rates_stale("2020-01-01"));
+///
+/// // Future date is not stale
+/// assert!(!are_rates_stale("2030-12-31"));
+///
+/// // Invalid date is considered stale
+/// assert!(are_rates_stale("invalid-date"));
+/// ```
 pub fn are_rates_stale(stored_date: &str) -> bool {
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -104,21 +171,44 @@ fn parse_date_to_days(date_str: &str) -> Option<u64> {
     let month: u32 = parts[1].parse().ok()?;
     let day: u32 = parts[2].parse().ok()?;
 
-    // Approximate days since Unix epoch (Jan 1, 1970)
-    // This is a simple approximation, good enough for staleness checks
-    let days_since_epoch = ((year - 1970) * 365) as u64
-        + ((year - 1970) / 4) as u64 // Leap years approximation
-        + days_in_months_before(month) as u64
-        + day as u64;
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
 
-    Some(days_since_epoch)
+    // Calculate days since Unix epoch (Jan 1, 1970)
+    let mut days = 0u64;
+
+    // Add days for complete years
+    for y in 1970..year {
+        days += if is_leap_year(y) { 366 } else { 365 };
+    }
+
+    // Add days for complete months in the current year
+    let is_leap = is_leap_year(year);
+    days += days_in_months_before(month, is_leap) as u64;
+
+    // Add remaining days
+    days += day as u64;
+
+    Some(days)
+}
+
+/// Check if a year is a leap year
+fn is_leap_year(year: i32) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
 
 /// Helper to count days in months before the given month
-fn days_in_months_before(month: u32) -> u32 {
-    let days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+fn days_in_months_before(month: u32, is_leap: bool) -> u32 {
+    let days_non_leap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    let days_leap = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+
     if month > 0 && month <= 12 {
-        days[(month - 1) as usize]
+        if is_leap {
+            days_leap[(month - 1) as usize]
+        } else {
+            days_non_leap[(month - 1) as usize]
+        }
     } else {
         0
     }

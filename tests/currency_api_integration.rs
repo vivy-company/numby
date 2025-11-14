@@ -12,10 +12,18 @@ fn test_live_api_fetch() {
             println!("Successfully fetched {} rates dated {}", rates.len(), date);
 
             // Verify we got a reasonable number of currencies
-            assert!(rates.len() > 300, "Expected 300+ currencies, got {}", rates.len());
+            assert!(
+                rates.len() > 300,
+                "Expected 300+ currencies, got {}",
+                rates.len()
+            );
 
             // Verify USD exists as base currency
-            assert_eq!(rates.get("USD"), Some(&1.0), "USD should be 1.0 (base currency)");
+            assert_eq!(
+                rates.get("USD"),
+                Some(&1.0),
+                "USD should be 1.0 (base currency)"
+            );
 
             // Verify some common currencies exist
             assert!(rates.contains_key("EUR"), "EUR should be present");
@@ -25,7 +33,12 @@ fn test_live_api_fetch() {
 
             // Verify rates are reasonable (not zero or negative)
             for (currency, rate) in rates.iter() {
-                assert!(*rate > 0.0, "{} rate should be positive, got {}", currency, rate);
+                assert!(
+                    *rate > 0.0,
+                    "{} rate should be positive, got {}",
+                    currency,
+                    rate
+                );
             }
 
             // Verify date format is YYYY-MM-DD
@@ -46,11 +59,17 @@ fn test_live_api_fetch() {
 fn test_staleness_detection() {
     // Test with yesterday's date - should be stale
     let yesterday = "2020-01-01";
-    assert!(currency_fetcher::are_rates_stale(yesterday), "Old date should be stale");
+    assert!(
+        currency_fetcher::are_rates_stale(yesterday),
+        "Old date should be stale"
+    );
 
     // Test with future date - should not be stale
     let future = "2030-12-31";
-    assert!(!currency_fetcher::are_rates_stale(future), "Future date should not be stale");
+    assert!(
+        !currency_fetcher::are_rates_stale(future),
+        "Future date should not be stale"
+    );
 }
 
 #[test]

@@ -40,6 +40,29 @@ int32_t libnumby_load_config(NumbyContext *ctx, const char *path);
 
 int32_t libnumby_set_locale(NumbyContext *ctx, const char *locale);
 
+/**
+ * Gets the current locale
+ * Caller must free the returned string with libnumby_free_string
+ */
+char *libnumby_get_locale(void);
+
+/**
+ * Gets the number of available locales
+ */
+int32_t libnumby_get_locales_count(void);
+
+/**
+ * Gets the locale code at the specified index
+ * Caller must free the returned string with libnumby_free_string
+ */
+char *libnumby_get_locale_code(int32_t index);
+
+/**
+ * Gets the locale display name at the specified index
+ * Caller must free the returned string with libnumby_free_string
+ */
+char *libnumby_get_locale_name(int32_t index);
+
 void libnumby_free_string(char *s);
 
 int32_t libnumby_clear_history(NumbyContext *ctx);
@@ -47,6 +70,12 @@ int32_t libnumby_clear_history(NumbyContext *ctx);
 int32_t libnumby_get_history_count(NumbyContext *ctx);
 
 void libnumby_context_free(NumbyContext *ctx);
+
+/**
+ * Returns the default configuration path that the Rust core uses.
+ * Caller must free the returned string with libnumby_free_string.
+ */
+char *libnumby_get_default_config_path(void);
 
 /**
  * Fetches latest currency rates from the API and updates the config file

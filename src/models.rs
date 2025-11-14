@@ -1,24 +1,60 @@
+//! Core data structures for application state and agents.
+//!
+//! This module defines the application state, agent trait, and helper types
+//! for managing variables, history, and unit conversions.
+
+use crate::evaluator::{CacheManager, EvaluatorError, EventSubscriber, Result, StateEvent};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use crate::evaluator::{EvaluatorError, Result, CacheManager, EventSubscriber, StateEvent};
 
+/// Thread-safe map of variable names to (value, optional_unit).
 pub type VarMap = Arc<RwLock<HashMap<String, (f64, Option<String>)>>>;
+
+/// Map of unit names to conversion factors.
 pub type Units = HashMap<String, f64>;
+
+/// Map of currency codes to exchange rates.
 pub type Rates = HashMap<String, f64>;
+
+/// Map of temperature unit names to their type strings.
 pub type TempUnits = HashMap<String, String>;
 
+/// Trait for evaluation agents that process specific types of input.
+///
+/// Agents are checked in priority order until one can handle the input.
 pub trait Agent: Send + Sync {
     fn priority(&self) -> i32;
     fn can_handle(&self, input: &str, state: &AppState) -> bool;
-    fn process(&self, input: &str, state: &mut AppState, config: &crate::config::Config) -> Option<(String, bool, Option<f64>)>;
+    fn process(
+        &self,
+        input: &str,
+        state: &mut AppState,
+        config: &crate::config::Config,
+    ) -> Option<(String, bool, Option<f64>)>;
 }
 
+/// Editor mode for the TUI.
 #[derive(Clone)]
 pub enum Mode {
+    /// Normal editing mode.
     Normal,
+    /// Command mode with current command string.
     Command(String),
 }
 
+/// Main application state containing all runtime data.
+///
+/// Stores variables, history, unit configurations, and event subscribers.
+///
+/// # Examples
+///
+/// ```
+/// use numby::config::Config;
+/// use numby::models::AppState;
+///
+/// let config = Config::default();
+/// let state = AppState::builder(&config).build();
+/// ```
 #[derive(Clone)]
 pub struct AppState {
     pub variables: VarMap,
@@ -46,7 +82,9 @@ pub struct AppStateBuilder {
 
 impl AppStateBuilder {
     pub fn new(config: &crate::config::Config) -> Self {
-        Self { config: Arc::new(config.clone()) }
+        Self {
+            config: Arc::new(config.clone()),
+        }
     }
 
     pub fn build(self) -> AppState {
@@ -78,8 +116,11 @@ impl AppState {
     /// Create a new AppState from a configuration.
     ///
     /// # Example
-    /// ```ignore
-    /// let config = Config::load()?;
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
     /// let state = AppState::new(&config);
     /// ```
     #[allow(unused)]
@@ -110,8 +151,11 @@ impl AppState {
     /// Create a builder for AppState.
     ///
     /// # Example
-    /// ```ignore
-    /// let config = Config::load()?;
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
     /// let state = AppState::builder(&config).build();
     /// ```
     pub fn builder(config: &crate::config::Config) -> AppStateBuilder {
@@ -121,14 +165,22 @@ impl AppState {
     /// Set the status message.
     ///
     /// # Example
-    /// ```ignore
-    /// state.set_status("Processing...".to_string())?;
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
+    /// let state = AppState::builder(&config).build();
+    /// state.set_status("Processing...".to_string()).unwrap();
     /// ```
     pub fn set_status(&self, msg: String) -> Result<()> {
-        self.status.write()
+        self.status
+            .write()
             .map_err(|e| EvaluatorError::LockError(format!("Status lock: {}", e)))?
             .clear();
-        *self.status.write()
+        *self
+            .status
+            .write()
             .map_err(|e| EvaluatorError::LockError(format!("Status lock: {}", e)))? = msg;
         Ok(())
     }
@@ -136,12 +188,19 @@ impl AppState {
     /// Get the current status message.
     ///
     /// # Example
-    /// ```ignore
-    /// let status = state.get_status()?;
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
+    /// let state = AppState::builder(&config).build();
+    /// let status = state.get_status().unwrap();
     /// ```
     #[allow(unused)]
     pub fn get_status(&self) -> Result<String> {
-        Ok(self.status.read()
+        Ok(self
+            .status
+            .read()
             .map_err(|e| EvaluatorError::LockError(format!("Status lock: {}", e)))?
             .clone())
     }
@@ -149,14 +208,21 @@ impl AppState {
     /// Get a variable value and its unit.
     ///
     /// # Example
-    /// ```ignore
-    /// if let Some((value, unit)) = state.get_variable("x")? {
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
+    /// let state = AppState::builder(&config).build();
+    /// if let Some((value, unit)) = state.get_variable("x").unwrap() {
     ///     println!("x = {} {:?}", value, unit);
     /// }
     /// ```
     #[allow(unused)]
     pub fn get_variable(&self, name: &str) -> Result<Option<(f64, Option<String>)>> {
-        Ok(self.variables.read()
+        Ok(self
+            .variables
+            .read()
             .map_err(|e| EvaluatorError::LockError(format!("Variable lock: {}", e)))?
             .get(name)
             .cloned())
@@ -165,12 +231,18 @@ impl AppState {
     /// Set a variable with value and optional unit. Publishes VariableChanged event.
     ///
     /// # Example
-    /// ```ignore
-    /// state.set_variable("x".to_string(), 42.0, Some("m".to_string()))?;
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
+    /// let state = AppState::builder(&config).build();
+    /// state.set_variable("x".to_string(), 42.0, Some("m".to_string())).unwrap();
     /// ```
     #[allow(unused)]
     pub fn set_variable(&self, name: String, value: f64, unit: Option<String>) -> Result<()> {
-        self.variables.write()
+        self.variables
+            .write()
             .map_err(|e| EvaluatorError::LockError(format!("Variable lock: {}", e)))?
             .insert(name.clone(), (value, unit));
         self.publish_event(StateEvent::VariableChanged(name));
@@ -180,11 +252,17 @@ impl AppState {
     /// Add a value to history. Publishes HistoryAdded event.
     ///
     /// # Example
-    /// ```ignore
-    /// state.add_history(42.0)?;
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
+    /// let state = AppState::builder(&config).build();
+    /// state.add_history(42.0).unwrap();
     /// ```
     pub fn add_history(&self, value: f64) -> Result<()> {
-        self.history.write()
+        self.history
+            .write()
             .map_err(|e| EvaluatorError::LockError(format!("History lock: {}", e)))?
             .push(value);
         self.publish_event(StateEvent::HistoryAdded(value));
@@ -194,12 +272,19 @@ impl AppState {
     /// Get all history values.
     ///
     /// # Example
-    /// ```ignore
-    /// let history = state.get_history()?;
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    ///
+    /// let config = Config::default();
+    /// let state = AppState::builder(&config).build();
+    /// let history = state.get_history().unwrap();
     /// ```
     #[allow(unused)]
     pub fn get_history(&self) -> Result<Vec<f64>> {
-        Ok(self.history.read()
+        Ok(self
+            .history
+            .read()
             .map_err(|e| EvaluatorError::LockError(format!("History lock: {}", e)))?
             .clone())
     }
@@ -207,7 +292,13 @@ impl AppState {
     /// Publish an event to all subscribers.
     ///
     /// # Example
-    /// ```ignore
+    /// ```
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    /// use numby::evaluator::StateEvent;
+    ///
+    /// let config = Config::default();
+    /// let state = AppState::builder(&config).build();
     /// state.publish_event(StateEvent::ConfigReloaded);
     /// ```
     pub fn publish_event(&self, event: StateEvent) {
@@ -221,13 +312,26 @@ impl AppState {
     /// Subscribe to state change events.
     ///
     /// # Example
-    /// ```ignore
-    /// let subscriber = Arc::new(MySubscriber::new());
-    /// state.subscribe(subscriber)?;
+    /// ```
+    /// use std::sync::Arc;
+    /// use numby::config::Config;
+    /// use numby::models::AppState;
+    /// use numby::evaluator::{StateEvent, EventSubscriber};
+    ///
+    /// struct MySubscriber;
+    /// impl EventSubscriber for MySubscriber {
+    ///     fn on_event(&self, _event: &StateEvent) {}
+    /// }
+    ///
+    /// let config = Config::default();
+    /// let state = AppState::builder(&config).build();
+    /// let subscriber = Arc::new(MySubscriber);
+    /// state.subscribe(subscriber).unwrap();
     /// ```
     #[allow(unused)]
     pub fn subscribe(&self, subscriber: Arc<dyn EventSubscriber>) -> Result<()> {
-        self.subscribers.write()
+        self.subscribers
+            .write()
             .map_err(|e| EvaluatorError::LockError(format!("Subscribers lock: {}", e)))?
             .push(subscriber);
         Ok(())

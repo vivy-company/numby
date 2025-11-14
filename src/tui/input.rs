@@ -3,11 +3,17 @@ use ropey::Rope;
 use std::fs;
 
 use crate::models::{AppState, Mode};
+use crate::security::{
+    sanitize_terminal_string, validate_file_path, validate_input_size, MAX_EXPR_LENGTH,
+};
 use crate::utils;
-use crate::security::{validate_file_path, sanitize_terminal_string, validate_input_size, MAX_EXPR_LENGTH};
 
 /// Helper function to delete a text selection
-fn delete_selection(input: &mut Rope, cursor_pos: &mut usize, selection_start: Option<usize>) -> bool {
+fn delete_selection(
+    input: &mut Rope,
+    cursor_pos: &mut usize,
+    selection_start: Option<usize>,
+) -> bool {
     if let Some(start) = selection_start {
         let (from, to) = if start < *cursor_pos {
             (start, *cursor_pos)
@@ -122,7 +128,7 @@ pub fn handle_normal_mode(
                     *cursor_pos += 1;
                 } else {
                     let _ = state.set_status(
-                        crate::fl!("input-size-limit", "max" => &MAX_EXPR_LENGTH.to_string())
+                        crate::fl!("input-size-limit", "max" => &MAX_EXPR_LENGTH.to_string()),
                     );
                 }
             }
@@ -179,7 +185,7 @@ pub fn handle_normal_mode(
                     // Validate current line before evaluation
                     if let Err(e) = validate_input_size(trimmed) {
                         let _ = state.set_status(
-                            crate::fl!("line-validation-error", "error" => &e.to_string())
+                            crate::fl!("line-validation-error", "error" => &e.to_string()),
                         );
                     } else {
                         registry.evaluate(trimmed, state);
@@ -226,10 +232,16 @@ pub fn handle_command_mode(
                         }
                         Err(e) => {
                             let _ = state.set_status(
-                                crate::fl!("invalid-file-path", "error" => &e.to_string())
+                                crate::fl!("invalid-file-path", "error" => &e.to_string()),
                             );
                         }
                     }
+                } else if command == "langs" {
+                    list_languages(state);
+                } else if let Some(locale) = command.strip_prefix("lang ") {
+                    set_language(state, locale.trim());
+                } else if command == "lang" {
+                    show_current_language(state);
                 }
             }
             KeyCode::Esc => {
@@ -240,6 +252,44 @@ pub fn handle_command_mode(
     }
 
     false // Don't quit
+}
+
+/// Shows the current language
+fn show_current_language(state: &mut AppState) {
+    let locale = crate::i18n::get_locale();
+    let display_name = crate::i18n::get_locale_display_name(&locale.to_string());
+    let _ = state.set_status(crate::fl!("current-language", "name" => display_name));
+}
+
+/// Lists all available languages
+fn list_languages(state: &mut AppState) {
+    let locales = crate::i18n::get_available_locales();
+    let langs: Vec<String> = locales
+        .iter()
+        .map(|locale| {
+            crate::i18n::get_locale_display_name(locale).to_string()
+        })
+        .collect();
+
+    let _ = state.set_status(crate::fl!("available-languages", "list" => &langs.join(", ")));
+}
+
+/// Sets the current language
+fn set_language(state: &mut AppState, locale: &str) {
+    match crate::i18n::set_locale(locale) {
+        Ok(_) => {
+            let display_name = crate::i18n::get_locale_display_name(locale);
+            let _ = state.set_status(crate::fl!("language-changed", "name" => display_name));
+
+            // Try to update and save config
+            let mut config = crate::config::load_config();
+            config.locale = Some(locale.to_string());
+            let _ = crate::config::save_config(&config);
+        }
+        Err(e) => {
+            let _ = state.set_status(crate::fl!("failed-set-language", "error" => &e.to_string()));
+        }
+    }
 }
 
 /// Saves the current file
@@ -264,9 +314,7 @@ fn save_file(state: &mut AppState, input: &Rope, new_filename: Option<&str>) {
             let _ = state.set_status(crate::fl!("file-saved", "path" => filename));
         }
         Err(e) => {
-            let _ = state.set_status(
-                crate::fl!("error-saving-file", "error" => &e.to_string())
-            );
+            let _ = state.set_status(crate::fl!("error-saving-file", "error" => &e.to_string()));
         }
     }
 }
