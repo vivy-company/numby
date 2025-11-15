@@ -248,7 +248,14 @@ pub fn evaluate_expr_with_original(
         }
     }
 
-    // Extract units from expression
+    // Try to parse and handle unit algebra for multiplication/division
+    // Check if expression contains units and operations
+    let result_from_algebra = try_evaluate_with_unit_algebra(&expr_str, ctx);
+    if result_from_algebra.is_ok() {
+        return result_from_algebra;
+    }
+
+    // Fall back to original unit extraction logic for simple cases
     let mut num_expr = expr_str.clone();
     let mut found_unit = None;
     let words: Vec<&str> = expr_str.split_whitespace().collect();
@@ -299,6 +306,81 @@ pub fn evaluate_expr_with_original(
             )),
         }
     }
+}
+
+/// Try to evaluate an expression with unit algebra (multiplication/division)
+fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalResult> {
+    // Simple regex to match patterns like: "number unit * number unit" or "number unit * number"
+    lazy_static! {
+        static ref MULT_DIV_RE: Regex = Regex::new(
+            r"^\s*([\d.]+)\s+([a-zA-Z]+)\s*([*/])\s*([\d.]+)\s*([a-zA-Z]*)\s*$"
+        ).expect("Invalid unit algebra regex");
+    }
+
+    if let Some(caps) = MULT_DIV_RE.captures(expr) {
+        let left_val: f64 = caps[1].parse().map_err(|_| {
+            EvaluatorError::ParseError("Failed to parse left operand".to_string())
+        })?;
+        let left_unit = caps[2].to_string();
+        let op = &caps[3];
+        let right_val: f64 = caps[4].parse().map_err(|_| {
+            EvaluatorError::ParseError("Failed to parse right operand".to_string())
+        })?;
+        let right_unit = caps.get(5).map(|m| m.as_str().to_string());
+
+        // Perform the operation
+        let value = match op {
+            "*" => left_val * right_val,
+            "/" => left_val / right_val,
+            _ => return Err(EvaluatorError::InvalidExpression("Unsupported operation".to_string())),
+        };
+
+        // Determine result unit based on operation and units
+        let unit = match (op, &right_unit) {
+            ("*", None) => {
+                // number unit * number = number unit (e.g., 5 feet * 2 = 10 feet)
+                Some(left_unit)
+            }
+            ("*", Some(right_u)) if right_u.is_empty() => {
+                // number unit * number = number unit (e.g., 5 feet * 2 = 10 feet)
+                Some(left_unit)
+            }
+            ("*", Some(right_u)) if right_u == &left_unit => {
+                // Same unit multiplication: feet * feet = feet² (but for now, keep first unit)
+                // This is where you'd implement proper unit squaring
+                Some(left_unit)
+            }
+            ("*", Some(right_u)) if is_currency(right_u, ctx) => {
+                // area unit * currency = currency (e.g., feet² * USD = USD)
+                Some(right_u.clone())
+            }
+            ("/", None) => {
+                // number unit / number = number unit (e.g., 10 feet / 2 = 5 feet)
+                Some(left_unit)
+            }
+            ("/", Some(right_u)) if right_u.is_empty() => {
+                // number unit / number = number unit (e.g., 10 feet / 2 = 5 feet)
+                Some(left_unit)
+            }
+            ("/", Some(right_u)) if right_u == &left_unit => {
+                // Same unit division: feet / feet = unitless
+                None
+            }
+            _ => {
+                // For other cases, keep left unit
+                Some(left_unit)
+            }
+        };
+
+        Ok(EvalResult { value, unit })
+    } else {
+        Err(EvaluatorError::InvalidExpression("Not a unit algebra expression".to_string()))
+    }
+}
+
+/// Check if a unit string is a currency
+fn is_currency(unit: &str, ctx: &EvalContext) -> bool {
+    ctx.rates.contains_key(&unit.to_uppercase())
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -163,14 +163,11 @@ pub fn preprocess_input(
     // Replace variables with cached regexes (only in right side for assignments)
     let mut preprocessed_right = right_side.clone();
 
-    // Check if this is a unit conversion expression (contains " in " or " to ")
-    let is_conversion = preprocessed_right.contains(" in ") || preprocessed_right.contains(" to ");
-
     for (var, (val, unit)) in variables {
         let re = get_variable_regex(var);
-        // Include unit when replacing variables IF this is a conversion expression
-        // Otherwise just use the numeric value (units are tracked separately in evaluate_expr)
-        let replacement = if is_conversion && unit.is_some() {
+        // Always include unit when replacing variables if the variable has a unit
+        // This allows the evaluator to handle unit algebra (multiplication/division)
+        let replacement = if unit.is_some() {
             format!("{} {}", val, unit.as_ref().unwrap())
         } else {
             val.to_string()

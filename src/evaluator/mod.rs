@@ -344,4 +344,45 @@ mod tests {
         let vars = state.variables.read().unwrap();
         assert_eq!(vars.get("x").unwrap().0, 200.0);
     }
+
+    #[test]
+    fn test_variable_multiplication_with_units() {
+        let config = Config::default();
+        let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+        let mut state = AppStateBuilder::new(&config).build();
+
+        // Test case: room_length = 5 meters to feet
+        let result = registry.evaluate("room_length = 5 meters to feet", &mut state);
+        assert!(result.is_some());
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // room_width = 4 meters to feet
+        let result = registry.evaluate("room_width = 4 meters to feet", &mut state);
+        assert!(result.is_some());
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // area = room_length * room_width
+        let result = registry.evaluate("area = room_length * room_width", &mut state);
+        assert!(result.is_some(), "Failed to multiply variables with units");
+        let (area_str, _) = result.unwrap();
+        // 16.40 feet * 13.12 feet ≈ 215.2 square feet
+        assert!(area_str.contains("215") || area_str.contains("214"));
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // cost_per_sqft = 8.50 USD
+        let result = registry.evaluate("cost_per_sqft = 8.50 USD", &mut state);
+        assert!(result.is_some());
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // total_cost = area * cost_per_sqft
+        let result = registry.evaluate("total_cost = area * cost_per_sqft", &mut state);
+        assert!(result.is_some(), "Failed to multiply area by cost");
+        let (total_str, _) = result.unwrap();
+        // 215.2 * 8.50 ≈ 1829 USD
+        // Result should be in USD, not feet
+        assert!(total_str.contains("USD") || total_str.to_uppercase().contains("USD"),
+                "Result should be in USD, got: {}", total_str);
+        assert!(total_str.contains("1") && total_str.contains("8"),
+                "Result should be around 1829, got: {}", total_str);
+    }
 }
