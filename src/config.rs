@@ -95,6 +95,7 @@ fn create_length_units() -> HashMap<String, f64> {
             ("ft", 0.3048),
             ("foot", 0.3048),
             ("feet", 0.3048),
+            ("in", 0.0254),
             ("inch", 0.0254),
             ("inches", 0.0254),
             ("yard", 0.9144),
@@ -111,10 +112,15 @@ fn create_time_units() -> HashMap<String, f64> {
     insert_numeric_units(
         &mut map,
         &[
+            ("s", 1.0),
+            ("sec", 1.0),
             ("second", 1.0),
             ("seconds", 1.0),
+            ("min", 60.0),
             ("minute", 60.0),
             ("minutes", 60.0),
+            ("h", 3600.0),
+            ("hr", 3600.0),
             ("hour", 3600.0),
             ("hours", 3600.0),
             ("day", 86400.0),
@@ -135,9 +141,12 @@ fn create_temperature_units() -> HashMap<String, String> {
     insert_string_units(
         &mut map,
         &[
+            ("k", "kelvin"),
             ("kelvin", "kelvin"),
             ("kelvins", "kelvin"),
+            ("c", "celsius"),
             ("celsius", "celsius"),
+            ("f", "fahrenheit"),
             ("fahrenheit", "fahrenheit"),
         ],
     );
@@ -174,15 +183,23 @@ fn create_volume_units() -> HashMap<String, f64> {
             ("liter", 0.001),
             ("liters", 0.001),
             ("l", 0.001),
+            ("milliliter", 0.000001),
+            ("milliliters", 0.000001),
+            ("ml", 0.000001),
             ("pint", 0.000473176),
             ("pints", 0.000473176),
             ("quart", 0.000946353),
             ("quarts", 0.000946353),
             ("gallon", 0.00378541),
             ("gallons", 0.00378541),
-            ("tea spoon", 4.92892e-6),
-            ("table spoon", 1.47868e-5),
+            ("teaspoon", 4.92892e-6),
+            ("teaspoons", 4.92892e-6),
+            ("tsp", 4.92892e-6),
+            ("tablespoon", 1.47868e-5),
+            ("tablespoons", 1.47868e-5),
+            ("tbsp", 1.47868e-5),
             ("cup", 0.000236588),
+            ("cups", 0.000236588),
         ],
     );
     map
@@ -196,6 +213,9 @@ fn create_weight_units() -> HashMap<String, f64> {
             ("gram", 1.0),
             ("grams", 1.0),
             ("g", 1.0),
+            ("kilogram", 1000.0),
+            ("kilograms", 1000.0),
+            ("kg", 1000.0),
             ("tonne", 1000000.0),
             ("tonnes", 1000000.0),
             ("carat", 0.2),
@@ -203,10 +223,13 @@ fn create_weight_units() -> HashMap<String, f64> {
             ("centner", 100000.0),
             ("pound", 453.592),
             ("pounds", 453.592),
+            ("lb", 453.592),
+            ("lbs", 453.592),
             ("stone", 6350.29),
             ("stones", 6350.29),
             ("ounce", 28.3495),
             ("ounces", 28.3495),
+            ("oz", 28.3495),
         ],
     );
     map
@@ -382,7 +405,17 @@ fn create_functions() -> HashMap<String, String> {
 fn create_custom_units() -> HashMap<String, HashMap<String, f64>> {
     let mut custom_units = HashMap::new();
     let mut energy_units = HashMap::new();
-    insert_numeric_units(&mut energy_units, &[("joule", 1.0), ("calorie", 4.184)]);
+    insert_numeric_units(
+        &mut energy_units,
+        &[
+            ("joule", 1.0),
+            ("joules", 1.0),
+            ("j", 1.0),
+            ("calorie", 4.184),
+            ("calories", 4.184),
+            ("cal", 4.184),
+        ],
+    );
     custom_units.insert("energy".to_string(), energy_units);
     custom_units
 }
@@ -456,13 +489,13 @@ pub fn parse_rate(rate_str: &str) -> Option<(String, f64)> {
 pub fn load_config() -> Config {
     let config_path = get_config_path();
     if let Ok(content) = fs::read_to_string(&config_path) {
-        if let Ok(config) = serde_json::from_str(&content) {
+        if let Ok(config) = serde_json::from_str::<Config>(&content) {
             return config;
         }
     }
     // Try ./config.json
     if let Ok(content) = fs::read_to_string("./config.json") {
-        if let Ok(config) = serde_json::from_str(&content) {
+        if let Ok(config) = serde_json::from_str::<Config>(&content) {
             return config;
         }
     }

@@ -248,6 +248,38 @@ fn test_invalid_expression() {
 }
 
 #[test]
+fn test_variable_assignment_with_conversion() {
+    // Test: flight = 850 USD to JPY
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "JPY:150",
+        "flight = 850 USD to JPY",
+    ]);
+    // 850 * 150 = 127500 JPY (displayed as 127.5k JPY)
+    let re = Regex::new(r"127\.5k JPY").unwrap();
+    assert!(re.is_match(stdout.trim()));
+}
+
+#[test]
+fn test_arithmetic_with_conversion_in_assignment() {
+    // Test: hotel = 150 USD * 5 to JPY
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "JPY:150",
+        "hotel = 150 USD * 5 to JPY",
+    ]);
+    // (150 * 5) * 150 = 112500 JPY (displayed as 112.5k JPY)
+    let re = Regex::new(r"112\.5k JPY").unwrap();
+    assert!(re.is_match(stdout.trim()));
+}
+
+#[test]
 fn test_division_by_zero() {
     let (stdout, _) = run_command(&["run", "--", "1 / 0"]);
     // meval may return inf or error, check for either

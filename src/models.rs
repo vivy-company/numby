@@ -74,6 +74,9 @@ pub struct AppState {
     pub cache: Arc<CacheManager>,
     pub subscribers: Arc<RwLock<Vec<Arc<dyn EventSubscriber>>>>,
     pub is_display_only: bool,
+    /// Stores the original input (before preprocessing) temporarily during evaluation
+    /// Used by agents that need to access variable names before they are replaced
+    pub original_input: Arc<RwLock<Option<String>>>,
 }
 
 pub struct AppStateBuilder {
@@ -98,6 +101,7 @@ impl AppStateBuilder {
             length_units: self.config.length_units.clone(),
             time_units: self.config.time_units.clone(),
             temperature_units: self.config.temperature_units.clone(),
+            original_input: Arc::new(RwLock::new(None)),
             area_units: self.config.area_units.clone(),
             volume_units: self.config.volume_units.clone(),
             weight_units: self.config.weight_units.clone(),
@@ -145,6 +149,7 @@ impl AppState {
             cache,
             subscribers,
             is_display_only: false,
+            original_input: Arc::new(RwLock::new(None)),
         }
     }
 

@@ -67,6 +67,11 @@ void libnumby_free_string(char *s);
 
 int32_t libnumby_clear_history(NumbyContext *ctx);
 
+/**
+ * Clear all variables from the context
+ */
+int32_t libnumby_clear_variables(NumbyContext *ctx);
+
 int32_t libnumby_get_history_count(NumbyContext *ctx);
 
 void libnumby_context_free(NumbyContext *ctx);

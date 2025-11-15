@@ -47,16 +47,33 @@ lazy_static! {
         Regex::new(r"(\w+)\s+(\d+(?:\.\d+)?)").expect("Invalid regex pattern for function parsing");
 }
 
+/// Evaluate an expression
 pub fn evaluate_expr(expr: &str, ctx: &mut EvalContext) -> Result<EvalResult> {
+    evaluate_expr_with_original(expr, ctx, None)
+}
+
+/// Evaluate an expression with optional original expression for unit tracking
+///
+/// # Arguments
+/// * `expr` - The preprocessed expression to evaluate
+/// * `ctx` - The evaluation context
+/// * `original_expr` - Optional original expression (before variable substitution) for unit tracking
+pub fn evaluate_expr_with_original(
+    expr: &str,
+    ctx: &mut EvalContext,
+    original_expr: Option<&str>,
+) -> Result<EvalResult> {
     // Preprocessing is now handled elsewhere before calling this function
     // This function receives already preprocessed input
     let mut expr_str = expr.to_string();
 
-    // Track unit from variables
+    // Track unit from variables that are actually used in the ORIGINAL expression
+    // (before preprocessing replaced variable names with values)
+    let expr_for_unit_check = original_expr.unwrap_or(expr);
     let mut has_unit = false;
     let mut result_unit = None;
-    for (_val, unit) in (*ctx.variables).values() {
-        if unit.is_some() {
+    for (var_name, (_val, unit)) in ctx.variables.iter() {
+        if unit.is_some() && expr_for_unit_check.contains(var_name) {
             has_unit = true;
             result_unit = unit.clone();
             break;
@@ -159,8 +176,10 @@ pub fn evaluate_expr(expr: &str, ctx: &mut EvalContext) -> Result<EvalResult> {
         .map(|pos| (" in ", pos))
         .or_else(|| expr_str.find(" to ").map(|pos| (" to ", pos)));
     if let Some((kw, pos)) = conversion_keyword {
-        let left = &expr_str[..pos].trim();
-        let right = &expr_str[pos + kw.len()..].trim();
+        let left = expr_str[..pos].trim();
+        let right = expr_str[pos + kw.len()..].trim();
+
+        // First, try direct conversion (e.g., "100 USD" to "EUR")
         if let Some(val) = evaluate_unit_conversion(
             left,
             right,
@@ -180,7 +199,7 @@ pub fn evaluate_expr(expr: &str, ctx: &mut EvalContext) -> Result<EvalResult> {
             let parts: Vec<&str> = val.split_whitespace().collect();
             let value = parts
                 .first()
-                .and_then(|v| v.parse::<f64>().ok())
+                .and_then(|v| crate::conversions::parse_number_with_scale(v))
                 .unwrap_or(0.0);
             let unit = if parts.len() > 1 {
                 Some(parts[1].to_string())
@@ -188,6 +207,44 @@ pub fn evaluate_expr(expr: &str, ctx: &mut EvalContext) -> Result<EvalResult> {
                 None
             };
             return Ok(EvalResult { value, unit });
+        }
+
+        // If direct conversion failed, try evaluating left side first (e.g., "150 USD * 5" to "JPY")
+        if let Ok(left_result) = evaluate_expr(left, ctx) {
+            // Format as "value unit" for conversion
+            let left_with_unit = if let Some(unit) = left_result.unit {
+                format!("{} {}", left_result.value, unit)
+            } else {
+                left_result.value.to_string()
+            };
+
+            if let Some(val) = evaluate_unit_conversion(
+                &left_with_unit,
+                right,
+                ctx.length_units,
+                ctx.time_units,
+                ctx.temperature_units,
+                ctx.area_units,
+                ctx.volume_units,
+                ctx.weight_units,
+                ctx.angular_units,
+                ctx.data_units,
+                ctx.speed_units,
+                ctx.rates,
+                ctx.custom_units,
+            ) {
+                let parts: Vec<&str> = val.split_whitespace().collect();
+                let value = parts
+                    .first()
+                    .and_then(|v| crate::conversions::parse_number_with_scale(v))
+                    .unwrap_or(0.0);
+                let unit = if parts.len() > 1 {
+                    Some(parts[1].to_string())
+                } else {
+                    None
+                };
+                return Ok(EvalResult { value, unit });
+            }
         }
     }
 

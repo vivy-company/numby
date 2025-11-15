@@ -228,6 +228,14 @@ class NumbyWrapper: ObservableObject {
         }
     }
 
+    func clearVariables() {
+        guard let ctx = context else { return }
+        let result = libnumby_clear_variables(ctx)
+        if result != 0 {
+            print("Failed to clear variables")
+        }
+    }
+
     func getHistoryCount() -> Int {
         guard let ctx = context else { return 0 }
         let count = libnumby_get_history_count(ctx)

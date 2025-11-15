@@ -1,22 +1,59 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.2.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
   packages: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update version in Cargo.toml
+        id: bump
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Commit and tag
+        run: |
+          VERSION="${{ steps.bump.outputs.version }}"
+          git add Cargo.toml
+          git commit -m "bump version to $VERSION"
+          git tag "v$VERSION"
+          git push origin main
+          git push origin "v$VERSION"
+
   build:
+    needs: prepare
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             name: linux-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: linux-aarch64
           - os: macos-latest
             target: x86_64-apple-darwin
             name: macos-x86_64
@@ -26,9 +63,14 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             name: windows-x86_64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            name: windows-aarch64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare.outputs.version }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -52,25 +94,29 @@ jobs:
       - name: Prepare binary for upload
         shell: bash
         run: |
+          VERSION="v${{ needs.prepare.outputs.version }}"
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            mv target/${{ matrix.target }}/release/numby.exe numby-${{ github.ref_name }}-${{ matrix.name }}.exe
+            mv target/${{ matrix.target }}/release/numby.exe numby-$VERSION-${{ matrix.name }}.exe
           else
-            mv target/${{ matrix.target }}/release/numby numby-${{ github.ref_name }}-${{ matrix.name }}
-            tar -czf numby-${{ github.ref_name }}-${{ matrix.name }}.tar.gz numby-${{ github.ref_name }}-${{ matrix.name }}
+            mv target/${{ matrix.target }}/release/numby numby-$VERSION-${{ matrix.name }}
+            tar -czf numby-$VERSION-${{ matrix.name }}.tar.gz numby-$VERSION-${{ matrix.name }}
           fi
 
       - name: Upload binary to release
         uses: softprops/action-gh-release@v1
         with:
-          files: numby-${{ github.ref_name }}-${{ matrix.name }}*
+          tag_name: v${{ needs.prepare.outputs.version }}
+          files: numby-v${{ needs.prepare.outputs.version }}-${{ matrix.name }}*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-crates:
+    needs: prepare
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare.outputs.version }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

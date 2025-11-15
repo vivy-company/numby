@@ -258,7 +258,7 @@ pub unsafe extern "C" fn libnumby_evaluate(
             let parts: Vec<&str> = result_str.split_whitespace().collect();
             let value = parts
                 .first()
-                .and_then(|s| s.parse::<f64>().ok())
+                .and_then(|s| crate::conversions::parse_number_with_scale(s))
                 .unwrap_or(0.0);
 
             // Safe string conversion
@@ -477,6 +477,27 @@ pub unsafe extern "C" fn libnumby_clear_history(ctx: *mut NumbyContext) -> i32 {
     match context.history.write() {
         Ok(mut history) => {
             history.clear();
+            0
+        }
+        Err(_) => -1,
+    }
+}
+
+/// Clear all variables from the context
+///
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_clear_variables(ctx: *mut NumbyContext) -> i32 {
+    if ctx.is_null() {
+        return -1;
+    }
+
+    let context = &mut *ctx;
+    match context.variables.write() {
+        Ok(mut variables) => {
+            variables.clear();
             0
         }
         Err(_) => -1,

@@ -273,6 +273,7 @@ class CalculatorInstance: ObservableObject {
         results = []
         cursorPosition = 0
         numby.clearHistory()
+        numby.clearVariables()
     }
 
     deinit {

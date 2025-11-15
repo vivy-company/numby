@@ -52,8 +52,8 @@ struct CalculatorSurfaceView: View {
                                     .font(Font(NSFont(name: configManager.config.fontName ?? "SFMono-Regular", size: configManager.config.fontSize) ?? .monospacedSystemFont(ofSize: configManager.config.fontSize, weight: .regular)))
                                     .foregroundColor(Color(themeManager.syntaxColor(for: .results)))
                                     .frame(maxWidth: .infinity, alignment: .trailing)
+                                    .frame(height: configManager.config.fontSize + 8, alignment: .center)
                                     .lineLimit(1)
-                                    .frame(height: configManager.config.fontSize + 8)
                             }
                         }
                         .padding(16)

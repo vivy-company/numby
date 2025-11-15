@@ -15,6 +15,7 @@
     "ft": 0.3048,
     "foot": 0.3048,
     "feet": 0.3048,
+    "in": 0.0254,
     "inch": 0.0254,
     "inches": 0.0254,
     "yard": 0.9144,
@@ -33,25 +34,33 @@
     "nautical mile": 1852.0
   },
   "time_units": {
+    "s": 1.0,
+    "sec": 1.0,
     "second": 1.0,
     "seconds": 1.0,
+    "min": 60.0,
     "minute": 60.0,
     "minutes": 60.0,
+    "h": 3600.0,
+    "hr": 3600.0,
     "hour": 3600.0,
     "hours": 3600.0,
     "day": 86400.0,
     "days": 86400.0,
     "week": 604800.0,
     "weeks": 604800.0,
-    "month": 2592000.0,  // 30 days
+    "month": 2592000.0,
     "months": 2592000.0,
-    "year": 31536000.0,  // 365 days
+    "year": 31536000.0,
     "years": 31536000.0
   },
   "temperature_units": {
+    "k": "kelvin",
     "kelvin": "kelvin",
     "kelvins": "kelvin",
+    "c": "celsius",
     "celsius": "celsius",
+    "f": "fahrenheit",
     "fahrenheit": "fahrenheit"
   },
   "area_units": {
@@ -76,20 +85,31 @@
     "liter": 0.001,
     "liters": 0.001,
     "l": 0.001,
+    "milliliter": 0.000001,
+    "milliliters": 0.000001,
+    "ml": 0.000001,
     "pint": 0.000473176,
     "pints": 0.000473176,
     "quart": 0.000946353,
     "quarts": 0.000946353,
     "gallon": 0.00378541,
     "gallons": 0.00378541,
-    "tea spoon": 4.92892e-6,
-    "table spoon": 1.47868e-5,
-    "cup": 0.000236588
+    "teaspoon": 4.92892e-6,
+    "teaspoons": 4.92892e-6,
+    "tsp": 4.92892e-6,
+    "tablespoon": 1.47868e-5,
+    "tablespoons": 1.47868e-5,
+    "tbsp": 1.47868e-5,
+    "cup": 0.000236588,
+    "cups": 0.000236588
   },
   "weight_units": {
     "gram": 1.0,
     "grams": 1.0,
     "g": 1.0,
+    "kilogram": 1000.0,
+    "kilograms": 1000.0,
+    "kg": 1000.0,
     "tonne": 1000000.0,
     "tonnes": 1000000.0,
     "carat": 0.2,
@@ -97,10 +117,13 @@
     "centner": 100000.0,
     "pound": 453.592,
     "pounds": 453.592,
+    "lb": 453.592,
+    "lbs": 453.592,
     "stone": 6350.29,
     "stones": 6350.29,
     "ounce": 28.3495,
-    "ounces": 28.3495
+    "ounces": 28.3495,
+    "oz": 28.3495
   },
   "angular_units": {
     "radian": 1.0,
@@ -132,10 +155,10 @@
   },
   "currencies": {
     "USD": 1.0,
-    "EUR": 0.85,
-    "GBP": 0.73,
-    "JPY": 0.0065,
-    "CAD": 0.68
+    "EUR": 0.86,
+    "GBP": 0.76,
+    "JPY": 154.0,
+    "CAD": 1.40
   },
   "currency_symbols": [
     "usd", "eur", "gbp", "jpy", "cad",
@@ -184,7 +207,11 @@
   "custom_units": {
     "energy": {
       "joule": 1.0,
-      "calorie": 4.184
+      "joules": 1.0,
+      "j": 1.0,
+      "calorie": 4.184,
+      "calories": 4.184,
+      "cal": 4.184
     }
   }
 }

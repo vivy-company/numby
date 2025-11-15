@@ -78,7 +78,7 @@ fn normalize_currency_input(input: &str) -> String {
     input.to_string()
 }
 
-fn parse_number_with_scale(num_str: &str) -> Option<f64> {
+pub fn parse_number_with_scale(num_str: &str) -> Option<f64> {
     // Try direct parse first
     if let Ok(num) = num_str.parse::<f64>() {
         return Some(num);
@@ -236,6 +236,8 @@ pub fn evaluate_currency_conversion(left: &str, right: &str, rates: &Rates) -> O
 
     // Similar to length
     let left_parts: Vec<&str> = left_normalized.split_whitespace().collect();
+
+    // Handle "NUMBER CURRENCY to CURRENCY" format
     if left_parts.len() == 2 {
         let num_str = left_parts[0];
         let curr1 = left_parts[1];
@@ -243,16 +245,32 @@ pub fn evaluate_currency_conversion(left: &str, right: &str, rates: &Rates) -> O
         if let Some(num) = parse_number_with_scale(num_str) {
             if let Some(rate1) = rates.get(&curr1.to_uppercase()) {
                 if let Some(rate2) = rates.get(&curr2.to_uppercase()) {
-                    // Formula: amount * (target_per_usd / source_per_usd)
-                    // If rates are "X units per 1 USD", then to convert from source to target:
-                    // First convert source to USD: amount / rate1
-                    // Then convert USD to target: (amount / rate1) * rate2
-                    // Simplified: amount * rate2 / rate1
+                    // Formula: Convert from source currency to target currency
+                    // Rates are stored as "X units per 1 USD" (e.g., 154 JPY per 1 USD)
+                    // To convert: first convert source to USD, then USD to target
+                    // source -> USD: amount / rate1 (e.g., 850 USD / 1 = 850 USD)
+                    // USD -> target: usd_amount * rate2 (e.g., 850 * 154 = 130,900 JPY)
+                    // Combined: amount * rate2 / rate1
                     return Some(num * rate2 / rate1);
                 }
             }
         }
     }
+
+    // Handle "NUMBER to CURRENCY" format (no source unit)
+    // Assume the number is already in the target currency (just format it)
+    if left_parts.len() == 1 {
+        let curr2 = right_normalized.trim();
+        // Only apply this if the target is actually a valid currency
+        if rates.contains_key(&curr2.to_uppercase()) {
+            if let Some(num) = parse_number_with_scale(left_parts[0]) {
+                // Just return the number - it's being "converted" to the target currency
+                // This allows expressions like "100 + 400 to USD" to work
+                return Some(num);
+            }
+        }
+    }
+
     // For expressions, skip
     None
 }

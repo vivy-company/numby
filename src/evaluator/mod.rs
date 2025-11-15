@@ -11,7 +11,7 @@ pub mod events;
 mod preprocessing;
 
 pub use cache::CacheManager;
-pub use core::{evaluate_expr, evaluate_unit_conversion, EvalContext};
+pub use core::{evaluate_expr, evaluate_expr_with_original, evaluate_unit_conversion, EvalContext};
 pub use error::{EvaluatorError, Result};
 pub use events::{EventSubscriber, StateEvent};
 pub use preprocessing::{preprocess, preprocess_input};
@@ -181,6 +181,10 @@ impl AgentRegistry {
         state: &mut AppState,
         modify_history: bool,
     ) -> Option<(String, bool)> {
+        // Store original input so agents can access it
+        if let Ok(mut orig) = state.original_input.write() {
+            *orig = Some(input.to_string());
+        }
         let preprocessed = preprocess(input, state, &self.config);
         // Check if this is a history command (don't add history command results to history)
         let is_history_command = matches!(

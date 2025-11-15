@@ -1,5 +1,5 @@
 use crate::evaluator::agents::PRIORITY_VARIABLE;
-use crate::evaluator::{evaluate_expr, preprocess_input, EvalContext};
+use crate::evaluator::{preprocess_input, EvalContext};
 use crate::models::{Agent, AppState};
 use crate::prettify::prettify_number;
 
@@ -20,10 +20,25 @@ impl Agent for VariableAgent {
         state: &mut AppState,
         config: &crate::config::Config,
     ) -> Option<(String, bool, Option<f64>)> {
+        // Get original input to extract the original val_expr (before variable substitution)
+        // If not available, fall back to using the preprocessed input
+        let original_input = state.original_input.read().ok()?.clone();
+        let original_parts: Vec<&str> = if let Some(ref orig) = original_input {
+            orig.split('=').collect()
+        } else {
+            vec![]
+        };
+
         let parts: Vec<&str> = input.split('=').collect();
         if parts.len() == 2 {
             let var = parts[0].trim();
             let val_expr = parts[1].trim();
+            // Use original val_expr if available, otherwise use preprocessed
+            let original_val_expr = if original_parts.len() == 2 {
+                original_parts[1].trim()
+            } else {
+                val_expr
+            };
 
             let mut vars_guard = state.variables.write().ok()?;
             let history_guard = state.history.read().ok()?;
@@ -46,7 +61,10 @@ impl Agent for VariableAgent {
                 custom_units: &config.custom_units,
             };
 
-            if let Ok(eval_result) = evaluate_expr(&preprocessed, &mut ctx) {
+            // Pass original expression for unit tracking
+            if let Ok(eval_result) =
+                crate::evaluator::evaluate_expr_with_original(&preprocessed, &mut ctx, Some(original_val_expr))
+            {
                 // Block variable assignments in display-only mode
                 if state.is_display_only {
                     // Format the result for display but don't store it
