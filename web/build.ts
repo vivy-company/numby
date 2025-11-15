@@ -105,13 +105,13 @@ const formatFileSize = (bytes: number): string => {
   return `${size.toFixed(2)} ${units[unitIndex]}`;
 };
 
-console.log("\n🚀 Starting build process...\n");
+console.log("\nStarting build process...\n");
 
 const cliConfig = parseArgs();
 const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
 
 if (existsSync(outdir)) {
-  console.log(`🗑️ Cleaning previous build at ${outdir}`);
+  console.log(`Cleaning previous build at ${outdir}`);
   await rm(outdir, { recursive: true, force: true });
 }
 
@@ -120,7 +120,7 @@ const start = performance.now();
 const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]
   .map(a => path.resolve("src", a))
   .filter(dir => !dir.includes("node_modules"));
-console.log(`📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`);
+console.log(`Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`);
 
 const result = await Bun.build({
   entrypoints,
@@ -154,6 +154,16 @@ const buildTime = (end - start).toFixed(2);
 // Copy install.sh to dist
 const installSh = Bun.file("./src/install.sh");
 await Bun.write(path.join(outdir, "install.sh"), installSh);
-console.log(`📝 Copied install.sh to ${path.join(outdir, "install.sh")}`);
+console.log(`Copied install.sh to ${path.join(outdir, "install.sh")}`);
 
-console.log(`\n✅ Build completed in ${buildTime}ms\n`);
+// Copy sitemap.xml to dist
+const sitemap = Bun.file("./src/sitemap.xml");
+await Bun.write(path.join(outdir, "sitemap.xml"), sitemap);
+console.log(`Copied sitemap.xml to ${path.join(outdir, "sitemap.xml")}`);
+
+// Copy og.png to dist
+const ogImage = Bun.file("./src/og.png");
+await Bun.write(path.join(outdir, "og.png"), ogImage);
+console.log(`Copied og.png to ${path.join(outdir, "og.png")}`);
+
+console.log(`\nBuild completed in ${buildTime}ms\n`);
