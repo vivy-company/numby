@@ -142,15 +142,14 @@ jobs:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for release assets
-        run: sleep 30
-
-      - name: Checkout tap repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          repository: vivy-company/homebrew-numby
-          token: ${{ secrets.TAP_GITHUB_TOKEN }}
-          path: homebrew-tap
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for release assets
+        run: sleep 30
 
       - name: Download release assets and calculate SHA256
         run: |
@@ -164,17 +163,24 @@ jobs:
           curl -fsSL -o macos-aarch64.tar.gz \
             "https://github.com/vivy-company/numby/releases/download/${VERSION}/numby-${VERSION}-macos-aarch64.tar.gz"
 
+          # Download Windows x86_64 binary
+          curl -fsSL -o numby-windows-x86_64.exe \
+            "https://github.com/vivy-company/numby/releases/download/${VERSION}/numby-${VERSION}-windows-x86_64.exe"
+
           # Calculate SHA256
           SHA256_X86_64=$(sha256sum macos-x86_64.tar.gz | awk '{print $1}')
           SHA256_ARM64=$(sha256sum macos-aarch64.tar.gz | awk '{print $1}')
+          SHA256_WIN=$(sha256sum numby-windows-x86_64.exe | awk '{print $1}')
 
           echo "SHA256_X86_64=$SHA256_X86_64" >> $GITHUB_ENV
           echo "SHA256_ARM64=$SHA256_ARM64" >> $GITHUB_ENV
+          echo "SHA256_WIN=$SHA256_WIN" >> $GITHUB_ENV
           echo "VERSION=${{ needs.prepare.outputs.version }}" >> $GITHUB_ENV
 
       - name: Update Homebrew Formula
         run: |
-          cat > homebrew-tap/Formula/numby.rb << 'EOF'
+          mkdir -p Formula
+          cat > Formula/numby.rb << 'EOF'
           class Numby < Formula
             desc "Powerful natural language calculator with terminal user interface"
             homepage "https://github.com/vivy-company/numby"
@@ -201,38 +207,10 @@ jobs:
           end
           EOF
 
-      - name: Commit and push Homebrew formula
-        run: |
-          cd homebrew-tap
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/numby.rb
-          git diff --staged --quiet || git commit -m "Update numby to v${{ env.VERSION }}"
-          git push
-
-      - name: Checkout Scoop bucket
-        uses: actions/checkout@v4
-        with:
-          repository: vivy-company/scoop-numby
-          token: ${{ secrets.TAP_GITHUB_TOKEN }}
-          path: scoop-bucket
-
-      - name: Download Windows binary and calculate SHA256
-        run: |
-          VERSION="v${{ needs.prepare.outputs.version }}"
-
-          # Download Windows x86_64 binary
-          curl -fsSL -o numby-windows-x86_64.exe \
-            "https://github.com/vivy-company/numby/releases/download/${VERSION}/numby-${VERSION}-windows-x86_64.exe"
-
-          # Calculate SHA256
-          SHA256_WIN=$(sha256sum numby-windows-x86_64.exe | awk '{print $1}')
-
-          echo "SHA256_WIN=$SHA256_WIN" >> $GITHUB_ENV
-
       - name: Update Scoop manifest
         run: |
-          cat > scoop-bucket/numby.json << 'EOF'
+          mkdir -p bucket
+          cat > bucket/numby.json << 'EOF'
           {
             "version": "${{ env.VERSION }}",
             "description": "Powerful natural language calculator with terminal user interface",
@@ -260,11 +238,10 @@ jobs:
           }
           EOF
 
-      - name: Commit and push Scoop manifest
+      - name: Commit and push package manager files
         run: |
-          cd scoop-bucket
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add numby.json
-          git diff --staged --quiet || git commit -m "Update numby to v${{ env.VERSION }}"
-          git push
+          git add Formula/numby.rb bucket/numby.json
+          git diff --staged --quiet || git commit -m "update Homebrew and Scoop to v${{ env.VERSION }}"
+          git push origin main
