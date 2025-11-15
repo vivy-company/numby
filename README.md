@@ -2,287 +2,407 @@
 
 [![Rust](https://img.shields.io/badge/rust-2021-blue)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Crates.io](https://img.shields.io/crates/v/numby)](https://crates.io/crates/numby)
 
-A powerful natural language calculator with a terminal user interface (TUI). Numby allows you to perform calculations, work with variables, convert units and currencies, calculate percentages, add comments, and maintain a history of your computations.
+A powerful natural language calculator with both CLI and terminal user interface (TUI). Numby allows you to perform calculations, work with variables, convert between 40+ units across 9 categories, handle currency conversions, calculate percentages, and maintain a history of your computations—all with multi-language support.
 
 ## Features
 
-- **Natural Language Calculations**: Evaluate mathematical expressions in a human-readable format
-- **Interactive TUI**: User-friendly terminal interface for interactive calculations
-- **CLI Mode**: Evaluate expressions directly from the command line
-- **Variables**: Store and reuse variables in your calculations
-- **Unit Conversion**: Convert between various units (length, etc.)
-- **Currency Conversion**: Convert between 300+ currencies with automatic daily updates from free API
-- **Percentage Calculations**: Support for percentage expressions and operations
-- **Comments**: Support for `//` and `#` comments to annotate calculations (grayed out in TUI)
-- **History**: Keep track of your calculation history
-- **File Support**: Save and load calculation files (.numby extension)
-- **Syntax Highlighting**: Colorized output for better readability
-- **Multilingual Support**: Available in English, Spanish, and Chinese
+### Core Capabilities
+- **Natural Language Calculations**: Evaluate mathematical expressions with natural operators like "plus", "times", "divided by"
+- **Interactive TUI**: Split-panel interface with live evaluation and syntax highlighting
+- **CLI Mode**: Evaluate expressions directly from the command line or pipe input
+- **Variables & History**: Store values, reference previous results with `prev`, `sum`, `average`
+- **File Support**: Save and load calculation files (`.numby` extension) with multi-line expressions
+- **Clipboard Integration**: Copy inputs or results with `Ctrl+I` / `Ctrl+Y`
+
+### Mathematical Operations
+- **Basic Arithmetic**: `+`, `-`, `*`, `/`, `%`, `^` (exponentiation)
+- **Trigonometry**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sinh`, `cosh`, `tanh`
+- **Logarithms**: `log` (base 10), `ln` (natural log)
+- **Other Functions**: `sqrt`, `abs`, `round`, `ceil`, `floor`
+- **Constants**: `pi` (π), `e` (Euler's number)
+- **Number Formats**: Binary (`0b101`), octal (`0o10`), hex (`0xFF`), scale suffixes (`5k`, `2M`, `3G`)
+
+### Unit Conversions (40+ Units)
+- **Length**: meter, km, cm, mm, foot, inch, yard, mile, nautical mile, hand, rod, chain, furlong
+- **Time**: seconds, minutes, hours, days, weeks, months, years
+- **Temperature**: Celsius, Fahrenheit, Kelvin (with proper conversion formulas)
+- **Area**: m², hectare, acre
+- **Volume**: liter, ml, m³, pint, quart, gallon, cup, teaspoon, tablespoon
+- **Mass/Weight**: gram, kg, tonne, pound, ounce, stone, carat
+- **Speed**: m/s, km/h, mph, knot
+- **Angles**: degree, radian
+- **Data**: bit, byte
+- **Energy**: joule, calorie
+
+### Currency & Financial
+- **300+ Currencies**: USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR, BTC, ETH, and more
+- **Auto-Updates**: Daily exchange rate updates from free API
+- **Offline Support**: Cached rates work without internet
+- **Custom Rates**: Override rates with `--rate EUR:0.92`
+
+### Percentage Calculations
+- `20% of 100` → 20
+- `100 + 10%` → 110 (adds 10% of 100)
+- `200 - 25%` → 150 (subtracts 25% of 200)
+- Works with currencies: `50% of 200 USD` → 100 USD
+
+### Multilingual Support (9 Languages)
+Available in English, Spanish, French, German, Japanese, Russian, Belarusian, Chinese (Simplified & Traditional). Switch with `--locale` or `:lang` command.
+
+### Developer Features
+- **Comments**: Use `//` or `#` to annotate calculations (grayed out in TUI)
+- **Syntax Highlighting**: Colorized numbers, operators, units, and errors
+- **Vim-like Commands**: `:w` to save, `:q` to quit, `:lang` to switch language
+- **Configurable**: JSON config at `~/.numby/config.json` for custom units, rates, and aliases
 
 ## Installation
 
-### Prerequisites
+### Recommended: Automated Installer
 
-- Rust (latest stable version recommended)
-- Cargo (comes with Rust)
+```bash
+curl -fsSL https://raw.githubusercontent.com/vivy-company/numby/main/install.sh | bash
+```
 
-### Option 1: Cargo Install (Recommended for Rust Users)
+Automatically detects your OS/architecture and installs the latest release binary.
+
+### Option 2: Cargo (Rust Users)
 
 ```bash
 cargo install numby
 ```
 
-This installs the latest version from crates.io.
+Installs from [crates.io](https://crates.io/crates/numby).
 
-### Option 2: Prebuilt Binaries
+### Option 3: Download Pre-built Binaries
 
-Download the latest release from [GitHub Releases](https://github.com/wiedymi/numby/releases) for your platform.
+Download for your platform from [GitHub Releases](https://github.com/vivy-company/numby/releases):
 
-Or use the automated installer:
+- **Linux**: x86_64, ARM64
+- **macOS**: x86_64 (Intel), ARM64 (Apple Silicon)
+- **Windows**: x86_64, ARM64
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/wiedymi/numby/main/install.sh | bash
-```
+Extract and add to your `PATH`.
 
-### Option 3: Package Managers
+### Option 4: macOS App (Paid)
 
-#### macOS (Homebrew)
+A native macOS app with graphical interface is available on the **App Store** for **$6**.
 
-```bash
-brew tap wiedymi/numby
-brew install numby
-```
-
-#### Windows (Scoop)
-
-```bash
-scoop bucket add wiedymi-numby https://github.com/wiedymi/numby
-scoop install numby
-```
-
-#### Linux
-
-Use the install.sh script above, or build from source.
+The CLI/TUI version remains free and open-source.
 
 ### Building from Source
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/vivy-company/numby.git
 cd numby
 cargo build --release
 ```
 
-The binary will be available at `target/release/numby`.
-
-### Installation from Source (Optional)
-
-```bash
-cargo install --path .
-```
-
-This will install `numby` to your Cargo bin directory.
+Binary available at `target/release/numby`.
 
 ## Usage
 
-### Interactive Mode
+### Interactive TUI Mode (Default)
 
 ```bash
 numby
 ```
 
-This starts the TUI mode where you can interactively enter expressions.
+Launches the split-panel terminal interface with live evaluation.
 
-### Evaluate Expression
+**TUI Keybindings:**
+- Arrow keys: Navigate cursor
+- `Home` / `End`: Jump to line start/end
+- `Enter`: Evaluate line and insert newline
+- `Ctrl+Y`: Copy current result to clipboard
+- `Ctrl+I`: Copy current input to clipboard
+- `:q`: Quit | `:w`: Save | `:w <file>`: Save as
+- `:lang <locale>`: Switch language | `:langs`: List languages
+
+### CLI Mode (Quick Evaluation)
 
 ```bash
+# Single expression
 numby "2 + 3 * 4"
+
+# With units
+numby "100 USD in EUR"
+
+# Natural language
+numby "5 meters plus 3 feet in inches"
+
+# Percentage
+numby "15% of 200"
 ```
 
-### Open File
+### File Operations
 
 ```bash
-numby my_calculations.numby
+# Open existing file
+numby calculations.numby
+
+# Or specify with flag
+numby --file my_calculations.numby
 ```
 
-### Currency Rate Management
+Save from TUI with `:w` or `:w filename.numby`.
 
-Numby automatically updates currency rates daily from a free API (342+ currencies supported). Rates are cached locally and work offline.
+### CLI Options
 
 ```bash
-# Force update currency rates
+numby [OPTIONS] [EXPRESSION]
+
+Options:
+  -f, --file <PATH>        Open file for editing
+      --locale <LOCALE>    Set language (en-US, es, fr, de, ja, ru, be, zh-CN, zh-TW)
+      --rate <CURR:RATE>   Override currency rate (e.g., EUR:0.92)
+      --update-rates       Force update currency rates from API
+      --no-update          Skip automatic rate update
+  -h, --help              Print help
+  -V, --version           Print version
+```
+
+### Currency Management
+
+Exchange rates auto-update daily from free API (300+ currencies). Cached rates work offline.
+
+```bash
+# Force update
 numby --update-rates
 
-# Skip automatic rate update on startup
+# Skip auto-update
 numby --no-update
 
-# Manually override a specific rate
-numby --rate EUR:0.85
+# Override specific rate
+numby --rate EUR:0.92 --rate GBP:0.85
+
+# Check current rates
+numby "1 USD in EUR"
 ```
 
-**Supported Currencies**: USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR, BTC, ETH, and 300+ more fiat and cryptocurrencies.
-
-**API Source**: [fawazahmed0/currency-api](https://github.com/fawazahmed0/exchange-api) (free, no rate limits, daily updates)
-
-### Other Options
-
-- `--help`: Show help information
-- `--version`: Show version information
-- `--locale <LOCALE>`: Set language (e.g., `en-US`, `es`, `zh-CN`)
-- `--update-rates`: Force update currency rates from API
-- `--no-update`: Skip automatic currency rate update on startup
-
-### Interactive Commands
-
-- `:q` - Quit the application
-- `:w` - Save current file
-- `:w <filename>` - Save as new file
+**API Source**: [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) (free, no limits)
 
 ## Examples
 
-### Basic Calculations
+### Basic Arithmetic
 
-```
-2 + 3 * 4
-sin(45) + cos(30)
-sqrt(16) + log(100)
-```
-
-### Variables
-
-```
-x = 10
-y = 20
-x + y * 2
+```bash
+numby "2 + 3 * 4"              # 14
+numby "100 / 25"               # 4
+numby "2 ^ 8"                  # 256
+numby "sqrt(144)"              # 12
 ```
 
-### Unit Conversion
+### Trigonometry & Math Functions
 
-```
-5 meters to feet
-100 km in miles
-```
-
-### Currency Conversion
-
-Supports 300+ currencies including fiat and cryptocurrencies:
-
-```
-100 USD to EUR
-500 GBP in JPY
-1 BTC to USD
-50 ETH in EUR
-1000 CNY to INR
+```bash
+numby "sin(45)"                # 0.85
+numby "cos(pi/3)"              # 0.5
+numby "log(1000)"              # 3
+numby "abs(-42)"               # 42
 ```
 
-Currency rates update automatically every 24 hours. Use `--update-rates` to force an update or `--no-update` to skip the automatic check.
+### Variables & History
 
-### Complex Expressions
+```bash
+# In TUI:
+x = 100
+y = 50
+total = x + y                  # 150
+prev + 10                      # 160 (uses previous result)
+sum                            # Sum of all results
+average                        # Average of all results
+```
+
+### Unit Conversions
+
+```bash
+numby "5 meters to feet"       # 16.4 ft
+numby "100 km in miles"        # 62.14 mi
+numby "32 f to c"              # 0°C (Fahrenheit to Celsius)
+numby "2 hours in seconds"     # 7200 s
+numby "5 gallons to liters"    # 18.93 L
+```
+
+### Currency Conversions
+
+```bash
+numby "100 USD in EUR"         # ~92 EUR (live rates)
+numby "500 GBP to JPY"         # ~95000 JPY
+numby "1 BTC in USD"           # Current Bitcoin price
+numby "50 ETH to EUR"          # Ethereum conversion
+```
+
+### Percentage Operations
+
+```bash
+numby "20% of 500"             # 100
+numby "100 + 15%"              # 115 (adds 15% of 100)
+numby "200 - 10%"              # 180 (subtracts 10% of 200)
+numby "50% of 80 USD"          # 40 USD
+```
+
+### Complex Multi-line Calculations
+
+Create a file `budget.numby`:
 
 ```
-distance = 100 km
-time = 2 hours
-speed = distance / time
-speed in mph
+# Monthly budget calculation
+income = 5000 USD
+rent = 30% of income           # 1500 USD
+utilities = 200 USD
+food = 500 USD
+savings = income - rent - utilities - food
+savings in EUR                 # Converted savings
 ```
 
-### Percentage Calculations
+Run: `numby budget.numby`
 
+### Natural Language
+
+```bash
+numby "5 meters plus 3 feet in inches"
+numby "100 divided by 4 times 2"
+numby "pi times 10"
 ```
-10% of 100          # Returns 10
-50% of 200 USD      # Returns 100 USD
-25% of 1000 EUR     # Returns 250 EUR
 
-100 + 10%           # Returns 110 (100 + 10% of 100)
-200 - 25%           # Returns 150 (200 - 25% of 200)
-100 * 50%           # Returns 50 (100 * 0.5)
-100 / 20%           # Returns 500 (100 / 0.2)
+### Number Formats
+
+```bash
+numby "0b1010"                 # Binary: 10
+numby "0xFF"                   # Hex: 255
+numby "5k + 2M"                # 2,005,000
+numby "1_000_000 / 2"          # 500,000
 ```
 
 ### Comments
 
 ```
-10 + 5 // Simple addition
-50% of 200 USD # Calculate half of 200 dollars
-// This is a comment line (ignored)
-# This is also a comment line (ignored)
+// Budget calculations
+income = 4500 USD              # Monthly income
+expenses = 3200 USD            // Fixed expenses
+savings = income - expenses    # Remaining savings
 ```
 
-*Both `//` and `#` comment styles are supported. Comments appear grayed out in the TUI for better readability*
+Comments appear grayed out in TUI.
 
-### Internationalization
-
-Numby supports multiple languages:
+### Multi-language Support
 
 ```bash
-# Use Spanish
-numby --locale es "2 + 2"
+# Spanish
+numby --locale es "100 + 50"
 
-# Use Chinese
-numby --locale zh-CN "100 meters in feet"
+# Japanese
+numby --locale ja "10 km to miles"
 
-# Default (English or system locale)
-numby "5 * 10"
+# Chinese
+numby --locale zh-CN "50% of 200"
+
+# Switch language in TUI
+:lang de                       # Switch to German
+:langs                         # List available languages
 ```
 
-**Supported Languages:**
-- **English (en-US)** - Default
-- **Spanish (es)** - Español
-- **Chinese (zh-CN)** - 中文
-
-You can also set the locale in your `config.json`:
-
-```json
-{
-  "locale": "es",
-  ...
-}
-```
-
-The locale priority is: CLI argument → config file → system locale → en-US fallback.
+**Supported**: English, Spanish, French, German, Japanese, Russian, Belarusian, Chinese (Simplified/Traditional)
 
 ## Configuration
 
-Numby uses a `config.json` file for configuration. The default configuration includes:
+Numby stores configuration at `~/.numby/config.json`. Auto-generated on first run.
 
-- **Units**: Conversion factors for various length units
-- **Currencies**: Exchange rates for different currencies
-- **Currency Symbols**: Recognized currency symbols
+**Configurable Options:**
+- **Units**: Custom unit definitions and conversion factors
+- **Currencies**: Exchange rates (auto-updated from API)
+- **Currency Symbols**: Symbol mappings ($, €, £, ¥, etc.)
+- **Operator Aliases**: Natural language mappings ("plus" → "+")
+- **Locale**: Default language
+- **Padding**: TUI interface spacing
 
-You can modify `config.json` to add custom units or update currency rates. For current rates, check a financial API or update manually.
+**Example config.json:**
 
-See `example.numby` for a sample calculation file.
+```json
+{
+  "locale": "en-US",
+  "units": {
+    "meter": 1.0,
+    "foot": 0.3048,
+    "mile": 1609.34
+  },
+  "currencies": {
+    "USD": 1.0,
+    "EUR": 0.92
+  },
+  "operator_aliases": {
+    "plus": "+",
+    "times": "*",
+    "divided by": "/"
+  }
+}
+```
 
-## Testing
+Edit to add custom units or override defaults.
 
-Run tests with:
+## Development
+
+### Running Tests
 
 ```bash
 # All tests
 cargo test
 
-# Unit tests (i18n tests need single thread)
-cargo test --lib i18n -- --test-threads=1
-
-# Integration tests
+# Specific test suites
+cargo test --lib
+cargo test --test cli_tests
 cargo test --test localization_integration
+
+# i18n tests (require single thread)
+cargo test --lib i18n -- --test-threads=1
 ```
 
-## Dependencies
+### Building
 
-- [ratatui](https://github.com/ratatui-org/ratatui) - Terminal UI library
-- [crossterm](https://github.com/crossterm-rs/crossterm) - Terminal manipulation
-- [regex](https://github.com/rust-lang/regex) - Regular expressions
-- [fasteval2](https://github.com/izihawa/fasteval2) - Fast evaluation of algebraic expressions
-- [serde](https://serde.rs/) - Serialization
-- [fluent](https://projectfluent.org/) - Localization system
-- [arboard](https://github.com/1Password/arboard) - Clipboard operations
-- [nu-ansi-term](https://github.com/nushell/nu-ansi-term) - ANSI terminal colors
+```bash
+# Development build
+cargo build
+
+# Optimized release
+cargo build --release
+
+# Platform-specific profiles
+cargo build --profile release-cli   # CLI/TUI (with LTO)
+cargo build --profile release-lib   # macOS app library
+```
+
+## Architecture
+
+**Agent-Based Evaluation Pipeline:**
+1. **History Agent**: Handles `sum`, `total`, `avg`, `prev`
+2. **Variable Agent**: Manages variable assignments
+3. **Percentage Agent**: Processes percentage operations
+4. **Unit Agent**: Handles conversions with `in`/`to`
+5. **Math Agent**: Fallback for arithmetic expressions
+
+**Key Dependencies:**
+- [ratatui](https://github.com/ratatui-org/ratatui) - Terminal UI framework
+- [crossterm](https://github.com/crossterm-rs/crossterm) - Cross-platform terminal control
+- [fasteval2](https://github.com/izihawa/fasteval2) - Expression evaluation engine
+- [fluent](https://projectfluent.org/) - Localization framework
+- [ropey](https://github.com/cessen/ropey) - Efficient text buffer
+- [arboard](https://github.com/1Password/arboard) - Clipboard integration
+- [serde](https://serde.rs/) + [serde_json](https://github.com/serde-rs/json) - Configuration serialization
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome! Please submit a Pull Request.
+
+**Areas for contribution:**
+- Additional unit conversions
+- New language translations
+- Bug fixes and performance improvements
+- Documentation enhancements
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file.
+
+**Note:** The CLI/TUI version is free and open-source. The macOS App Store version ($6) supports ongoing development.
