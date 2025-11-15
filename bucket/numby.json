@@ -1,25 +1,25 @@
 {
-    "version": "0.1.0",
-    "description": "A powerful natural language calculator with a terminal user interface",
-    "homepage": "https://github.com/wiedymi/numby",
-    "license": "MIT",
-    "architecture": {
-        "64bit": {
-            "url": "https://github.com/wiedymi/numby/releases/download/v$version/numby-windows-x86_64.exe",
-            "hash": "TODO: Add SHA256 hash"
-        }
-    },
-    "bin": "numby.exe",
-    "shortcuts": [
-        ["numby", "numby.exe"]
-    ],
-    "checkver": "github",
-    "autoupdate": {
-        "architecture": {
-            "64bit": {
-                "url": "https://github.com/wiedymi/numby/releases/download/v$version/numby-windows-x86_64.exe",
-                "hash": "TODO: Add SHA256 hash"
-            }
-        }
+  "version": "0.1.3",
+  "description": "Powerful natural language calculator with terminal user interface",
+  "homepage": "https://github.com/vivy-company/numby",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/vivy-company/numby/releases/download/v0.1.3/numby-v0.1.3-windows-x86_64.exe",
+      "hash": "176ec982bd90db7b712f3c8768f654a3be3a1a4964e4bf53ea1ba5bbeb61cc20",
+      "bin": [
+        ["numby-v0.1.3-windows-x86_64.exe", "numby"]
+      ]
     }
+  },
+  "checkver": {
+    "github": "https://github.com/vivy-company/numby"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/vivy-company/numby/releases/download/v$version/numby-v$version-windows-x86_64.exe"
+      }
+    }
+  }
 }
