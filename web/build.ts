@@ -151,4 +151,9 @@ const outputTable = result.outputs.map(output => ({
 console.table(outputTable);
 const buildTime = (end - start).toFixed(2);
 
+// Copy install.sh to dist
+const installSh = Bun.file("./src/install.sh");
+await Bun.write(path.join(outdir, "install.sh"), installSh);
+console.log(`📝 Copied install.sh to ${path.join(outdir, "install.sh")}`);
+
 console.log(`\n✅ Build completed in ${buildTime}ms\n`);
