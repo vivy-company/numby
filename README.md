@@ -59,37 +59,15 @@ Available in English, Spanish, French, German, Japanese, Russian, Belarusian, Ch
 
 ## Installation
 
-### Package Managers
-
-#### Homebrew (macOS/Linux)
-
-```bash
-brew install vivy-company/numby/numby
-```
-
-Or tap first, then install:
-
-```bash
-brew tap vivy-company/numby
-brew install numby
-```
-
-#### Scoop (Windows)
-
-```bash
-scoop bucket add numby https://github.com/vivy-company/numby
-scoop install numby
-```
-
-#### Cargo (Cross-platform)
+### Cargo (Recommended)
 
 ```bash
 cargo install numby
 ```
 
-### Manual Installation
+Installs from [crates.io](https://crates.io/crates/numby).
 
-#### Automated Installer Script
+### Automated Installer Script
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/vivy-company/numby/main/install.sh | bash
@@ -97,7 +75,7 @@ curl -fsSL https://raw.githubusercontent.com/vivy-company/numby/main/install.sh 
 
 Automatically detects your OS/architecture and installs the latest release binary.
 
-#### Download Pre-built Binaries
+### Download Pre-built Binaries
 
 Download for your platform from [GitHub Releases](https://github.com/vivy-company/numby/releases):
 
