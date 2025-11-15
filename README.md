@@ -64,6 +64,12 @@ Available in English, Spanish, French, German, Japanese, Russian, Belarusian, Ch
 #### Homebrew (macOS/Linux)
 
 ```bash
+brew install vivy-company/numby/numby
+```
+
+Or tap first, then install:
+
+```bash
 brew tap vivy-company/numby
 brew install numby
 ```
