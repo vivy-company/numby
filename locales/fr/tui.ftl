@@ -4,7 +4,7 @@
 commands-help = Commandes : :q quitter, :w sauvegarder, :lang [langue] changer langue, :langs lister langues
 
 # Help tooltip
-help-commands = Commandes : :q quitter  :w sauvegarder  :w <fichier> sauvegarder sous  :lang changer langue  :langs liste
+help-commands = Commandes : :q quitter  :w sauvegarder  :w <fichier> sauvegarder sous  :lang changer langue  :langs lister langues
 help-shortcuts = Raccourcis : Ctrl+Y copier résultat  Ctrl+I copier entrée  Ctrl+A copier entrée
 
 # Input validation

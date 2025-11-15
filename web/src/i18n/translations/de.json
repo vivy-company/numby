@@ -1,0 +1,95 @@
+{
+  "hero": {
+    "title": "Numby",
+    "subtitle": "Der natürlichsprachige Taschenrechner für macOS. Berechne alles mit Worten.",
+    "comingSoon": "Demnächst",
+    "pricingPrefix": "$5.99 im App Store • ",
+    "pricingFree": "Kostenlos",
+    "pricingSuffix": " über Terminal",
+    "installLabel": "CLI-Version über Terminal installieren:"
+  },
+  "showcase": {
+    "app": "App",
+    "terminal": "Terminal"
+  },
+  "features": {
+    "title": "Alles, was Sie brauchen",
+    "naturalLanguage": {
+      "title": "Natürliche Sprache",
+      "desc": "Geben Sie Berechnungen ein, wie Sie denken. Keine Syntax zu merken."
+    },
+    "unitConversions": {
+      "title": "Über 40 Einheitenumrechnungen",
+      "desc": "Konvertieren Sie zwischen Länge, Zeit, Temperatur, Volumen, Gewicht, Geschwindigkeit und mehr."
+    },
+    "currencies": {
+      "title": "Über 300 Währungen",
+      "desc": "Echtzeit-Wechselkurse für USD, EUR, BTC, ETH und 300+ weitere Währungen."
+    },
+    "percentages": {
+      "title": "Intelligente Prozentrechnung",
+      "desc": "Berechnen Sie Prozentsätze natürlich: '20% von 100', '100 + 15%', '200 - 10%'."
+    },
+    "variables": {
+      "title": "Variablen und Verlauf",
+      "desc": "Speichern Sie Werte, verwenden Sie prev, sum, average. Greifen Sie jederzeit auf frühere Berechnungen zu."
+    },
+    "languages": {
+      "title": "9 Sprachen",
+      "desc": "Volle Unterstützung für Englisch, Spanisch, Französisch, Deutsch, Japanisch, Russisch und mehr."
+    },
+    "files": {
+      "title": "Dateien speichern und laden",
+      "desc": "Arbeiten Sie mit .numby-Dateien. Speichern Sie komplexe Berechnungen und verwenden Sie sie später wieder."
+    }
+  },
+  "howItWorks": {
+    "title": "Wie es funktioniert",
+    "step1": {
+      "title": "Numby starten",
+      "desc": "Verwenden Sie die globale Tastenkombination, um Numby von überall aus zu öffnen"
+    },
+    "step2": {
+      "title": "Berechnung eingeben",
+      "desc": "Schreiben Sie Ihre Berechnung in einfachem Deutsch, so wie Sie es sagen würden"
+    },
+    "step3": {
+      "title": "Sofortige Ergebnisse erhalten",
+      "desc": "Sehen Sie Ergebnisse in Echtzeit aktualisieren, während Sie tippen"
+    }
+  },
+  "faq": {
+    "title": "Häufig gestellte Fragen",
+    "q1": {
+      "question": "Welche Plattformen unterstützt Numby?",
+      "answer": "Numby funktioniert auf macOS, Linux und Windows. Die native macOS-App wird bald im App Store verfügbar sein."
+    },
+    "q2": {
+      "question": "Ist Numby kostenlos?",
+      "answer": "Ja, die Terminal-Version ist völlig kostenlos und quelloffen. Die kommende macOS-App kostet $5.99 im App Store."
+    },
+    "q3": {
+      "question": "Benötigt Numby eine Internetverbindung?",
+      "answer": "Nein, Numby funktioniert offline für alle Berechnungen. Währungsumrechnungen verwenden zwischengespeicherte Kurse, die täglich aktualisiert werden, wenn online."
+    },
+    "q4": {
+      "question": "Wie verwende ich Variablen in Berechnungen?",
+      "answer": "Weisen Sie einfach Werte wie 'x = 100' zu und referenzieren Sie sie später. Verwenden Sie 'prev' für das letzte Ergebnis oder 'sum' und 'average' für alle Ergebnisse."
+    },
+    "q5": {
+      "question": "Welche Währungsformate werden unterstützt?",
+      "answer": "300+ Währungen einschließlich USD, EUR, GBP, JPY und Kryptowährungen wie BTC und ETH mit Echtzeit-Wechselkursen."
+    },
+    "q6": {
+      "question": "Kann ich meine Berechnungen speichern?",
+      "answer": "Ja, Numby unterstützt das Speichern von Berechnungen in .numby-Dateien. Verwenden Sie im TUI :w zum Speichern. Laden Sie Dateien mit 'numby myfile.numby'."
+    }
+  },
+  "footer": {
+    "copyright": "© 2025 Vivy Technologies Co., Limited",
+    "privacy": "Datenschutz",
+    "eula": "EULA",
+    "github": "GitHub",
+    "reportIssue": "Problem melden"
+  }
+}

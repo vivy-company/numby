@@ -20,8 +20,11 @@ import screenshotBills from "./screenshot-bills.png";
 import screenshotTravel from "./screenshot-travel.png";
 import screenshotTui from "./screenshot-tui.png";
 import appStoreBadge from "./app-store-badge.svg";
+import { useLanguage, LanguageProvider } from "./i18n/LanguageContext";
+import { LanguageSelector } from "./i18n/LanguageSelector";
 
-export function App() {
+function AppContent() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("macos");
   const [copied, setCopied] = useState(false);
 
@@ -44,9 +47,9 @@ export function App() {
           <div className="inline-block mb-8">
             <img src={logo} alt="Numby" className="w-28 h-28 drop-shadow-[0_0_40px_rgba(0,113,227,0.3)]" />
           </div>
-          <h1 className="text-8xl font-semibold tracking-tight mb-6 leading-none">Numby</h1>
+          <h1 className="text-8xl font-semibold tracking-tight mb-6 leading-none">{t("hero.title")}</h1>
           <p className="text-[28px] text-[#86868b] mb-12">
-            The natural language calculator for macOS. Calculate anything with words.
+            {t("hero.subtitle")}
           </p>
           <div className="flex flex-col items-center gap-3 mb-6">
             <div className="flex justify-center mb-2">
@@ -55,15 +58,19 @@ export function App() {
                   <img src={appStoreBadge} alt="Download on the App Store" className="h-[52px] block rounded-[8px]" />
                 </div>
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[11px] text-[#86868b] whitespace-nowrap">
-                  Coming Soon
+                  {t("hero.comingSoon")}
                 </span>
               </div>
             </div>
-            <p className="text-sm text-[#86868b]"><span className="text-[#0071e3]">$5.99</span> on App Store • <span className="text-[#34c759] font-semibold">Free</span> via Terminal</p>
+            <p className="text-sm text-[#86868b]">
+              {t("hero.pricingPrefix")}
+              <span className="text-[#34c759] font-semibold">{t("hero.pricingFree")}</span>
+              {t("hero.pricingSuffix")}
+            </p>
           </div>
           <div className="mt-6 max-w-[580px] mx-auto">
             <p className="text-[13px] text-[#86868b] mb-2 text-center">
-              Install CLI version via Terminal:
+              {t("hero.installLabel")}
             </p>
             <div
               onClick={copyInstallCommand}
@@ -103,7 +110,7 @@ export function App() {
                     : "bg-transparent text-[#86868b] hover:text-[#f5f5f7]"
                 }`}
               >
-                {tab === "macos" ? "App" : "Terminal"}
+                {tab === "macos" ? t("showcase.app") : t("showcase.terminal")}
               </button>
             ))}
           </div>
@@ -116,16 +123,16 @@ export function App() {
       {/* Features Bento Grid */}
       <section className="py-20 px-6">
         <div className="max-w-[1200px] mx-auto">
-          <h2 className="text-[56px] md:text-[56px] text-[36px] font-semibold text-center mb-16 tracking-tight">Everything you need</h2>
+          <h2 className="text-[56px] md:text-[56px] text-[36px] font-semibold text-center mb-16 tracking-tight">{t("features.title")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { icon: Calculator, bg: "rgba(0,113,227,0.1)", color: "#0071e3", title: "Natural Language", desc: "Type calculations just like you think. No syntax to remember.", span: true },
-              { icon: Ruler, bg: "rgba(255,149,0,0.1)", color: "#ff9500", title: "40+ Unit Conversions", desc: "Convert between length, time, temperature, volume, weight, speed, and more." },
-              { icon: Globe, bg: "rgba(52,199,89,0.1)", color: "#34c759", title: "300+ Currencies", desc: "Real-time exchange rates for USD, EUR, BTC, ETH, and 300+ other currencies." },
-              { icon: Percent, bg: "rgba(175,82,222,0.1)", color: "#af52de", title: "Smart Percentages", desc: "Calculate percentages naturally: '20% of 100', '100 + 15%', '200 - 10%'." },
-              { icon: Variable, bg: "rgba(255,59,48,0.1)", color: "#ff3b30", title: "Variables & History", desc: "Store values, use prev, sum, average. Reference past calculations anytime." },
-              { icon: Languages, bg: "rgba(255,204,0,0.1)", color: "#ffcc00", title: "9 Languages", desc: "Full support for English, Spanish, French, German, Japanese, Russian, and more." },
-              { icon: History, bg: "rgba(0,113,227,0.1)", color: "#0071e3", title: "Save & Load Files", desc: "Work with .numby files. Save complex calculations and reuse them later." },
+              { icon: Calculator, bg: "rgba(0,113,227,0.1)", color: "#0071e3", key: "naturalLanguage", span: true },
+              { icon: Ruler, bg: "rgba(255,149,0,0.1)", color: "#ff9500", key: "unitConversions" },
+              { icon: Globe, bg: "rgba(52,199,89,0.1)", color: "#34c759", key: "currencies" },
+              { icon: Percent, bg: "rgba(175,82,222,0.1)", color: "#af52de", key: "percentages" },
+              { icon: Variable, bg: "rgba(255,59,48,0.1)", color: "#ff3b30", key: "variables" },
+              { icon: Languages, bg: "rgba(255,204,0,0.1)", color: "#ffcc00", key: "languages" },
+              { icon: History, bg: "rgba(0,113,227,0.1)", color: "#0071e3", key: "files" },
             ].map((feature, i) => (
               <div
                 key={i}
@@ -138,8 +145,8 @@ export function App() {
                 >
                   <feature.icon size={24} color={feature.color} />
                 </div>
-                <h3 className="text-2xl font-semibold mb-3 tracking-tight">{feature.title}</h3>
-                <p className="text-[#86868b] text-[17px] leading-[1.47059]">{feature.desc}</p>
+                <h3 className="text-2xl font-semibold mb-3 tracking-tight">{t(`features.${feature.key}.title`)}</h3>
+                <p className="text-[#86868b] text-[17px] leading-[1.47059]">{t(`features.${feature.key}.desc`)}</p>
               </div>
             ))}
           </div>
@@ -149,18 +156,18 @@ export function App() {
       {/* How It Works */}
       <section className="py-20 px-6">
         <div className="max-w-[720px] mx-auto">
-          <h2 className="text-[56px] font-semibold text-center mb-16 tracking-tight">How it works</h2>
+          <h2 className="text-[56px] font-semibold text-center mb-16 tracking-tight">{t("howItWorks.title")}</h2>
           <div className="flex flex-col gap-10">
             {[
-              { num: "1", title: "Launch Numby", desc: "Use the global keyboard shortcut to bring up Numby from anywhere" },
-              { num: "2", title: "Type your calculation", desc: "Write your calculation in plain English, just like you'd say it" },
-              { num: "3", title: "Get instant results", desc: "See results update in real-time as you type" },
+              { num: "1", key: "step1" },
+              { num: "2", key: "step2" },
+              { num: "3", key: "step3" },
             ].map((step) => (
               <div key={step.num} className="flex gap-6 items-start">
                 <span className="text-[40px] font-bold text-[#0071e3] font-mono min-w-[60px]">{step.num}</span>
                 <div>
-                  <h3 className="text-2xl font-semibold mb-2 tracking-tight">{step.title}</h3>
-                  <p className="text-[#86868b] text-[17px] leading-[1.47059]">{step.desc}</p>
+                  <h3 className="text-2xl font-semibold mb-2 tracking-tight">{t(`howItWorks.${step.key}.title`)}</h3>
+                  <p className="text-[#86868b] text-[17px] leading-[1.47059]">{t(`howItWorks.${step.key}.desc`)}</p>
                 </div>
               </div>
             ))}
@@ -171,44 +178,49 @@ export function App() {
       {/* FAQ */}
       <section className="py-20 px-6">
         <div className="max-w-[720px] mx-auto">
-          <h2 className="text-[56px] font-semibold text-center mb-16 tracking-tight">Frequently asked questions</h2>
+          <h2 className="text-[56px] font-semibold text-center mb-16 tracking-tight">{t("faq.title")}</h2>
           <div className="flex flex-col gap-8">
-            <div>
-              <h3 className="text-[21px] font-semibold mb-3 tracking-tight">What platforms does Numby support?</h3>
-              <p className="text-[#86868b] text-[17px] leading-[1.47059]">
-                Numby works on macOS, Linux, and Windows. The native macOS app is coming to the App Store soon.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-[21px] font-semibold mb-3 tracking-tight">Is Numby free?</h3>
-              <p className="text-[#86868b] text-[17px] leading-[1.47059]">
-                Yes, the terminal version is <span className="text-[#34c759] font-semibold">completely free</span> and open source. The upcoming macOS app will be <span className="text-[#0071e3]">$5.99</span> on the App Store.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-[21px] font-semibold mb-3 tracking-tight">Does Numby require an internet connection?</h3>
-              <p className="text-[#86868b] text-[17px] leading-[1.47059]">
-                No, Numby works offline for all calculations. Currency conversions use cached rates that update daily when online.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-[21px] font-semibold mb-3 tracking-tight">How do I use variables in calculations?</h3>
-              <p className="text-[#86868b] text-[17px] leading-[1.47059]">
-                Just assign values like <code className="text-[#89dceb] font-mono text-[15px]">x = 100</code> and reference them later. Use <code className="text-[#89dceb] font-mono text-[15px]">prev</code> for the last result, or <code className="text-[#89dceb] font-mono text-[15px]">sum</code> and <code className="text-[#89dceb] font-mono text-[15px]">average</code> for all results.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-[21px] font-semibold mb-3 tracking-tight">What currency formats are supported?</h3>
-              <p className="text-[#86868b] text-[17px] leading-[1.47059]">
-                300+ currencies including USD, EUR, GBP, JPY, and cryptocurrencies like BTC and ETH with real-time exchange rates.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-[21px] font-semibold mb-3 tracking-tight">Can I save my calculations?</h3>
-              <p className="text-[#86868b] text-[17px] leading-[1.47059]">
-                Yes, Numby supports saving calculations to <code className="text-[#89dceb] font-mono text-[15px]">.numby</code> files. In the TUI, use <code className="text-[#89dceb] font-mono text-[15px]">:w</code> to save. Load files with <code className="text-[#89dceb] font-mono text-[15px]">numby myfile.numby</code>.
-              </p>
-            </div>
+            {["q1", "q2", "q3", "q4", "q5", "q6"].map((qKey) => {
+              const answer = t(`faq.${qKey}.answer`);
+
+              // For q2, highlight "completely free" and "$5.99"
+              const renderQ2 = () => {
+                const freeTerms = ["completely free", "completamente gratuita", "complètement gratuit", "vollständig kostenlos", "完全無料", "полностью бесплатная", "цалкам бясплатная", "完全免费"];
+                const freeTerm = freeTerms.find(term => answer.includes(term)) || "completely free";
+                const parts = answer.split(freeTerm);
+                const afterFree = parts[1] || "";
+                const priceParts = afterFree.split("$5.99");
+
+                return (
+                  <>
+                    {parts[0]}
+                    <span className="text-[#34c759] font-semibold">{freeTerm}</span>
+                    {priceParts[0]}
+                    <span className="text-[#0071e3]">$5.99</span>
+                    {priceParts[1]}
+                  </>
+                );
+              };
+
+              return (
+                <div key={qKey}>
+                  <h3 className="text-[21px] font-semibold mb-3 tracking-tight">{t(`faq.${qKey}.question`)}</h3>
+                  <p className="text-[#86868b] text-[17px] leading-[1.47059]">
+                    {qKey === "q2" ? renderQ2() : (
+                      <span dangerouslySetInnerHTML={{ __html: answer
+                        .replace(/x = 100/g, '<code class="text-[#89dceb] font-mono text-[15px]">x = 100</code>')
+                        .replace(/prev/g, '<code class="text-[#89dceb] font-mono text-[15px]">prev</code>')
+                        .replace(/sum/g, '<code class="text-[#89dceb] font-mono text-[15px]">sum</code>')
+                        .replace(/average/g, '<code class="text-[#89dceb] font-mono text-[15px]">average</code>')
+                        .replace(/\.numby/g, '<code class="text-[#89dceb] font-mono text-[15px]">.numby</code>')
+                        .replace(/:w/g, '<code class="text-[#89dceb] font-mono text-[15px]">:w</code>')
+                        .replace(/numby myfile\.numby/g, '<code class="text-[#89dceb] font-mono text-[15px]">numby myfile.numby</code>')
+                      }} />
+                    )}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -216,24 +228,33 @@ export function App() {
       {/* Footer */}
       <footer className="py-12 px-6 border-t border-white/8 mt-20">
         <div className="max-w-[1200px] mx-auto flex justify-between items-center flex-wrap gap-6">
-          <p className="text-sm text-[#86868b]">© 2025 Vivy Technologies Co., Limited</p>
-          <div className="flex gap-6">
+          <p className="text-sm text-[#86868b]">{t("footer.copyright")}</p>
+          <div className="flex gap-6 items-center">
             <a href="/privacy" className="text-sm text-[#86868b] hover:text-[#0071e3] transition-colors duration-200">
-              Privacy
+              {t("footer.privacy")}
             </a>
             <a href="/eula" className="text-sm text-[#86868b] hover:text-[#0071e3] transition-colors duration-200">
-              EULA
+              {t("footer.eula")}
             </a>
             <a href="https://github.com/vivy-company/numby" className="text-sm text-[#86868b] hover:text-[#0071e3] transition-colors duration-200">
-              GitHub
+              {t("footer.github")}
             </a>
             <a href="https://github.com/vivy-company/numby/issues" className="text-sm text-[#86868b] hover:text-[#0071e3] transition-colors duration-200">
-              Report an Issue
+              {t("footer.reportIssue")}
             </a>
+            <LanguageSelector />
           </div>
         </div>
       </footer>
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 

@@ -46,18 +46,15 @@ struct CalculatorSurfaceView: View {
                         Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
                             .ignoresSafeArea()
 
-                        VStack(alignment: .trailing, spacing: 0) {
-                            ForEach(Array(instance.results.enumerated()), id: \.offset) { index, result in
-                                Text(result ?? "")
-                                    .font(Font(NSFont(name: configManager.config.fontName ?? "SFMono-Regular", size: configManager.config.fontSize) ?? .monospacedSystemFont(ofSize: configManager.config.fontSize, weight: .regular)))
-                                    .foregroundColor(Color(themeManager.syntaxColor(for: .results)))
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
-                                    .frame(height: configManager.config.fontSize + 8, alignment: .center)
-                                    .lineLimit(1)
-                            }
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity)
+                        ResultsTextView(
+                            results: instance.results,
+                            textColor: themeManager.syntaxColor(for: .results),
+                            backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
+                            fontSize: configManager.config.fontSize,
+                            fontName: configManager.config.fontName ?? "SFMono-Regular"
+                        )
+                        .padding(.top, 16)
+                        .padding(.trailing, 16)
                     }
                     .frame(width: geometry.size.width * 0.20)
                 }
@@ -177,6 +174,75 @@ class CustomNSTextView: NSTextView {
         }
 
         didChangeText()
+    }
+}
+
+// MARK: - Results Text View
+
+struct ResultsTextView: NSViewRepresentable {
+    let results: [String?]
+    let textColor: NSColor
+    let backgroundColor: NSColor
+    let fontSize: Double
+    let fontName: String
+
+    func makeNSView(context: Context) -> NSTextView {
+        let textView = NSTextView()
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width, .height]
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
+
+        let font = NSFont(name: fontName, size: fontSize) ?? .monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        textView.font = font
+        textView.textColor = textColor
+        textView.alignment = .right
+
+        textView.wantsLayer = true
+        textView.layer?.backgroundColor = backgroundColor.cgColor
+        textView.drawsBackground = false
+        textView.isRichText = false
+        textView.textContainerInset = NSSize(width: 0, height: 0)
+
+        // Match input text view paragraph style exactly
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineHeightMultiple = 1.0
+        paragraph.paragraphSpacing = 0
+        paragraph.lineSpacing = 8
+        paragraph.alignment = .right
+        textView.defaultParagraphStyle = paragraph
+
+        return textView
+    }
+
+    func updateNSView(_ textView: NSTextView, context: Context) {
+        let font = NSFont(name: fontName, size: fontSize) ?? .monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        textView.font = font
+        textView.textColor = textColor
+        textView.wantsLayer = true
+        textView.layer?.backgroundColor = backgroundColor.cgColor
+
+        // Update paragraph style
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineHeightMultiple = 1.0
+        paragraph.paragraphSpacing = 0
+        paragraph.lineSpacing = 8
+        paragraph.alignment = .right
+        textView.defaultParagraphStyle = paragraph
+
+        // Build results text
+        let resultsText = results.map { $0 ?? "" }.joined(separator: "\n")
+        textView.string = resultsText
+
+        // Apply text attributes
+        let storage = textView.textStorage!
+        let fullRange = NSRange(location: 0, length: storage.length)
+        storage.addAttribute(.foregroundColor, value: textColor, range: fullRange)
+        storage.addAttribute(.font, value: font, range: fullRange)
+        storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
     }
 }
 

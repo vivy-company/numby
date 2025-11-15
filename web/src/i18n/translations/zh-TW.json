@@ -1,0 +1,95 @@
+{
+  "hero": {
+    "title": "Numby",
+    "subtitle": "適用於macOS的自然語言計算器。用文字計算一切。",
+    "comingSoon": "即將推出",
+    "pricingPrefix": "App Store售價$5.99 • ",
+    "pricingFree": "免費",
+    "pricingSuffix": " 透過終端機",
+    "installLabel": "透過終端機安裝CLI版本:"
+  },
+  "showcase": {
+    "app": "應用程式",
+    "terminal": "終端機"
+  },
+  "features": {
+    "title": "您需要的一切",
+    "naturalLanguage": {
+      "title": "自然語言",
+      "desc": "像思考一樣輸入計算。無需記憶語法。"
+    },
+    "unitConversions": {
+      "title": "40多種單位轉換",
+      "desc": "在長度、時間、溫度、體積、重量、速度等單位之間進行轉換。"
+    },
+    "currencies": {
+      "title": "300多種貨幣",
+      "desc": "USD、EUR、BTC、ETH和300多種其他貨幣的即時匯率。"
+    },
+    "percentages": {
+      "title": "智慧百分比",
+      "desc": "自然計算百分比:'20% of 100'、'100 + 15%'、'200 - 10%'。"
+    },
+    "variables": {
+      "title": "變數和歷史記錄",
+      "desc": "儲存值,使用prev、sum、average。隨時參考過去的計算。"
+    },
+    "languages": {
+      "title": "9種語言",
+      "desc": "全面支援英語、西班牙語、法語、德語、日語、俄語等。"
+    },
+    "files": {
+      "title": "儲存和載入檔案",
+      "desc": "使用.numby檔案。儲存複雜的計算並在以後重複使用。"
+    }
+  },
+  "howItWorks": {
+    "title": "運作原理",
+    "step1": {
+      "title": "啟動Numby",
+      "desc": "使用全域鍵盤快速鍵從任何地方叫出Numby"
+    },
+    "step2": {
+      "title": "輸入計算",
+      "desc": "用簡單的中文寫下您的計算,就像您說出來一樣"
+    },
+    "step3": {
+      "title": "獲得即時結果",
+      "desc": "在您輸入時即時查看更新的結果"
+    }
+  },
+  "faq": {
+    "title": "常見問題",
+    "q1": {
+      "question": "Numby支援哪些平台?",
+      "answer": "Numby可在macOS、Linux和Windows上執行。原生macOS應用程式即將在App Store上架。"
+    },
+    "q2": {
+      "question": "Numby免費嗎?",
+      "answer": "是的,終端機版本完全免費且開源。即將推出的macOS應用程式在App Store售價$5.99。"
+    },
+    "q3": {
+      "question": "Numby需要網際網路連線嗎?",
+      "answer": "不需要,Numby可離線進行所有計算。貨幣轉換使用快取的匯率,在聯網時每天更新。"
+    },
+    "q4": {
+      "question": "如何在計算中使用變數?",
+      "answer": "只需像'x = 100'這樣賦值,然後在之後參考它們。使用'prev'表示最後一個結果,或使用'sum'和'average'表示所有結果。"
+    },
+    "q5": {
+      "question": "支援哪些貨幣格式?",
+      "answer": "支援300多種貨幣,包括USD、EUR、GBP、JPY以及BTC和ETH等加密貨幣,提供即時匯率。"
+    },
+    "q6": {
+      "question": "我可以儲存我的計算嗎?",
+      "answer": "可以,Numby支援將計算儲存到.numby檔案。在TUI中,使用:w儲存。使用'numby myfile.numby'載入檔案。"
+    }
+  },
+  "footer": {
+    "copyright": "© 2025 Vivy Technologies Co., Limited",
+    "privacy": "隱私權",
+    "eula": "最終使用者授權合約",
+    "github": "GitHub",
+    "reportIssue": "回報問題"
+  }
+}

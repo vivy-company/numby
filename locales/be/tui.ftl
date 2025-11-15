@@ -4,7 +4,7 @@
 commands-help = Каманды: :q выхад, :w захаваць, :lang [мова] змяніць мову, :langs спіс моў
 
 # Help tooltip
-help-commands = Каманды: :q выхад  :w захаваць  :w <файл> захаваць як  :lang змяніць мову  :langs спіс
+help-commands = Каманды: :q выхад  :w захаваць  :w <файл> захаваць як  :lang змяніць мову  :langs спіс моў
 help-shortcuts = Гарачыя клавішы: Ctrl+Y капіяваць вынік  Ctrl+I капіяваць увод  Ctrl+A капіяваць увод
 
 # Input validation

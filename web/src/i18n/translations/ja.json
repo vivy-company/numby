@@ -1,0 +1,95 @@
+{
+  "hero": {
+    "title": "Numby",
+    "subtitle": "macOS向けの自然言語電卓。言葉で何でも計算できます。",
+    "comingSoon": "近日公開",
+    "pricingPrefix": "App Storeで$5.99 • ",
+    "pricingFree": "無料",
+    "pricingSuffix": " ターミナル経由",
+    "installLabel": "ターミナル経由でCLIバージョンをインストール:"
+  },
+  "showcase": {
+    "app": "アプリ",
+    "terminal": "ターミナル"
+  },
+  "features": {
+    "title": "必要なすべての機能",
+    "naturalLanguage": {
+      "title": "自然言語",
+      "desc": "思った通りに計算を入力できます。覚える構文はありません。"
+    },
+    "unitConversions": {
+      "title": "40以上の単位変換",
+      "desc": "長さ、時間、温度、体積、重量、速度などの単位を相互変換できます。"
+    },
+    "currencies": {
+      "title": "300以上の通貨",
+      "desc": "USD、EUR、BTC、ETHなど300以上の通貨のリアルタイム為替レート。"
+    },
+    "percentages": {
+      "title": "スマートなパーセント計算",
+      "desc": "パーセントを自然に計算: '20% of 100'、'100 + 15%'、'200 - 10%'。"
+    },
+    "variables": {
+      "title": "変数と履歴",
+      "desc": "値を保存し、prev、sum、averageを使用。過去の計算をいつでも参照できます。"
+    },
+    "languages": {
+      "title": "9つの言語",
+      "desc": "英語、スペイン語、フランス語、ドイツ語、日本語、ロシア語などを完全サポート。"
+    },
+    "files": {
+      "title": "ファイルの保存と読み込み",
+      "desc": ".numbyファイルを扱えます。複雑な計算を保存して後で再利用できます。"
+    }
+  },
+  "howItWorks": {
+    "title": "使い方",
+    "step1": {
+      "title": "Numbyを起動",
+      "desc": "グローバルキーボードショートカットを使用して、どこからでもNumbyを呼び出せます"
+    },
+    "step2": {
+      "title": "計算を入力",
+      "desc": "普通に話すように、自然な日本語で計算を書きます"
+    },
+    "step3": {
+      "title": "即座に結果を取得",
+      "desc": "入力中にリアルタイムで更新される結果を確認できます"
+    }
+  },
+  "faq": {
+    "title": "よくある質問",
+    "q1": {
+      "question": "Numbyはどのプラットフォームをサポートしていますか？",
+      "answer": "NumbyはmacOS、Linux、Windowsで動作します。ネイティブmacOSアプリは近日中にApp Storeで公開予定です。"
+    },
+    "q2": {
+      "question": "Numbyは無料ですか？",
+      "answer": "はい、ターミナル版は完全に無料でオープンソースです。今後のmacOSアプリはApp Storeで$5.99になります。"
+    },
+    "q3": {
+      "question": "Numbyにはインターネット接続が必要ですか？",
+      "answer": "いいえ、すべての計算はオフラインで動作します。通貨換算はキャッシュされたレートを使用し、オンライン時に毎日更新されます。"
+    },
+    "q4": {
+      "question": "計算で変数を使用するにはどうすればよいですか？",
+      "answer": "'x = 100'のように値を代入し、後で参照するだけです。最後の結果には'prev'を、すべての結果には'sum'と'average'を使用できます。"
+    },
+    "q5": {
+      "question": "どの通貨形式がサポートされていますか？",
+      "answer": "USD、EUR、GBP、JPY、BTCやETHなどの暗号通貨を含む300以上の通貨がリアルタイム為替レートでサポートされています。"
+    },
+    "q6": {
+      "question": "計算を保存できますか？",
+      "answer": "はい、Numbyは計算を.numbyファイルに保存できます。TUIでは:wを使用して保存します。'numby myfile.numby'でファイルを読み込めます。"
+    }
+  },
+  "footer": {
+    "copyright": "© 2025 Vivy Technologies Co., Limited",
+    "privacy": "プライバシー",
+    "eula": "使用許諾契約",
+    "github": "GitHub",
+    "reportIssue": "問題を報告"
+  }
+}

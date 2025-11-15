@@ -4,7 +4,7 @@
 commands-help = Befehle: :q beenden, :w speichern, :lang [sprache] Sprache ändern, :langs Sprachen auflisten
 
 # Help tooltip
-help-commands = Befehle: :q beenden  :w speichern  :w <datei> speichern als  :lang Sprache ändern  :langs liste
+help-commands = Befehle: :q beenden  :w speichern  :w <datei> speichern als  :lang Sprache ändern  :langs Sprachen auflisten
 help-shortcuts = Tastenkombinationen: Strg+Y Ergebnis kopieren  Strg+I Eingabe kopieren  Strg+A Eingabe kopieren
 
 # Input validation

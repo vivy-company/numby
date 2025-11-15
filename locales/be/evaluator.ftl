@@ -2,7 +2,7 @@
 
 error-evaluating-expression = Памылка пры вылічэнні выразу
 cannot-compute-average-empty = Немагчыма вылічыць сярэдняе значэнне пустой гісторыі
-no-previous-result = Няма папярэдняга вынику ў гісторыі
+no-previous-result = Няма папярэдняга выніку ў гісторыі
 failed-parse-percentage = Не атрымалася разабраць працэнтны вынік: {$error}
 invalid-percentage-operator = Недапушчальны аператар працэнта: {$op}
 failed-evaluate-expression = Не атрымалася вылічыць выраз: {$error}

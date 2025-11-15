@@ -1,6 +1,6 @@
 # Cadenas de seguridad y validación
 
-path-traversal-detected = Traversal de ruta detectado
+path-traversal-detected = Se detectó un recorrido de ruta
 cannot-determine-cwd = No se puede determinar el directorio actual
 parent-dir-not-exist = El directorio padre no existe
 invalid-path = Ruta inválida
