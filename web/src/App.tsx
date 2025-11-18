@@ -53,14 +53,9 @@ function AppContent() {
           </p>
           <div className="flex flex-col items-center gap-3 mb-6">
             <div className="flex justify-center mb-2">
-              <div className="relative pb-6">
-                <div className="opacity-50 cursor-not-allowed">
-                  <img src={appStoreBadge} alt="Download on the App Store" className="h-[52px] block rounded-[8px]" />
-                </div>
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[11px] text-[#86868b] whitespace-nowrap">
-                  {t("hero.comingSoon")}
-                </span>
-              </div>
+              <a href="https://apps.apple.com/app/numby-pro/id6755249901" target="_blank" rel="noopener noreferrer" className="transition-opacity duration-200 hover:opacity-80">
+                <img src={appStoreBadge} alt="Download on the App Store" className="h-[52px] block rounded-[8px]" />
+              </a>
             </div>
             <p className="text-sm text-[#86868b]">
               {t("hero.pricingPrefix")}
