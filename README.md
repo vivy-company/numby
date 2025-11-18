@@ -70,7 +70,7 @@ Installs from [crates.io](https://crates.io/crates/numby).
 ### Automated Installer Script
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/vivy-company/numby/main/install.sh | bash
+curl -fsSL https://numby.vivy.app/install.sh | bash
 ```
 
 Automatically detects your OS/architecture and installs the latest release binary.
