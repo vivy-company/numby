@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  AppDelegate.swift
 //  Numby
@@ -61,10 +62,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             // Update window titles if they're settings or CLI installer windows
             if let settingsWindow = settingsWindowController?.window, window == settingsWindow {
-                window.title = "window.settings".localized()
+                window.title = "window.settings".localized
             }
             if let cliWindow = cliInstallerWindowController?.window, window == cliWindow {
-                window.title = "window.cliInstaller".localized()
+                window.title = "window.cliInstaller".localized
             }
         }
     }
@@ -79,11 +80,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Update submenu title based on index (menus are in fixed order)
             switch index {
             case 0: break // App menu (no title)
-            case 1: submenu.title = "menu.file".localized()
-            case 2: submenu.title = "menu.edit".localized()
-            case 3: submenu.title = "menu.view".localized()
-            case 4: submenu.title = "menu.window".localized()
-            case 5: submenu.title = "menu.help".localized()
+            case 1: submenu.title = "menu.file".localized
+            case 2: submenu.title = "menu.edit".localized
+            case 3: submenu.title = "menu.view".localized
+            case 4: submenu.title = "menu.window".localized
+            case 5: submenu.title = "menu.help".localized
             default: break
             }
 
@@ -102,47 +103,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func localizedTitleForAction(_ action: Selector, tag: Int = 0) -> String {
         switch action {
         // App menu
-        case #selector(NSApplication.orderFrontStandardAboutPanel(_:)): return "menu.about".localized()
-        case #selector(openSettings): return "menu.settings".localized()
-        case #selector(openCLIInstaller): return "menu.installCLI".localized()
-        case #selector(NSApplication.hide(_:)): return "menu.hide".localized()
-        case #selector(NSApplication.hideOtherApplications(_:)): return "menu.hideOthers".localized()
-        case #selector(NSApplication.unhideAllApplications(_:)): return "menu.showAll".localized()
-        case #selector(NSApplication.terminate(_:)): return "menu.quit".localized()
+        case #selector(NSApplication.orderFrontStandardAboutPanel(_:)): return "menu.about".localized
+        case #selector(openSettings): return "menu.settings".localized
+        case #selector(openCLIInstaller): return "menu.installCLI".localized
+        case #selector(NSApplication.hide(_:)): return "menu.hide".localized
+        case #selector(NSApplication.hideOtherApplications(_:)): return "menu.hideOthers".localized
+        case #selector(NSApplication.unhideAllApplications(_:)): return "menu.showAll".localized
+        case #selector(NSApplication.terminate(_:)): return "menu.quit".localized
 
         // File menu
-        case #selector(createNewWindow): return "menu.newWindow".localized()
-        case #selector(createNewTab): return "menu.newTab".localized()
-        case #selector(openCalculator): return "menu.openCalculator".localized()
-        case #selector(exportCalculator): return "menu.exportCalculator".localized()
-        case #selector(NumbyWindow.closeSplit): return "menu.close".localized()
+        case #selector(createNewWindow): return "menu.newWindow".localized
+        case #selector(createNewTab): return "menu.newTab".localized
+        case #selector(openCalculator): return "menu.openCalculator".localized
+        case #selector(exportCalculator): return "menu.exportCalculator".localized
+        case #selector(NumbyWindow.closeSplit): return "menu.close".localized
 
         // Edit menu
-        case #selector(UndoManager.undo): return "menu.undo".localized()
-        case #selector(UndoManager.redo): return "menu.redo".localized()
-        case #selector(NSText.cut(_:)): return "menu.cut".localized()
-        case #selector(NSText.copy(_:)): return "menu.copy".localized()
-        case #selector(NSText.paste(_:)): return "menu.paste".localized()
-        case #selector(NSText.selectAll(_:)): return "menu.selectAll".localized()
+        case #selector(UndoManager.undo): return "menu.undo".localized
+        case #selector(UndoManager.redo): return "menu.redo".localized
+        case #selector(NSText.cut(_:)): return "menu.cut".localized
+        case #selector(NSText.copy(_:)): return "menu.copy".localized
+        case #selector(NSText.paste(_:)): return "menu.paste".localized
+        case #selector(NSText.selectAll(_:)): return "menu.selectAll".localized
 
         // View menu
-        case #selector(toggleHistorySidebar): return "menu.toggleHistory".localized()
-        case #selector(NumbyWindow.splitHorizontally): return "menu.splitHorizontally".localized()
-        case #selector(NumbyWindow.splitVertically): return "menu.splitVertically".localized()
-        case #selector(NSWindow.toggleFullScreen(_:)): return "menu.fullScreen".localized()
+        case #selector(toggleHistorySidebar): return "menu.toggleHistory".localized
+        case #selector(NumbyWindow.splitHorizontally): return "menu.splitHorizontally".localized
+        case #selector(NumbyWindow.splitVertically): return "menu.splitVertically".localized
+        case #selector(NSWindow.toggleFullScreen(_:)): return "menu.fullScreen".localized
 
         // Window menu
-        case #selector(NSWindow.miniaturize(_:)): return "menu.minimize".localized()
-        case #selector(NSWindow.zoom(_:)): return "menu.zoom".localized()
-        case #selector(NSApplication.arrangeInFront(_:)): return "menu.bringAllToFront".localized()
-        case #selector(NSWindow.toggleTabBar(_:)): return "menu.showAllTabs".localized()
-        case #selector(NSWindow.selectNextTab(_:)): return "menu.nextTab".localized()
-        case #selector(NSWindow.selectPreviousTab(_:)): return "menu.previousTab".localized()
+        case #selector(NSWindow.miniaturize(_:)): return "menu.minimize".localized
+        case #selector(NSWindow.zoom(_:)): return "menu.zoom".localized
+        case #selector(NSApplication.arrangeInFront(_:)): return "menu.bringAllToFront".localized
+        case #selector(NSWindow.toggleTabBar(_:)): return "menu.showAllTabs".localized
+        case #selector(NSWindow.selectNextTab(_:)): return "menu.nextTab".localized
+        case #selector(NSWindow.selectPreviousTab(_:)): return "menu.previousTab".localized
         case #selector(NumbyWindow.selectTab(_:)):
-            return tag > 0 ? String(format: "menu.showTab".localized(), tag) : ""
+            return tag > 0 ? String(format: "menu.showTab".localized, tag) : ""
 
         // Help menu
-        case #selector(NSApplication.showHelp(_:)): return "menu.numbyHelp".localized()
+        case #selector(NSApplication.showHelp(_:)): return "menu.numbyHelp".localized
 
         default: return ""
         }
@@ -239,10 +240,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let content = calculator.inputText
         if content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
             let alert = NSAlert()
-            alert.messageText = "alert.nothingToExport".localized()
-            alert.informativeText = "alert.emptyCalculator".localized()
+            alert.messageText = "alert.nothingToExport".localized
+            alert.informativeText = "alert.emptyCalculator".localized
             alert.alertStyle = .informational
-            alert.addButton(withTitle: "alert.ok".localized())
+            alert.addButton(withTitle: "alert.ok".localized)
             alert.runModal()
             return
         }
@@ -320,106 +321,106 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenuItem = NSMenuItem()
         appMenuItem.submenu = appMenu
 
-        appMenu.addItem(withTitle: "menu.about".localized(), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "menu.about".localized, action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "menu.settings".localized(), action: #selector(openSettings), keyEquivalent: ",")
+        appMenu.addItem(withTitle: "menu.settings".localized, action: #selector(openSettings), keyEquivalent: ",")
 
         // CLI Installation menu item
-        let cliMenuItem = NSMenuItem(title: "menu.installCLI".localized(), action: #selector(openCLIInstaller), keyEquivalent: "")
+        let cliMenuItem = NSMenuItem(title: "menu.installCLI".localized, action: #selector(openCLIInstaller), keyEquivalent: "")
         cliMenuItem.target = self
         appMenu.addItem(cliMenuItem)
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "menu.hide".localized(), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "menu.hide".localized, action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem({ () -> NSMenuItem in
-            let item = NSMenuItem(title: "menu.hideOthers".localized(), action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+            let item = NSMenuItem(title: "menu.hideOthers".localized, action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
             item.keyEquivalentModifierMask = [.command, .option]
             return item
         }())
-        appMenu.addItem(withTitle: "menu.showAll".localized(), action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "menu.showAll".localized, action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "menu.quit".localized(), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "menu.quit".localized, action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         mainMenu.addItem(appMenuItem)
 
         // File Menu
-        let fileMenu = NSMenu(title: "menu.file".localized())
+        let fileMenu = NSMenu(title: "menu.file".localized)
         let fileMenuItem = NSMenuItem()
         fileMenuItem.submenu = fileMenu
 
-        fileMenu.addItem(withTitle: "menu.newWindow".localized(), action: #selector(createNewWindow), keyEquivalent: "n")
-        fileMenu.addItem(withTitle: "menu.newTab".localized(), action: #selector(createNewTab), keyEquivalent: "t")
+        fileMenu.addItem(withTitle: "menu.newWindow".localized, action: #selector(createNewWindow), keyEquivalent: "n")
+        fileMenu.addItem(withTitle: "menu.newTab".localized, action: #selector(createNewTab), keyEquivalent: "t")
         fileMenu.addItem(NSMenuItem.separator())
 
-        let openItem = NSMenuItem(title: "menu.openCalculator".localized(), action: #selector(openCalculator), keyEquivalent: "o")
+        let openItem = NSMenuItem(title: "menu.openCalculator".localized, action: #selector(openCalculator), keyEquivalent: "o")
         openItem.target = self
         fileMenu.addItem(openItem)
 
-        let exportItem = NSMenuItem(title: "menu.exportCalculator".localized(), action: #selector(exportCalculator), keyEquivalent: "s")
+        let exportItem = NSMenuItem(title: "menu.exportCalculator".localized, action: #selector(exportCalculator), keyEquivalent: "s")
         exportItem.target = self
         fileMenu.addItem(exportItem)
 
         fileMenu.addItem(NSMenuItem.separator())
         // Cmd+W handled by closeSplit - closes pane or tab if last pane
-        fileMenu.addItem(withTitle: "menu.close".localized(), action: #selector(NumbyWindow.closeSplit), keyEquivalent: "w")
+        fileMenu.addItem(withTitle: "menu.close".localized, action: #selector(NumbyWindow.closeSplit), keyEquivalent: "w")
 
         mainMenu.addItem(fileMenuItem)
 
         // Edit Menu
-        let editMenu = NSMenu(title: "menu.edit".localized())
+        let editMenu = NSMenu(title: "menu.edit".localized)
         let editMenuItem = NSMenuItem()
         editMenuItem.submenu = editMenu
 
-        editMenu.addItem(withTitle: "menu.undo".localized(), action: #selector(UndoManager.undo), keyEquivalent: "z")
-        editMenu.addItem(withTitle: "menu.redo".localized(), action: #selector(UndoManager.redo), keyEquivalent: "Z")
+        editMenu.addItem(withTitle: "menu.undo".localized, action: #selector(UndoManager.undo), keyEquivalent: "z")
+        editMenu.addItem(withTitle: "menu.redo".localized, action: #selector(UndoManager.redo), keyEquivalent: "Z")
         editMenu.addItem(NSMenuItem.separator())
-        editMenu.addItem(withTitle: "menu.cut".localized(), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "menu.copy".localized(), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "menu.paste".localized(), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "menu.selectAll".localized(), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(withTitle: "menu.cut".localized, action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "menu.copy".localized, action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "menu.paste".localized, action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "menu.selectAll".localized, action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
 
         mainMenu.addItem(editMenuItem)
 
         // View Menu
-        let viewMenu = NSMenu(title: "menu.view".localized())
+        let viewMenu = NSMenu(title: "menu.view".localized)
         let viewMenuItem = NSMenuItem()
         viewMenuItem.submenu = viewMenu
 
-        let toggleHistoryItem = NSMenuItem(title: "menu.toggleHistory".localized(), action: #selector(toggleHistorySidebar), keyEquivalent: "h")
+        let toggleHistoryItem = NSMenuItem(title: "menu.toggleHistory".localized, action: #selector(toggleHistorySidebar), keyEquivalent: "h")
         toggleHistoryItem.keyEquivalentModifierMask = [.command, .shift]
         toggleHistoryItem.target = self
         viewMenu.addItem(toggleHistoryItem)
 
         viewMenu.addItem(NSMenuItem.separator())
-        viewMenu.addItem(withTitle: "menu.splitHorizontally".localized(), action: #selector(NumbyWindow.splitHorizontally), keyEquivalent: "d")
-        viewMenu.addItem(withTitle: "menu.splitVertically".localized(), action: #selector(NumbyWindow.splitVertically), keyEquivalent: "D")
+        viewMenu.addItem(withTitle: "menu.splitHorizontally".localized, action: #selector(NumbyWindow.splitHorizontally), keyEquivalent: "d")
+        viewMenu.addItem(withTitle: "menu.splitVertically".localized, action: #selector(NumbyWindow.splitVertically), keyEquivalent: "D")
         viewMenu.addItem(NSMenuItem.separator())
-        viewMenu.addItem(withTitle: "menu.fullScreen".localized(), action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
+        viewMenu.addItem(withTitle: "menu.fullScreen".localized, action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
 
         mainMenu.addItem(viewMenuItem)
 
         // Window Menu
-        let windowMenu = NSMenu(title: "menu.window".localized())
+        let windowMenu = NSMenu(title: "menu.window".localized)
         let windowMenuItem = NSMenuItem()
         windowMenuItem.submenu = windowMenu
 
-        windowMenu.addItem(withTitle: "menu.minimize".localized(), action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m")
-        windowMenu.addItem(withTitle: "menu.zoom".localized(), action: #selector(NSWindow.zoom(_:)), keyEquivalent: "")
+        windowMenu.addItem(withTitle: "menu.minimize".localized, action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(withTitle: "menu.zoom".localized, action: #selector(NSWindow.zoom(_:)), keyEquivalent: "")
         windowMenu.addItem(NSMenuItem.separator())
-        windowMenu.addItem(withTitle: "menu.bringAllToFront".localized(), action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
+        windowMenu.addItem(withTitle: "menu.bringAllToFront".localized, action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
         windowMenu.addItem(NSMenuItem.separator())
 
         // Show Tabs
-        let showTabsItem = NSMenuItem(title: "menu.showAllTabs".localized(), action: #selector(NSWindow.toggleTabBar(_:)), keyEquivalent: "")
+        let showTabsItem = NSMenuItem(title: "menu.showAllTabs".localized, action: #selector(NSWindow.toggleTabBar(_:)), keyEquivalent: "")
         windowMenu.addItem(showTabsItem)
 
         windowMenu.addItem(NSMenuItem.separator())
 
         // Tab navigation shortcuts (these will show on tabs)
-        let nextTabItem = NSMenuItem(title: "menu.nextTab".localized(), action: #selector(NSWindow.selectNextTab(_:)), keyEquivalent: "\t")
+        let nextTabItem = NSMenuItem(title: "menu.nextTab".localized, action: #selector(NSWindow.selectNextTab(_:)), keyEquivalent: "\t")
         nextTabItem.keyEquivalentModifierMask = [.control]
         windowMenu.addItem(nextTabItem)
 
-        let prevTabItem = NSMenuItem(title: "menu.previousTab".localized(), action: #selector(NSWindow.selectPreviousTab(_:)), keyEquivalent: "\t")
+        let prevTabItem = NSMenuItem(title: "menu.previousTab".localized, action: #selector(NSWindow.selectPreviousTab(_:)), keyEquivalent: "\t")
         prevTabItem.keyEquivalentModifierMask = [.control, .shift]
         windowMenu.addItem(prevTabItem)
 
@@ -427,7 +428,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Add Cmd+1 through Cmd+9 for switching to specific tabs
         for i in 1...9 {
-            let tabItem = NSMenuItem(title: String(format: "menu.showTab".localized(), i), action: #selector(NumbyWindow.selectTab(_:)), keyEquivalent: "\(i)")
+            let tabItem = NSMenuItem(title: String(format: "menu.showTab".localized, i), action: #selector(NumbyWindow.selectTab(_:)), keyEquivalent: "\(i)")
             tabItem.tag = i
             windowMenu.addItem(tabItem)
         }
@@ -436,11 +437,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.windowsMenu = windowMenu
 
         // Help Menu
-        let helpMenu = NSMenu(title: "menu.help".localized())
+        let helpMenu = NSMenu(title: "menu.help".localized)
         let helpMenuItem = NSMenuItem()
         helpMenuItem.submenu = helpMenu
 
-        helpMenu.addItem(withTitle: "menu.numbyHelp".localized(), action: #selector(NSApplication.showHelp(_:)), keyEquivalent: "?")
+        helpMenu.addItem(withTitle: "menu.numbyHelp".localized, action: #selector(NSApplication.showHelp(_:)), keyEquivalent: "?")
 
         mainMenu.addItem(helpMenuItem)
 
@@ -495,12 +496,12 @@ class CalculatorWindowController: NSWindowController, NSWindowDelegate {
         if hasContent {
             // Show confirmation dialog
             let alert = NSAlert()
-            alert.messageText = "alert.closeWithoutSaving".localized()
-            alert.informativeText = "alert.unsavedContent".localized()
+            alert.messageText = "alert.closeWithoutSaving".localized
+            alert.informativeText = "alert.unsavedContent".localized
             alert.alertStyle = .warning
-            alert.addButton(withTitle: "alert.saveAndClose".localized())
-            alert.addButton(withTitle: "alert.closeWithoutSavingButton".localized())
-            alert.addButton(withTitle: "alert.cancel".localized())
+            alert.addButton(withTitle: "alert.saveAndClose".localized)
+            alert.addButton(withTitle: "alert.closeWithoutSavingButton".localized)
+            alert.addButton(withTitle: "alert.cancel".localized)
 
             let response = alert.runModal()
 
@@ -691,10 +692,10 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
             return item
         } else if itemIdentifier == .toggleSidebar {
             let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-            let label = "toolbar.toggleSidebar".localized()
+            let label = "toolbar.toggleSidebar".localized
             item.label = label
             item.paletteLabel = label
-            item.toolTip = "toolbar.toggleSidebarTooltip".localized()
+            item.toolTip = "toolbar.toggleSidebarTooltip".localized
             item.isBordered = true
             item.image = NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: label)
             item.target = self
@@ -702,10 +703,10 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
             return item
         } else if itemIdentifier.rawValue == "NewTab" {
             let item = NSToolbarItem(itemIdentifier: itemIdentifier)
-            let label = "toolbar.newTab".localized()
+            let label = "toolbar.newTab".localized
             item.label = label
             item.paletteLabel = label
-            item.toolTip = "toolbar.newTabTooltip".localized()
+            item.toolTip = "toolbar.newTabTooltip".localized
             item.isBordered = true
             item.image = NSImage(systemSymbolName: "plus", accessibilityDescription: label)
             item.target = NSApp.delegate
@@ -964,7 +965,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let hostingController = FocuslessHostingController(rootView: SettingsView())
         let window = NSWindow(contentViewController: hostingController)
         window.setContentSize(NSSize(width: 500, height: 400))
-        window.title = "window.settings".localized()
+        window.title = "window.settings".localized
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.center()
         window.isReleasedWhenClosed = false
@@ -985,7 +986,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.window?.title = "window.settings".localized()
+            self?.window?.title = "window.settings".localized
         }
     }
 
@@ -1014,7 +1015,7 @@ final class CLIInstallerWindowController: NSWindowController, NSWindowDelegate {
         let hostingController = FocuslessHostingController(rootView: CLIInstallerView())
         let window = NSWindow(contentViewController: hostingController)
         window.setContentSize(NSSize(width: 500, height: 600))
-        window.title = "window.cliInstaller".localized()
+        window.title = "window.cliInstaller".localized
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.center()
         window.isReleasedWhenClosed = false
@@ -1035,7 +1036,7 @@ final class CLIInstallerWindowController: NSWindowController, NSWindowDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.window?.title = "window.cliInstaller".localized()
+            self?.window?.title = "window.cliInstaller".localized
         }
     }
 
@@ -1054,3 +1055,4 @@ final class CLIInstallerWindowController: NSWindowController, NSWindowDelegate {
         }
     }
 }
+#endif

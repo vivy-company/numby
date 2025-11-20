@@ -5,14 +5,14 @@
 //  Root view that renders the split tree of calculator instances
 //
 
+#if os(macOS)
 import SwiftUI
 import Combine
 
 /// Root view for a calculator window - renders the split tree
 struct CalculatorRootView: View {
     @ObservedObject var controller: CalculatorController
-    @EnvironmentObject var themeManager: ThemeManager
-    @EnvironmentObject var configManager: ConfigurationManager
+    @EnvironmentObject var configManager: Configuration
     @FocusedValue(\.calculatorLeafId) private var focusedLeafId: SplitLeafID?
     @State private var localeVersion: Int = 0
 
@@ -53,7 +53,7 @@ struct CalculatorRootView: View {
 
     private var localizedEmpty: String {
         _ = localeVersion
-        return "calculator.empty".localized()
+        return "calculator.empty".localized
     }
 }
 
@@ -99,6 +99,7 @@ struct NodeView: View {
 
     private var localizedNotFound: String {
         _ = localeVersion
-        return "calculator.notFound".localized()
+        return "calculator.notFound".localized
     }
 }
+#endif

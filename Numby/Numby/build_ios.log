@@ -1,0 +1,5 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project Numby/Numby.xcodeproj -scheme Numby -destination id=C4E40C93-1CF6-4974-A5C5-58516D95936D clean build
+
+2025-11-18 16:06:59.586 xcodebuild[57918:8794755] Writing error result bundle to /var/folders/7d/f5gglz4d2k10nj1nynr2hq6c0000gn/T/ResultBundle_2025-18-11_4-06-0059 PM.xcresult
+xcodebuild: error: 'Numby/Numby.xcodeproj' does not exist.

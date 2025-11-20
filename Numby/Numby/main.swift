@@ -5,11 +5,22 @@
 //  Main entry point for AppDelegate-based app
 //
 
+#if os(iOS)
+import UIKit
+import Foundation
+
+UIApplicationMain(
+    CommandLine.argc,
+    CommandLine.unsafeArgv,
+    nil,
+    NSStringFromClass(iOSAppDelegate.self)
+)
+#elseif os(macOS)
 @preconcurrency import AppKit
 import Foundation
 
 // Set app locale from configuration before app launches
-if let savedLocale = ConfigurationManager.shared.config.locale {
+if let savedLocale = Configuration.shared.config.locale {
     // Map Rust locale codes to Swift/Apple locale codes
     let swiftLocale: String
     switch savedLocale {
@@ -31,3 +42,4 @@ let delegate = AppDelegate()
 app.delegate = delegate
 
 _ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
+#endif

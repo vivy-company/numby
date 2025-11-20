@@ -5,6 +5,7 @@
 //  Handles .numby file export and import
 //
 
+#if os(macOS)
 import Cocoa
 import UniformTypeIdentifiers
 
@@ -125,3 +126,4 @@ class FileHandler {
         }
     }
 }
+#endif

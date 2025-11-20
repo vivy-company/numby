@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  HistorySidebarView.swift
 //  Numby
@@ -50,7 +51,7 @@ struct SearchBar: View {
 
     private var localizedPlaceholder: String {
         _ = localeVersion
-        return "history.searchPlaceholder".localized()
+        return "history.searchPlaceholder".localized
     }
 
     var body: some View {
@@ -86,12 +87,12 @@ struct EmptyStateView: View {
 
     private var localizedTitle: String {
         _ = localeVersion
-        return hasSearchQuery ? "history.noResults".localized() : "history.empty".localized()
+        return hasSearchQuery ? "history.noResults".localized : "history.empty".localized
     }
 
     private var localizedDescription: String {
         _ = localeVersion
-        return "history.emptyDescription".localized()
+        return "history.emptyDescription".localized
     }
 
     var body: some View {
@@ -203,27 +204,27 @@ struct SessionRow: View {
 
     private var localizedName: String {
         _ = localeVersion
-        return "history.name".localized()
+        return "history.name".localized
     }
 
     private var localizedDone: String {
         _ = localeVersion
-        return "history.done".localized()
+        return "history.done".localized
     }
 
     private var localizedOpenInNewTab: String {
         _ = localeVersion
-        return "history.openInNewTab".localized()
+        return "history.openInNewTab".localized
     }
 
     private var localizedRename: String {
         _ = localeVersion
-        return "history.rename".localized()
+        return "history.rename".localized
     }
 
     private var localizedDelete: String {
         _ = localeVersion
-        return "history.delete".localized()
+        return "history.delete".localized
     }
 
     var body: some View {
@@ -300,3 +301,4 @@ struct HistorySidebarView_Previews: PreviewProvider {
         .frame(width: 250, height: 600)
     }
 }
+#endif

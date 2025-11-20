@@ -5,11 +5,13 @@
 //  Settings window for theme, font, and preferences
 //
 
+#if os(macOS)
+
 import SwiftUI
 
 struct SettingsView: View {
-    @ObservedObject var themeManager = ThemeManager.shared
-    @ObservedObject var configManager = ConfigurationManager.shared
+    // Theme accessed via Theme.current
+    @ObservedObject var configManager = Configuration.shared
     @StateObject private var numbyWrapper = NumbyWrapper()
 
     @State private var selectedFont: String = "SFMono-Regular"
@@ -20,33 +22,34 @@ struct SettingsView: View {
     @State private var availableLocales: [(code: String, name: String)] = []
     @State private var selectedLocale: String = "en-US"
     @State private var localeVersion: Int = 0
+    @State private var selectedTheme: Theme = Theme.current
 
     // Computed properties for localized strings that update when locale changes
     private var localizedLanguageSection: String {
         _ = localeVersion
-        return configManager.localizedString("settings.language.section")
+        return NSLocalizedString("settings.language.section", comment: "")
     }
-    private var localizedLanguagePicker: String { _ = localeVersion; return configManager.localizedString("settings.language.picker") }
-    private var localizedAppearanceSection: String { _ = localeVersion; return configManager.localizedString("settings.appearance.section") }
-    private var localizedTheme: String { _ = localeVersion; return configManager.localizedString("settings.appearance.theme") }
-    private var localizedFontSize: String { _ = localeVersion; return configManager.localizedString("settings.appearance.fontSize") }
-    private var localizedFont: String { _ = localeVersion; return configManager.localizedString("settings.appearance.font") }
-    private var localizedSyntaxHighlighting: String { _ = localeVersion; return configManager.localizedString("settings.appearance.syntaxHighlighting") }
-    private var localizedBehaviorSection: String { _ = localeVersion; return configManager.localizedString("settings.behavior.section") }
-    private var localizedAutoEvaluate: String { _ = localeVersion; return configManager.localizedString("settings.behavior.autoEvaluate") }
-    private var localizedSplitRatio: String { _ = localeVersion; return configManager.localizedString("settings.behavior.splitRatio") }
-    private var localizedCurrencySection: String { _ = localeVersion; return configManager.localizedString("settings.currency.section") }
-    private var localizedLastUpdated: String { _ = localeVersion; return configManager.localizedString("settings.currency.lastUpdated") }
-    private var localizedStale: String { _ = localeVersion; return configManager.localizedString("settings.currency.stale") }
-    private var localizedUpdate: String { _ = localeVersion; return configManager.localizedString("settings.currency.update") }
-    private var localizedUpdating: String { _ = localeVersion; return configManager.localizedString("settings.currency.updating") }
-    private var localizedCurrencyDesc: String { _ = localeVersion; return configManager.localizedString("settings.currency.description") }
-    private var localizedCLISection: String { _ = localeVersion; return configManager.localizedString("settings.cli.section") }
-    private var localizedInstallViaHomebrew: String { _ = localeVersion; return configManager.localizedString("settings.cli.installViaHomebrew") }
-    private var localizedCopyTooltip: String { _ = localeVersion; return configManager.localizedString("settings.cli.copyTooltip") }
-    private var localizedInstallHomebrew: String { _ = localeVersion; return configManager.localizedString("settings.cli.installHomebrew") }
-    private var localizedOrDownload: String { _ = localeVersion; return configManager.localizedString("settings.cli.orDownload") }
-    private var localizedGithubReleases: String { _ = localeVersion; return configManager.localizedString("settings.cli.githubReleases") }
+    private var localizedLanguagePicker: String { _ = localeVersion; return NSLocalizedString("settings.language.picker", comment: "") }
+    private var localizedAppearanceSection: String { _ = localeVersion; return NSLocalizedString("settings.appearance.section", comment: "") }
+    private var localizedTheme: String { _ = localeVersion; return NSLocalizedString("settings.appearance.theme", comment: "") }
+    private var localizedFontSize: String { _ = localeVersion; return NSLocalizedString("settings.appearance.fontSize", comment: "") }
+    private var localizedFont: String { _ = localeVersion; return NSLocalizedString("settings.appearance.font", comment: "") }
+    private var localizedSyntaxHighlighting: String { _ = localeVersion; return NSLocalizedString("settings.appearance.syntaxHighlighting", comment: "") }
+    private var localizedBehaviorSection: String { _ = localeVersion; return NSLocalizedString("settings.behavior.section", comment: "") }
+    private var localizedAutoEvaluate: String { _ = localeVersion; return NSLocalizedString("settings.behavior.autoEvaluate", comment: "") }
+    private var localizedSplitRatio: String { _ = localeVersion; return NSLocalizedString("settings.behavior.splitRatio", comment: "") }
+    private var localizedCurrencySection: String { _ = localeVersion; return NSLocalizedString("settings.currency.section", comment: "") }
+    private var localizedLastUpdated: String { _ = localeVersion; return NSLocalizedString("settings.currency.lastUpdated", comment: "") }
+    private var localizedStale: String { _ = localeVersion; return NSLocalizedString("settings.currency.stale", comment: "") }
+    private var localizedUpdate: String { _ = localeVersion; return NSLocalizedString("settings.currency.update", comment: "") }
+    private var localizedUpdating: String { _ = localeVersion; return NSLocalizedString("settings.currency.updating", comment: "") }
+    private var localizedCurrencyDesc: String { _ = localeVersion; return NSLocalizedString("settings.currency.description", comment: "") }
+    private var localizedCLISection: String { _ = localeVersion; return NSLocalizedString("settings.cli.section", comment: "") }
+    private var localizedInstallViaHomebrew: String { _ = localeVersion; return NSLocalizedString("settings.cli.installViaHomebrew", comment: "") }
+    private var localizedCopyTooltip: String { _ = localeVersion; return NSLocalizedString("settings.cli.copyTooltip", comment: "") }
+    private var localizedInstallHomebrew: String { _ = localeVersion; return NSLocalizedString("settings.cli.installHomebrew", comment: "") }
+    private var localizedOrDownload: String { _ = localeVersion; return NSLocalizedString("settings.cli.orDownload", comment: "") }
+    private var localizedGithubReleases: String { _ = localeVersion; return NSLocalizedString("settings.cli.githubReleases", comment: "") }
 
     var body: some View {
         Form {
@@ -71,12 +74,15 @@ struct SettingsView: View {
 
             Section(localizedAppearanceSection) {
                 // Theme picker
-                Picker(localizedTheme, selection: $themeManager.currentTheme) {
+                Picker(localizedTheme, selection: $selectedTheme) {
                     ForEach(Theme.allThemes, id: \.name) { theme in
                         Text(theme.name).tag(theme)
                     }
                 }
                 .pickerStyle(.menu)
+                .onChange(of: selectedTheme) { newTheme in
+                    Theme.current = newTheme
+                }
 
                 // Font size slider
                 HStack {
@@ -102,18 +108,6 @@ struct SettingsView: View {
                 Toggle(localizedSyntaxHighlighting, isOn: $configManager.config.syntaxHighlighting)
             }
 
-            Section(localizedBehaviorSection) {
-                // Auto-evaluate toggle
-                Toggle(localizedAutoEvaluate, isOn: $configManager.config.autoEvaluate)
-
-                // Split ratio
-                HStack {
-                    Text(localizedSplitRatio)
-                    Slider(value: $configManager.config.defaultSplitRatio, in: 0.2...0.9, step: 0.05)
-                    Text("\(Int(configManager.config.defaultSplitRatio * 100))%")
-                        .frame(width: 50)
-                }
-            }
 
             Section(localizedCurrencySection) {
                 // Last update info
@@ -242,7 +236,7 @@ struct SettingsView: View {
         if let date = numbyWrapper.getCurrencyRatesUpdateDate() {
             lastRatesUpdate = date
         } else {
-            lastRatesUpdate = configManager.localizedString("settings.currency.never")
+            lastRatesUpdate = NSLocalizedString("settings.currency.never", comment: "")
         }
         ratesAreStale = numbyWrapper.areCurrencyRatesStale()
     }
@@ -257,11 +251,13 @@ struct SettingsView: View {
                 isUpdatingRates = false
                 if success {
                     loadCurrencyRatesInfo()
-                    print(configManager.localizedString("settings.currency.success"))
+                    print(NSLocalizedString("settings.currency.success", comment: ""))
                 } else {
-                    print(configManager.localizedString("settings.currency.failed"))
+                    print(NSLocalizedString("settings.currency.failed", comment: ""))
                 }
             }
         }
     }
 }
+
+#endif

@@ -5,6 +5,7 @@
 //  Helper extensions for view hierarchy traversal
 //
 
+#if os(macOS)
 import Cocoa
 
 extension NSView {
@@ -50,3 +51,4 @@ extension NSView {
         return nil
     }
 }
+#endif

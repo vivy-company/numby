@@ -13,6 +13,9 @@ NC='\033[0m'
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MACOS_APP_LIB="Numby/Numby/libnumby.a"
 MACOS_APP_RESOURCES="Numby/Numby/Resources"
+IOS_DEVICE_LIB="Numby/iOS/libnumby-ios.a"
+IOS_SIM_LIB="Numby/iOS/libnumby-ios-sim.a"
+XCFRAMEWORK_PATH="Numby/libnumby.xcframework"
 
 # Temp file tracking for cleanup
 ZIP_PATH=""
@@ -30,26 +33,73 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo -e "${BLUE}📚 Building static library (size-optimized for macOS app)...${NC}"
-# Apply embed-bitcode=no for staticlib to reduce size (conflicts with LTO, so only for lib)
-# Set deployment target to match Xcode project (prevents version mismatch warnings)
-export MACOSX_DEPLOYMENT_TARGET=13.5
-export RUSTFLAGS="-C embed-bitcode=no"
-cargo build --profile release-lib --lib
-unset RUSTFLAGS
-unset MACOSX_DEPLOYMENT_TARGET
+build_macos() {
+    echo -e "${BLUE}📚 Building static library for macOS (ARM64 only)...${NC}"
+    export MACOSX_DEPLOYMENT_TARGET=13.5
+    export RUSTFLAGS="-C embed-bitcode=no"
+    cargo build --profile release-lib --lib --target aarch64-apple-darwin
+    unset RUSTFLAGS
+    unset MACOSX_DEPLOYMENT_TARGET
 
-LIB_SIZE=$(ls -lh target/release-lib/libnumby.a | awk '{print $5}')
-echo -e "${GREEN}✓ Library built: target/release-lib/libnumby.a (${LIB_SIZE})${NC}"
+    cp target/aarch64-apple-darwin/release-lib/libnumby.a "$MACOS_APP_LIB"
 
-echo -e "${BLUE}📦 Copying library for macOS app...${NC}"
-cp target/release-lib/libnumby.a "$MACOS_APP_LIB"
-echo -e "${GREEN}✓ Copied library to ${MACOS_APP_LIB}${NC}"
+    LIB_SIZE=$(ls -lh "$MACOS_APP_LIB" | awk '{print $5}')
+    echo -e "${GREEN}✓ macOS library (ARM64): ${MACOS_APP_LIB} (${LIB_SIZE})${NC}"
+}
+
+build_ios() {
+    echo -e "${BLUE}📱 Building static library for iOS (ARM64 only)...${NC}"
+
+    # iOS device (arm64)
+    echo "  Building for iOS device (arm64)..."
+    export IPHONEOS_DEPLOYMENT_TARGET=17.0
+    cargo build --profile release-lib --lib --target aarch64-apple-ios
+    unset IPHONEOS_DEPLOYMENT_TARGET
+
+    # iOS simulator (arm64 only)
+    echo "  Building for iOS simulator (arm64)..."
+    cargo build --profile release-lib --lib --target aarch64-apple-ios-sim
+
+    # Create iOS device library
+    mkdir -p "$(dirname "$IOS_DEVICE_LIB")"
+    cp target/aarch64-apple-ios/release-lib/libnumby.a "$IOS_DEVICE_LIB"
+
+    # Create iOS simulator library
+    mkdir -p "$(dirname "$IOS_SIM_LIB")"
+    cp target/aarch64-apple-ios-sim/release-lib/libnumby.a "$IOS_SIM_LIB"
+
+    IOS_DEV_SIZE=$(ls -lh "$IOS_DEVICE_LIB" | awk '{print $5}')
+    IOS_SIM_SIZE=$(ls -lh "$IOS_SIM_LIB" | awk '{print $5}')
+    echo -e "${GREEN}✓ iOS device (ARM64): ${IOS_DEVICE_LIB} (${IOS_DEV_SIZE})${NC}"
+    echo -e "${GREEN}✓ iOS simulator (ARM64): ${IOS_SIM_LIB} (${IOS_SIM_SIZE})${NC}"
+}
+
+create_xcframework() {
+    echo -e "${BLUE}📦 Creating XCFramework...${NC}"
+
+    rm -rf "$XCFRAMEWORK_PATH"
+
+    xcodebuild -create-xcframework \
+        -library "$MACOS_APP_LIB" \
+        -library "$IOS_DEVICE_LIB" \
+        -library "$IOS_SIM_LIB" \
+        -output "$XCFRAMEWORK_PATH"
+
+    echo -e "${GREEN}✓ XCFramework created: ${XCFRAMEWORK_PATH}${NC}"
+}
+
+# Build all platforms
+build_macos
+build_ios
+create_xcframework
 
 echo ""
 echo -e "${GREEN}✅ Build complete!${NC}"
 echo ""
 echo "Artifacts:"
-echo "  • Library:  target/release-lib/libnumby.a (${LIB_SIZE})"
+echo "  • macOS library:     ${MACOS_APP_LIB}"
+echo "  • iOS device:        ${IOS_DEVICE_LIB}"
+echo "  • iOS simulator:     ${IOS_SIM_LIB}"
+echo "  • XCFramework:       ${XCFRAMEWORK_PATH}"
 echo ""
-echo "To build the macOS app, open Numby.xcodeproj in Xcode and build from there."
+echo "To build the app, open Numby.xcodeproj in Xcode and select your target."

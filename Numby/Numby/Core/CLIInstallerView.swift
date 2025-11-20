@@ -5,24 +5,25 @@
 //  Dedicated view for CLI tool installation
 //
 
+#if os(macOS)
 import SwiftUI
 
 struct CLIInstallerView: View {
-    @ObservedObject var configManager = ConfigurationManager.shared
+    @ObservedObject var configManager = Configuration.shared
     @State private var localeVersion: Int = 0
 
-    private var localizedTitle: String { _ = localeVersion; return configManager.localizedString("cliInstaller.title") }
-    private var localizedSubtitle: String { _ = localeVersion; return configManager.localizedString("cliInstaller.subtitle") }
-    private var localizedInstallViaHomebrew: String { _ = localeVersion; return configManager.localizedString("cliInstaller.installViaHomebrew") }
-    private var localizedRunCommand: String { _ = localeVersion; return configManager.localizedString("cliInstaller.runCommand") }
-    private var localizedNoHomebrew: String { _ = localeVersion; return configManager.localizedString("cliInstaller.noHomebrew") }
-    private var localizedInstallHomebrew: String { _ = localeVersion; return configManager.localizedString("settings.cli.installHomebrew") }
-    private var localizedAlternative: String { _ = localeVersion; return configManager.localizedString("cliInstaller.alternative") }
-    private var localizedDownloadRelease: String { _ = localeVersion; return configManager.localizedString("cliInstaller.downloadRelease") }
-    private var localizedGithubReleases: String { _ = localeVersion; return configManager.localizedString("settings.cli.githubReleases") }
-    private var localizedMoveToPath: String { _ = localeVersion; return configManager.localizedString("cliInstaller.moveToPath") }
-    private var localizedOpenTerminal: String { _ = localeVersion; return configManager.localizedString("cliInstaller.openTerminal") }
-    private var localizedCopyTooltip: String { _ = localeVersion; return configManager.localizedString("settings.cli.copyTooltip") }
+    private var localizedTitle: String { _ = localeVersion; return NSLocalizedString("cliInstaller.title", comment: "") }
+    private var localizedSubtitle: String { _ = localeVersion; return NSLocalizedString("cliInstaller.subtitle", comment: "") }
+    private var localizedInstallViaHomebrew: String { _ = localeVersion; return NSLocalizedString("cliInstaller.installViaHomebrew", comment: "") }
+    private var localizedRunCommand: String { _ = localeVersion; return NSLocalizedString("cliInstaller.runCommand", comment: "") }
+    private var localizedNoHomebrew: String { _ = localeVersion; return NSLocalizedString("cliInstaller.noHomebrew", comment: "") }
+    private var localizedInstallHomebrew: String { _ = localeVersion; return NSLocalizedString("settings.cli.installHomebrew", comment: "") }
+    private var localizedAlternative: String { _ = localeVersion; return NSLocalizedString("cliInstaller.alternative", comment: "") }
+    private var localizedDownloadRelease: String { _ = localeVersion; return NSLocalizedString("cliInstaller.downloadRelease", comment: "") }
+    private var localizedGithubReleases: String { _ = localeVersion; return NSLocalizedString("settings.cli.githubReleases", comment: "") }
+    private var localizedMoveToPath: String { _ = localeVersion; return NSLocalizedString("cliInstaller.moveToPath", comment: "") }
+    private var localizedOpenTerminal: String { _ = localeVersion; return NSLocalizedString("cliInstaller.openTerminal", comment: "") }
+    private var localizedCopyTooltip: String { _ = localeVersion; return NSLocalizedString("settings.cli.copyTooltip", comment: "") }
 
     var body: some View {
         VStack(spacing: 20) {
@@ -150,3 +151,4 @@ struct CLIInstallerView: View {
         }
     }
 }
+#endif

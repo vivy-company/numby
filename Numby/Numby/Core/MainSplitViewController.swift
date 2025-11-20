@@ -5,6 +5,7 @@
 //  Native split view controller with sidebar
 //
 
+#if os(macOS)
 import Cocoa
 import SwiftUI
 import ObjectiveC.runtime
@@ -35,7 +36,7 @@ class MainSplitViewController: NSSplitViewController {
         splitView.focusRingType = .none
 
         // Set background color for the entire split view
-        let backgroundColor = ConfigurationManager.shared.config.backgroundColor ?? NSColor.textBackgroundColor
+        let backgroundColor = Configuration.shared.config.backgroundColor ?? NSColor.textBackgroundColor
         splitView.wantsLayer = true
         splitView.layer?.backgroundColor = backgroundColor.cgColor
 
@@ -65,8 +66,7 @@ class MainSplitViewController: NSSplitViewController {
 
         // Create main content
         let rootView = CalculatorRootView(controller: calculatorController)
-            .environmentObject(ThemeManager.shared)
-            .environmentObject(ConfigurationManager.shared)
+            .environmentObject(Configuration.shared)
 
         let contentVC = FocuslessHostingController(rootView: rootView)
         contentItem = NSSplitViewItem(viewController: contentVC)
@@ -188,3 +188,4 @@ class MainSplitViewController: NSSplitViewController {
         // }
     }
 }
+#endif

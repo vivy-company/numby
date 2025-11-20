@@ -5,6 +5,7 @@
 //  Individual calculator surface - renders one calculator instance with input/results panels
 //
 
+#if os(macOS)
 import SwiftUI
 import Combine
 
@@ -14,8 +15,8 @@ struct CalculatorSurfaceView: View {
     let leafId: SplitLeafID
     let isFocused: Bool
 
-    @EnvironmentObject var themeManager: ThemeManager
-    @EnvironmentObject var configManager: ConfigurationManager
+    // Theme is now accessed via Theme.current static property
+    @EnvironmentObject var configManager: Configuration
 
     @State private var updateTrigger: Int = 0
     @FocusState private var isViewFocused: Bool
@@ -32,7 +33,7 @@ struct CalculatorSurfaceView: View {
                         InputTextView(
                             text: $instance.inputText,
                             backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
-                            textColor: themeManager.syntaxColor(for: .text),
+                            textColor: Theme.current.syntaxColor(for: .text),
                             fontSize: configManager.config.fontSize,
                             fontName: configManager.config.fontName ?? "SFMono-Regular",
                             syntaxHighlighting: configManager.config.syntaxHighlighting,
@@ -48,7 +49,7 @@ struct CalculatorSurfaceView: View {
 
                         ResultsTextView(
                             results: instance.results,
-                            textColor: themeManager.syntaxColor(for: .results),
+                            textColor: Theme.current.syntaxColor(for: .results),
                             backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
                             fontSize: configManager.config.fontSize,
                             fontName: configManager.config.fontName ?? "SFMono-Regular"
@@ -69,7 +70,7 @@ struct CalculatorSurfaceView: View {
                 }
             }
         }
-        .onChange(of: themeManager.currentTheme) { _ in
+        .onChange(of: Theme.current) { _ in
             updateTrigger += 1
         }
         .onChange(of: configManager.config.backgroundColorHex) { _ in
@@ -355,14 +356,14 @@ struct InputTextView: NSViewRepresentable {
         storage.addAttribute(.font, value: font, range: fullRange)
 
         let text = storage.string
-        let themeManager = ThemeManager.shared
+        let theme = Theme.current
 
         // Highlight numbers
         let numberPattern = "\\b\\d+(\\.\\d+)?\\b"
         if let regex = try? NSRegularExpression(pattern: numberPattern) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .numbers), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .numbers), range: range)
                 }
             }
         }
@@ -372,7 +373,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: operatorPattern) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .operators), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .operators), range: range)
                 }
             }
         }
@@ -382,7 +383,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: currencyPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .currency), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .currency), range: range)
                 }
             }
         }
@@ -392,7 +393,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: unitPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .units), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .units), range: range)
                 }
             }
         }
@@ -402,7 +403,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: keywordPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .keywords), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .keywords), range: range)
                 }
             }
         }
@@ -412,7 +413,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: functionPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .functions), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .functions), range: range)
                 }
             }
         }
@@ -422,7 +423,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: constantPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .constants), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .constants), range: range)
                 }
             }
         }
@@ -432,7 +433,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: variablePattern) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range(at: 1) {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .variables), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variables), range: range)
                 }
             }
         }
@@ -444,8 +445,8 @@ struct InputTextView: NSViewRepresentable {
                 if let range = match?.range {
                     // Only color if it's not already colored by other patterns
                     let currentColor = storage.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? NSColor
-                    if currentColor == themeManager.syntaxColor(for: .text) {
-                        storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .variableUsage), range: range)
+                    if currentColor == theme.syntaxColor(for: .text) {
+                        storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variableUsage), range: range)
                     }
                 }
             }
@@ -456,7 +457,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: assignmentPattern) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range(at: 1) {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .assignment), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .assignment), range: range)
                 }
             }
         }
@@ -466,7 +467,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: commentPattern, options: .anchorsMatchLines) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .comments), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .comments), range: range)
                 }
             }
         }
@@ -506,3 +507,4 @@ extension FocusedValues {
         typealias Value = SplitLeafID
     }
 }
+#endif

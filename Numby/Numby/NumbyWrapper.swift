@@ -28,8 +28,7 @@ class NumbyWrapper: ObservableObject {
             }
         }
         // Set locale (prioritize saved config, then system locale)
-        let configManager = ConfigurationManager.shared
-        let locale = configManager.config.locale ?? Locale.current.language.languageCode?.identifier ?? "en-US"
+        let locale = Configuration.shared.config.locale ?? Locale.current.language.languageCode?.identifier ?? "en-US"
         locale.withCString { cLocale in
             _ = libnumby_set_locale(context, cLocale)
         }

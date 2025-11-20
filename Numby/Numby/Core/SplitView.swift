@@ -5,6 +5,7 @@
 //  Native macOS split view component using NSSplitView
 //
 
+#if os(macOS)
 import SwiftUI
 import AppKit
 
@@ -131,3 +132,4 @@ final class FocuslessSplitView: NSSplitView {
         .zero
     }
 }
+#endif
