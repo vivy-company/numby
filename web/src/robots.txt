@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://numby.app/sitemap.xml

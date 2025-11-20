@@ -3,7 +3,7 @@ import React from "react";
 export function Privacy() {
   return (
     <div className="w-full overflow-x-hidden">
-      <section className="py-20 px-6">
+      <main className="py-20 px-6">
         <div className="max-w-[720px] mx-auto">
           <h1 className="text-[56px] font-semibold mb-8 tracking-tight">Privacy Policy</h1>
           <p className="text-[#86868b] text-[17px] mb-12">Last updated: November 15, 2025</p>
@@ -49,7 +49,7 @@ export function Privacy() {
               <h2 className="text-[32px] font-semibold text-[#f5f5f7] mb-4 tracking-tight">Open Source</h2>
               <p>
                 Numby is open source software. You can review the entire codebase at{" "}
-                <a href="https://github.com/vivy-company/numby" className="text-[#0071e3] hover:underline">
+                <a href="https://github.com/vivy-company/numby" className="text-blue-500 hover:underline">
                   github.com/vivy-company/numby
                 </a>{" "}
                 to verify our privacy claims.
@@ -60,7 +60,7 @@ export function Privacy() {
               <h2 className="text-[32px] font-semibold text-[#f5f5f7] mb-4 tracking-tight">Contact</h2>
               <p>
                 For privacy questions or concerns, please open an issue on our{" "}
-                <a href="https://github.com/vivy-company/numby/issues" className="text-[#0071e3] hover:underline">
+                <a href="https://github.com/vivy-company/numby/issues" className="text-blue-500 hover:underline">
                   GitHub repository
                 </a>.
               </p>
@@ -68,10 +68,10 @@ export function Privacy() {
           </div>
 
           <div className="mt-16 pt-8 border-t border-white/8">
-            <a href="/" className="text-[#0071e3] hover:underline">← Back to Home</a>
+            <a href="/" className="text-blue-500 hover:underline">← Back to Home</a>
           </div>
         </div>
-      </section>
+      </main>
     </div>
   );
 }

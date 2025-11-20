@@ -9,6 +9,8 @@ const server = serve({
     "/privacy": privacyHtml,
     "/eula": eulaHtml,
     "/install.sh": Bun.file("./src/install.sh"),
+    "/robots.txt": Bun.file("./src/robots.txt"),
+    "/sitemap.xml": Bun.file("./src/sitemap.xml"),
   },
 
   development: process.env.NODE_ENV !== "production" && {

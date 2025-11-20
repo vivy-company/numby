@@ -3,7 +3,7 @@ import React from "react";
 export function Eula() {
   return (
     <div className="w-full overflow-x-hidden">
-      <section className="py-20 px-6">
+      <main className="py-20 px-6">
         <div className="max-w-[720px] mx-auto">
           <h1 className="text-[56px] font-semibold mb-8 tracking-tight">End User License Agreement</h1>
           <p className="text-[#86868b] text-[17px] mb-12">Last updated: November 15, 2025</p>
@@ -72,7 +72,7 @@ export function Eula() {
               <h2 className="text-[32px] font-semibold text-[#f5f5f7] mb-4 tracking-tight">Contact</h2>
               <p>
                 For questions about this EULA, please contact us via{" "}
-                <a href="https://github.com/vivy-company/numby/issues" className="text-[#0071e3] hover:underline">
+                <a href="https://github.com/vivy-company/numby/issues" className="text-blue-500 hover:underline">
                   GitHub Issues
                 </a>.
               </p>
@@ -80,10 +80,10 @@ export function Eula() {
           </div>
 
           <div className="mt-16 pt-8 border-t border-white/8">
-            <a href="/" className="text-[#0071e3] hover:underline">← Back to Home</a>
+            <a href="/" className="text-blue-500 hover:underline">← Back to Home</a>
           </div>
         </div>
-      </section>
+      </main>
     </div>
   );
 }

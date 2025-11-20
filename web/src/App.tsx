@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import {
   Calculator,
   Globe,
@@ -14,14 +14,13 @@ import {
   Apple,
 } from "lucide-react";
 import logo from "./logo.png";
-import screenshotRecipe from "./screenshot-recipe.png";
 import screenshotFinance from "./screenshot-finance.png";
-import screenshotBills from "./screenshot-bills.png";
-import screenshotTravel from "./screenshot-travel.png";
 import screenshotTui from "./screenshot-tui.png";
 import appStoreBadge from "./app-store-badge.svg";
 import { useLanguage, LanguageProvider } from "./i18n/LanguageContext";
 import { LanguageSelector } from "./i18n/LanguageSelector";
+
+const FAQSection = lazy(() => import("./components/FAQSection"));
 
 function AppContent() {
   const { t } = useLanguage();
@@ -42,7 +41,7 @@ function AppContent() {
   return (
     <div className="w-full overflow-x-hidden">
       {/* Hero Section */}
-      <section className="relative text-center py-20 px-6 pb-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(0,113,227,0.15),transparent)] animate-[gradient-shift_15s_ease-in-out_infinite]">
+      <main className="relative text-center py-20 px-6 pb-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(0,113,227,0.15),transparent)] animate-[gradient-shift_15s_ease-in-out_infinite]">
         <div className="max-w-[980px] mx-auto">
           <div className="inline-block mb-8">
             <img src={logo} alt="Numby" className="w-28 h-28 drop-shadow-[0_0_40px_rgba(0,113,227,0.3)]" />
@@ -83,13 +82,13 @@ function AppContent() {
                 {copied ? (
                   <Check size={16} className="text-green-500" />
                 ) : (
-                  <Copy size={16} className="text-[#86868b] group-hover:text-[#0071e3] transition-colors" />
+                  <Copy size={16} className="text-zinc-500 group-hover:text-blue-500 transition-colors" />
                 )}
               </div>
             </div>
           </div>
         </div>
-      </section>
+      </main>
 
       {/* Visual Showcase */}
       <section className="py-12 px-6 pb-20">
@@ -110,7 +109,13 @@ function AppContent() {
             ))}
           </div>
           <div className="rounded-[18px] overflow-hidden">
-            <img src={screenshots[activeTab as keyof typeof screenshots]} alt={`${activeTab} example`} className="w-full block" />
+            <img
+              src={screenshots[activeTab as keyof typeof screenshots]}
+              alt={`${activeTab} example`}
+              className="w-full block"
+              fetchPriority="high"
+              loading="eager"
+            />
           </div>
         </div>
       </section>
@@ -121,13 +126,13 @@ function AppContent() {
           <h2 className="text-[56px] md:text-[56px] text-[36px] font-semibold text-center mb-16 tracking-tight">{t("features.title")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { icon: Calculator, bg: "rgba(0,113,227,0.1)", color: "#0071e3", key: "naturalLanguage", span: true },
+              { icon: Calculator, bg: "rgb(59 130 246 / 0.1)", color: "rgb(59 130 246)", key: "naturalLanguage", span: true },
               { icon: Ruler, bg: "rgba(255,149,0,0.1)", color: "#ff9500", key: "unitConversions" },
               { icon: Globe, bg: "rgba(52,199,89,0.1)", color: "#34c759", key: "currencies" },
               { icon: Percent, bg: "rgba(175,82,222,0.1)", color: "#af52de", key: "percentages" },
               { icon: Variable, bg: "rgba(255,59,48,0.1)", color: "#ff3b30", key: "variables" },
               { icon: Languages, bg: "rgba(255,204,0,0.1)", color: "#ffcc00", key: "languages" },
-              { icon: History, bg: "rgba(0,113,227,0.1)", color: "#0071e3", key: "files" },
+              { icon: History, bg: "rgb(59 130 246 / 0.1)", color: "rgb(59 130 246)", key: "files" },
             ].map((feature, i) => (
               <div
                 key={i}
@@ -159,7 +164,7 @@ function AppContent() {
               { num: "3", key: "step3" },
             ].map((step) => (
               <div key={step.num} className="flex gap-6 items-start">
-                <span className="text-[40px] font-bold text-[#0071e3] font-mono min-w-[60px]">{step.num}</span>
+                <span className="text-[40px] font-bold text-blue-500 font-mono min-w-[60px]">{step.num}</span>
                 <div>
                   <h3 className="text-2xl font-semibold mb-2 tracking-tight">{t(`howItWorks.${step.key}.title`)}</h3>
                   <p className="text-[#86868b] text-[17px] leading-[1.47059]">{t(`howItWorks.${step.key}.desc`)}</p>
@@ -171,70 +176,25 @@ function AppContent() {
       </section>
 
       {/* FAQ */}
-      <section className="py-20 px-6">
-        <div className="max-w-[720px] mx-auto">
-          <h2 className="text-[56px] font-semibold text-center mb-16 tracking-tight">{t("faq.title")}</h2>
-          <div className="flex flex-col gap-8">
-            {["q1", "q2", "q3", "q4", "q5", "q6"].map((qKey) => {
-              const answer = t(`faq.${qKey}.answer`);
-
-              // For q2, highlight "completely free" and "$5.99"
-              const renderQ2 = () => {
-                const freeTerms = ["completely free", "completamente gratuita", "complètement gratuit", "vollständig kostenlos", "完全無料", "полностью бесплатная", "цалкам бясплатная", "完全免费"];
-                const freeTerm = freeTerms.find(term => answer.includes(term)) || "completely free";
-                const parts = answer.split(freeTerm);
-                const afterFree = parts[1] || "";
-                const priceParts = afterFree.split("$5.99");
-
-                return (
-                  <>
-                    {parts[0]}
-                    <span className="text-[#34c759] font-semibold">{freeTerm}</span>
-                    {priceParts[0]}
-                    <span className="text-[#0071e3]">$5.99</span>
-                    {priceParts[1]}
-                  </>
-                );
-              };
-
-              return (
-                <div key={qKey}>
-                  <h3 className="text-[21px] font-semibold mb-3 tracking-tight">{t(`faq.${qKey}.question`)}</h3>
-                  <p className="text-[#86868b] text-[17px] leading-[1.47059]">
-                    {qKey === "q2" ? renderQ2() : (
-                      <span dangerouslySetInnerHTML={{ __html: answer
-                        .replace(/x = 100/g, '<code class="text-[#89dceb] font-mono text-[15px]">x = 100</code>')
-                        .replace(/prev/g, '<code class="text-[#89dceb] font-mono text-[15px]">prev</code>')
-                        .replace(/sum/g, '<code class="text-[#89dceb] font-mono text-[15px]">sum</code>')
-                        .replace(/average/g, '<code class="text-[#89dceb] font-mono text-[15px]">average</code>')
-                        .replace(/\.numby/g, '<code class="text-[#89dceb] font-mono text-[15px]">.numby</code>')
-                        .replace(/:w/g, '<code class="text-[#89dceb] font-mono text-[15px]">:w</code>')
-                        .replace(/numby myfile\.numby/g, '<code class="text-[#89dceb] font-mono text-[15px]">numby myfile.numby</code>')
-                      }} />
-                    )}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <Suspense fallback={<div className="py-20 px-6"><div className="max-w-[720px] mx-auto text-center text-zinc-500">Loading...</div></div>}>
+        <FAQSection />
+      </Suspense>
 
       {/* Footer */}
       <footer className="py-12 px-6 border-t border-white/8 mt-20">
-        <div className="max-w-[1200px] mx-auto flex justify-between items-center flex-wrap gap-6">
-          <p className="text-sm text-[#86868b]">{t("footer.copyright")}</p>
-          <div className="flex gap-6 items-center">
-            <a href="/privacy" className="text-sm text-[#86868b] hover:text-[#0071e3] transition-colors duration-200">
+        <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center md:items-center gap-6">
+          <p className="text-sm text-[#86868b] text-center md:text-left">{t("footer.copyright")}</p>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center">
+            <a href="/privacy" className="text-sm text-zinc-500 hover:text-blue-500 transition-colors duration-200">
               {t("footer.privacy")}
             </a>
-            <a href="/eula" className="text-sm text-[#86868b] hover:text-[#0071e3] transition-colors duration-200">
+            <a href="/eula" className="text-sm text-zinc-500 hover:text-blue-500 transition-colors duration-200">
               {t("footer.eula")}
             </a>
-            <a href="https://github.com/vivy-company/numby" className="text-sm text-[#86868b] hover:text-[#0071e3] transition-colors duration-200">
+            <a href="https://github.com/vivy-company/numby" className="text-sm text-zinc-500 hover:text-blue-500 transition-colors duration-200">
               {t("footer.github")}
             </a>
-            <a href="https://github.com/vivy-company/numby/issues" className="text-sm text-[#86868b] hover:text-[#0071e3] transition-colors duration-200">
+            <a href="https://github.com/vivy-company/numby/issues" className="text-sm text-zinc-500 hover:text-blue-500 transition-colors duration-200">
               {t("footer.reportIssue")}
             </a>
             <LanguageSelector />

@@ -129,6 +129,7 @@ const result = await Bun.build({
   minify: true,
   target: "browser",
   sourcemap: "linked",
+  splitting: true,
   naming: {
     chunk: "[name]-[hash].[ext]",
     entry: "[dir]/[name].[ext]",
@@ -165,5 +166,10 @@ console.log(`Copied sitemap.xml to ${path.join(outdir, "sitemap.xml")}`);
 const ogImage = Bun.file("./src/og.png");
 await Bun.write(path.join(outdir, "og.png"), ogImage);
 console.log(`Copied og.png to ${path.join(outdir, "og.png")}`);
+
+// Copy robots.txt to dist
+const robots = Bun.file("./src/robots.txt");
+await Bun.write(path.join(outdir, "robots.txt"), robots);
+console.log(`Copied robots.txt to ${path.join(outdir, "robots.txt")}`);
 
 console.log(`\nBuild completed in ${buildTime}ms\n`);

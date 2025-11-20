@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="./logo.png" />
 
+    <!-- Preconnect to important origins -->
+    <link rel="preconnect" href="https://numby.vivy.app" />
+    <link rel="dns-prefetch" href="https://numby.vivy.app" />
+
     <!-- Primary Meta Tags -->
     <title>Numby - Natural Language Calculator for macOS & Terminal</title>
     <meta name="title" content="Numby - Natural Language Calculator for macOS & Terminal" />
@@ -32,6 +36,9 @@
     <!-- Additional SEO -->
     <meta name="robots" content="index, follow" />
     <meta name="language" content="English" />
+
+    <!-- Analytics -->
+    <script defer src="https://analytics.vivy.app/script.js" data-website-id="077e9dc0-07f8-440e-935e-a74cd5f170d6"></script>
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -82,6 +89,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./frontend.tsx"></script>
+    <script type="module" src="./frontend.tsx" defer></script>
   </body>
 </html>
