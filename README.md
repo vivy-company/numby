@@ -13,6 +13,7 @@ A powerful natural language calculator with both CLI and terminal user interface
 - **Interactive TUI**: Split-panel interface with live evaluation and syntax highlighting
 - **CLI Mode**: Evaluate expressions directly from the command line or pipe input
 - **Variables & History**: Store values, reference previous results with `prev`, `sum`, `average`
+- **Date & Time Awareness**: Ask for `now`, `today`, `time in Tokyo`, `next Monday`, or `100 days from today`, and compute date differences
 - **File Support**: Save and load calculation files (`.numby` extension) with multi-line expressions
 - **Clipboard Integration**: Copy inputs or results with `Ctrl+I` / `Ctrl+Y`
 
@@ -37,9 +38,9 @@ A powerful natural language calculator with both CLI and terminal user interface
 - **Energy**: joule, calorie
 
 ### Currency & Financial
-- **300+ Currencies**: USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR, BTC, ETH, and more
-- **Auto-Updates**: Daily exchange rate updates from free API
-- **Offline Support**: Cached rates work without internet
+- **Hundreds of Fiat & Crypto Currencies**: USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR plus popular crypto assets (BTC, ETH, etc.) from the fawazahmed0 currency API
+- **Automatic Refresh**: On startup Numby fetches latest rates when the cached timestamp is older than 24 hours; `--update-rates` forces a refresh, `--no-update` skips it
+- **Offline Support**: Falls back to cached rates in `config.json` when offline
 - **Custom Rates**: Override rates with `--rate EUR:0.92`
 
 ### Percentage Calculations
@@ -159,13 +160,14 @@ Options:
       --rate <CURR:RATE>   Override currency rate (e.g., EUR:0.92)
       --update-rates       Force update currency rates from API
       --no-update          Skip automatic rate update
+      --format <NAME>      CLI output format: pretty (default), markdown, table/box, plain
   -h, --help              Print help
   -V, --version           Print version
 ```
 
 ### Currency Management
 
-Exchange rates auto-update daily from free API (300+ currencies). Cached rates work offline.
+Exchange rates are cached in `config.json` and refreshed from the free fawazahmed0 currency API when the cache is older than 24 hours. Cached rates work offline.
 
 ```bash
 # Force update
@@ -306,6 +308,16 @@ numby --locale zh-CN "50% of 200"
 
 **Supported**: English, Spanish, French, German, Japanese, Russian, Belarusian, Chinese (Simplified/Traditional)
 
+### Date & Time
+
+```bash
+numby "now"                      # Current local time
+numby "time in tokyo"            # Current time in a specific timezone
+numby "today + 5 days"           # Date arithmetic
+numby "days between 2025-01-01 and 2025-01-31"  # Difference in days
+numby "next monday"              # Next occurrence of a weekday
+```
+
 ## Configuration
 
 Numby stores configuration at `~/.numby/config.json`. Auto-generated on first run.
@@ -379,8 +391,9 @@ cargo build --profile release-lib   # macOS app library
 1. **History Agent**: Handles `sum`, `total`, `avg`, `prev`
 2. **Variable Agent**: Manages variable assignments
 3. **Percentage Agent**: Processes percentage operations
-4. **Unit Agent**: Handles conversions with `in`/`to`
-5. **Math Agent**: Fallback for arithmetic expressions
+4. **Date/Time Agent**: Understands `now`, relative offsets, day-of-week phrases, and date differences
+5. **Unit Agent**: Handles conversions with `in`/`to` across units and currencies
+6. **Math Agent**: Fallback for algebraic expressions
 
 **Key Dependencies:**
 - [ratatui](https://github.com/ratatui-org/ratatui) - Terminal UI framework
