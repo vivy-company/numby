@@ -50,9 +50,9 @@ log_step() {
 
 track_analytics() {
     local name="$1"
-    local os="$2"
-    local arch="$3"
-    local version="$4"
+    local os="${2:-}"
+    local arch="${3:-}"
+    local version="${4:-}"
     local data='{"name":"'"${name}"'"}'
     [ -n "$os" ] && data+=',"os":"'"${os}"'"'
     [ -n "$arch" ] && data+=',"arch":"'"${arch}"'"'
