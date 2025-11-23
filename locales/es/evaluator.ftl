@@ -11,3 +11,16 @@ input-validation-error = Error de validación de entrada: {$error}
 # Operaciones del portapapeles
 clipboard-copy-failed = Error al copiar al portapapeles: {$error}
 clipboard-not-available = Portapapeles no disponible: {$error}
+
+# Álgebra de unidades
+unit-algebra-parse-left = No se pudo analizar el operando izquierdo
+unit-algebra-parse-right = No se pudo analizar el operando derecho
+unit-algebra-unsupported-op = Operación no soportada
+unit-algebra-not-expression = No es una expresión de álgebra de unidades
+
+# Formato de fecha/hora
+datetime-render-pair = Local {$local}\nUTC   {$utc}
+
+# Advertencias de variables
+variable-tracking-update-failed = Advertencia: No se pudo actualizar el seguimiento de variables por línea: {$error}
+variable-content-update-failed = Advertencia: No se pudo actualizar el seguimiento de contenido por línea: {$error}

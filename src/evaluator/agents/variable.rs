@@ -111,10 +111,10 @@ impl Agent for VariableAgent {
                                 line_vars.insert(line_idx, var.to_string());
                             }
                             Err(e) => {
-                                eprintln!(
-                                    "Warning: Failed to update line variable tracking: {}",
-                                    e
-                                );
+                                eprintln!("{}", crate::fl!(
+                                    "variable-tracking-update-failed",
+                                    "error" => &e.to_string()
+                                ));
                             }
                         }
 
@@ -133,7 +133,13 @@ impl Agent for VariableAgent {
                                 line_content.insert(line_idx, original_line);
                             }
                             Err(e) => {
-                                eprintln!("Warning: Failed to update line content tracking: {}", e);
+                                eprintln!(
+                                    "{}",
+                                    crate::fl!(
+                                        "variable-content-update-failed",
+                                        "error" => &e.to_string()
+                                    )
+                                );
                             }
                         }
 

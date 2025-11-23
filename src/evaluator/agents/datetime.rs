@@ -489,10 +489,10 @@ fn format_datetime(dt: DateTime<FixedOffset>, include_time: bool, fmt_key: &str)
 fn render_datetime_pair(dt: DateTime<FixedOffset>, show_utc: bool, fmt_key: &str) -> String {
     if show_utc {
         let utc = dt.with_timezone(&Utc.fix());
-        format!(
-            "Local {}\nUTC   {}",
-            format_datetime(dt, true, fmt_key),
-            format_datetime(utc, true, fmt_key)
+        crate::fl!(
+            "datetime-render-pair",
+            "local" => &format_datetime(dt, true, fmt_key),
+            "utc" => &format_datetime(utc, true, fmt_key)
         )
     } else {
         format_datetime(dt, true, fmt_key)

@@ -400,14 +400,14 @@ fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalR
     }
 
     if let Some(caps) = MULT_DIV_RE.captures(expr) {
-        let left_val: f64 = caps[1]
-            .parse()
-            .map_err(|_| EvaluatorError::ParseError("Failed to parse left operand".to_string()))?;
+        let left_val: f64 = caps[1].parse().map_err(|_| {
+            EvaluatorError::ParseError(crate::fl!("unit-algebra-parse-left"))
+        })?;
         let left_unit = caps[2].to_string();
         let op = &caps[3];
-        let right_val: f64 = caps[4]
-            .parse()
-            .map_err(|_| EvaluatorError::ParseError("Failed to parse right operand".to_string()))?;
+        let right_val: f64 = caps[4].parse().map_err(|_| {
+            EvaluatorError::ParseError(crate::fl!("unit-algebra-parse-right"))
+        })?;
         let right_unit = caps.get(5).map(|m| m.as_str().to_string());
 
         // Perform the operation
@@ -416,7 +416,7 @@ fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalR
             "/" => left_val / right_val,
             _ => {
                 return Err(EvaluatorError::InvalidExpression(
-                    "Unsupported operation".to_string(),
+                    crate::fl!("unit-algebra-unsupported-op"),
                 ))
             }
         };
@@ -461,7 +461,7 @@ fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalR
         Ok(EvalResult { value, unit })
     } else {
         Err(EvaluatorError::InvalidExpression(
-            "Not a unit algebra expression".to_string(),
+            crate::fl!("unit-algebra-not-expression"),
         ))
     }
 }

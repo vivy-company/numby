@@ -86,12 +86,15 @@ fn print_pretty(rows: &[(String, Option<String>)]) {
 }
 
 fn print_markdown(rows: &[(String, Option<String>)]) {
-    println!("### Results\n");
+    println!("{}\n", crate::fl!("markdown-results-heading"));
     for (expr, res) in rows {
         let result = res
             .clone()
             .unwrap_or_else(|| crate::fl!("error-evaluating-expression"));
-        println!("- `{}` → `{}`", expr, result);
+        println!(
+            "{}",
+            crate::fl!("markdown-results-row", "expr" => expr, "result" => &result)
+        );
     }
 }
 
@@ -129,8 +132,8 @@ fn print_table(rows: &[(String, Option<String>)]) {
     println!("{}", top);
     println!(
         "│ {:expr_width$} │ {:res_width$} │",
-        "Expression",
-        "Result",
+        crate::fl!("cli-table-expression"),
+        crate::fl!("cli-table-result"),
         expr_width = expr_width,
         res_width = res_width
     );

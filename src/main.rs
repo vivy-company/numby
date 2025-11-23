@@ -12,13 +12,12 @@ mod tui;
 mod utils;
 
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, FromArgMatches, Parser};
 use models::AppState;
 
 #[derive(Parser)]
 #[command(
     name = "Numby",
-    about = "Numby - A powerful natural language calculator",
     version = concat!("v", env!("CARGO_PKG_VERSION"))
 )]
 struct Args {
@@ -65,33 +64,63 @@ fn determine_filename(file_arg: Option<String>, expression_arg: Option<&String>)
     None
 }
 
+fn detect_cli_locale_arg() -> Option<String> {
+    let mut args = std::env::args().peekable();
+    let _ = args.next(); // skip binary name
+
+    while let Some(arg) = args.next() {
+        if arg == "--locale" {
+            return args.next();
+        }
+        if let Some(value) = arg.strip_prefix("--locale=") {
+            return Some(value.to_string());
+        }
+    }
+
+    None
+}
+
 fn main() -> Result<()> {
-    let args = Args::parse();
+    config::save_default_config_if_missing()?;
+    let mut config = config::load_config();
+
+    let cli_locale = detect_cli_locale_arg();
+    let initial_locale = cli_locale
+        .as_deref()
+        .or(config.locale.as_deref());
+    i18n::init_locale(initial_locale);
+
+    let command = Args::command().about(crate::fl!("app-description-long"));
+    let matches = command.clone().get_matches();
+    let args = Args::from_arg_matches(&matches)?;
 
     let run_cli = args.expression.is_some();
     let mut startup_msgs: Vec<String> = Vec::new();
 
-    config::save_default_config_if_missing()?;
-
-    let mut config = config::load_config();
-
-    // Initialize locale from CLI arg, config, or system default
+    // Initialize locale from CLI arg, config, or system default (re-apply after parsing)
     let locale_str = args.locale.as_deref().or(config.locale.as_deref());
     i18n::init_locale(locale_str);
 
     // Handle currency rate updates
     if args.update_rates {
-        eprintln!("Updating currency rates...");
+        eprintln!("{}", crate::fl!("main-currency-updating"));
         match currency_fetcher::fetch_latest_rates() {
             Ok((rates, date)) => {
-                eprintln!("Fetched {} currency rates (date: {})", rates.len(), date);
+                eprintln!(
+                    "{}",
+                    crate::fl!(
+                        "main-currency-fetched",
+                        "count" => &rates.len().to_string(),
+                        "date" => &date
+                    )
+                );
                 config::update_currency_rates(rates.clone(), date.clone())?;
-                eprintln!("Currency rates updated successfully");
+                eprintln!("{}", crate::fl!("main-currency-updated-success"));
                 config.currencies = rates;
             }
             Err(e) => {
-                eprintln!("Failed to update currency rates: {}", e);
-                eprintln!("Using cached rates from config");
+                eprintln!("{}", crate::fl!("main-currency-update-failed", "error" => &e.to_string()));
+                eprintln!("{}", crate::fl!("main-currency-using-cache"));
             }
         }
     } else if !args.no_update {
@@ -103,7 +132,7 @@ fn main() -> Result<()> {
         };
 
         if should_update {
-            let msg = "Currency rates are stale, updating in background...".to_string();
+            let msg = crate::fl!("main-currency-stale-updating");
             if run_cli {
                 eprintln!("{}", msg);
             } else {

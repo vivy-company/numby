@@ -202,9 +202,10 @@ pub fn run(
                                         TIME_OPTS[format_selection_time].to_string();
                                     state.date_format =
                                         DATE_OPTS[format_selection_date].to_string();
-                                    let _ = state.set_status(format!(
-                                        "Formats set to time: {}, date: {}",
-                                        state.time_format, state.date_format
+                                    let _ = state.set_status(crate::fl!(
+                                        "tui-format-set-status",
+                                        "time" => &state.time_format,
+                                        "date" => &state.date_format
                                     ));
                                     status_timer = STATUS_TIMER_DURATION;
                                     format_picker_visible = false;
@@ -268,7 +269,10 @@ pub fn run(
                                 i18n::AVAILABLE_LOCALES.get(locale_selection)
                             {
                                 if i18n::set_locale(code).is_ok() {
-                                    let _ = state.set_status(format!("Locale set to {}", name));
+                                    let _ = state.set_status(crate::fl!(
+                                        "tui-locale-set-status",
+                                        "name" => *name
+                                    ));
                                     status_timer = STATUS_TIMER_DURATION;
                                 }
                             }
@@ -295,7 +299,7 @@ pub fn run(
                             } else {
                                 save_prompt_active = true;
                                 save_prompt.clear();
-                                save_prompt.push_str("untitled.numby");
+                                save_prompt.push_str(&crate::fl!("tui-save-default-filename"));
                             }
                             continue;
                         }
@@ -310,7 +314,7 @@ pub fn run(
                                 break;
                             } else {
                                 last_ctrlc_time = Some(now);
-                                let _ = state.set_status("Press Ctrl+C again to quit".to_string());
+                                let _ = state.set_status(crate::fl!("tui-quit-ctrlc"));
                                 status_timer = STATUS_TIMER_DURATION;
                             }
                             continue;
@@ -404,7 +408,7 @@ pub fn run(
                         break;
                     } else {
                         last_esc_time = Some(now);
-                        let _ = state.set_status("Press Esc again to quit".to_string());
+                        let _ = state.set_status(crate::fl!("tui-quit-esc"));
                         status_timer = STATUS_TIMER_DURATION;
                     }
                     continue;

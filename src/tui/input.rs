@@ -371,9 +371,12 @@ fn format_buffer_as_markdown_list(
         return String::new();
     }
 
-    let mut out = String::from("### Results\n\n");
+    let mut out = format!("{}\n\n", crate::fl!("markdown-results-heading"));
     for (expr, res) in rows {
-        out.push_str(&format!("- `{}` → `{}`\n", expr, res));
+        out.push_str(&format!(
+            "{}\n",
+            crate::fl!("markdown-results-row", "expr" => expr, "result" => res)
+        ));
     }
     out
 }
@@ -391,7 +394,7 @@ pub(crate) fn save_file(state: &mut AppState, input: &Rope, new_filename: Option
     } else if let Some(ref current) = state.current_filename {
         PathBuf::from(current)
     } else {
-        PathBuf::from("untitled.numby")
+        PathBuf::from(crate::fl!("tui-save-default-filename"))
     };
 
     // Ensure parent directories exist

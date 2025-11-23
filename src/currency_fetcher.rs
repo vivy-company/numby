@@ -4,6 +4,7 @@
 //! and checks for stale rates.
 
 use anyhow::{Context, Result};
+use crate::fl;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -64,8 +65,11 @@ pub fn fetch_latest_rates() -> Result<(HashMap<String, f64>, String)> {
             let elapsed = last_time.elapsed();
             if elapsed < MIN_REQUEST_INTERVAL {
                 anyhow::bail!(
-                    "Rate limit: Please wait {} seconds before requesting again",
-                    (MIN_REQUEST_INTERVAL - elapsed).as_secs()
+                    "{}",
+                    fl!(
+                        "currency-rate-limit",
+                        "seconds" => &(MIN_REQUEST_INTERVAL - elapsed).as_secs().to_string()
+                    )
                 );
             }
         }
@@ -76,7 +80,10 @@ pub fn fetch_latest_rates() -> Result<(HashMap<String, f64>, String)> {
     match fetch_from_url(PRIMARY_URL) {
         Ok(result) => return Ok(result),
         Err(e) => {
-            eprintln!("Primary URL failed: {}, trying fallback...", e);
+            eprintln!(
+                "{}",
+                crate::fl!("currency-primary-fallback", "error" => &e.to_string())
+            );
         }
     }
 
@@ -89,15 +96,23 @@ fn fetch_from_url(url: &str) -> Result<(HashMap<String, f64>, String)> {
     let response = ureq::get(url)
         .timeout(REQUEST_TIMEOUT)
         .call()
-        .map_err(|e| anyhow::anyhow!("HTTP request failed: {}", e))?;
+        .map_err(|e| {
+            anyhow::anyhow!(fl!(
+                "currency-http-request-failed",
+                "error" => &e.to_string()
+            ))
+        })?;
 
     if response.status() != 200 {
-        anyhow::bail!("HTTP request returned status: {}", response.status());
+        anyhow::bail!(fl!(
+            "currency-http-status",
+            "status" => &response.status().to_string()
+        ));
     }
 
     let api_response: CurrencyApiResponse = response
         .into_json()
-        .context("Failed to parse JSON response")?;
+        .context(fl!("currency-parse-json"))?;
 
     // Convert to uppercase keys and invert rates (API gives USD->X, we store as rate to convert TO USD)
     let mut rates: HashMap<String, f64> = HashMap::new();

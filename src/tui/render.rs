@@ -8,6 +8,7 @@ use ratatui::{
 use ropey::Rope;
 
 use super::syntax;
+use crate::fl;
 use crate::models::AppState;
 
 /// Context for rendering to reduce parameter count
@@ -169,7 +170,11 @@ fn render_footer(f: &mut Frame, size: Rect) {
     };
 
     let key_style = Style::default().fg(Color::Cyan).bold();
-    let segments = vec![Span::styled("Ctrl+H", key_style), Span::raw(" help")];
+    let segments = vec![
+        Span::styled(fl!("tui-footer-ctrlh-key"), key_style),
+        Span::raw(" "),
+        Span::raw(fl!("tui-footer-help-desc")),
+    ];
 
     let footer = Paragraph::new(Line::from(segments)).alignment(Alignment::Left);
     f.render_widget(footer, footer_rect);
@@ -185,26 +190,36 @@ fn render_help_overlay(f: &mut Frame, size: Rect) {
         height,
     };
 
-    let entries = [
-        ("Enter", "newline / eval"),
-        ("Ctrl+S", "save (prompt if unnamed)"),
-        ("Ctrl+Q", "quit"),
-        ("Ctrl+I", "copy shareable markdown"),
-        ("Ctrl+Y", "copy current result"),
-        ("Ctrl+L", "clear cache"),
-        ("Ctrl+H", "toggle help"),
-        ("Ctrl+Shift+T", "time format picker"),
-        ("Ctrl+Shift+D", "date format picker"),
-        ("Ctrl+Shift+L", "locale picker"),
-        ("F1", "toggle help"),
-        ("Esc", "close help or prompt"),
+    let entries: [(String, String); 12] = [
+        (fl!("tui-help-enter-key"), fl!("tui-help-enter-desc")),
+        (fl!("tui-help-ctrls-key"), fl!("tui-help-ctrls-desc")),
+        (fl!("tui-help-ctrlq-key"), fl!("tui-help-ctrlq-desc")),
+        (fl!("tui-help-ctrli-key"), fl!("tui-help-ctrli-desc")),
+        (fl!("tui-help-ctrly-key"), fl!("tui-help-ctrly-desc")),
+        (fl!("tui-help-ctrll-key"), fl!("tui-help-ctrll-desc")),
+        (fl!("tui-help-ctrlh-key"), fl!("tui-help-ctrlh-desc")),
+        (
+            fl!("tui-help-ctrlshift-t-key"),
+            fl!("tui-help-ctrlshift-t-desc"),
+        ),
+        (
+            fl!("tui-help-ctrlshift-d-key"),
+            fl!("tui-help-ctrlshift-d-desc"),
+        ),
+        (
+            fl!("tui-help-ctrlshift-l-key"),
+            fl!("tui-help-ctrlshift-l-desc"),
+        ),
+        (fl!("tui-help-f1-key"), fl!("tui-help-f1-desc")),
+        (fl!("tui-help-esc-key"), fl!("tui-help-esc-desc")),
     ];
 
     let mid = entries.len().div_ceil(2);
     let (left, right) = entries.split_at(mid);
 
-    let key = |k: &str| Span::styled(k.to_string(), Style::default().fg(Color::LightCyan).bold());
-    let row_line = |(k, v): (&str, &str)| {
+    let key =
+        |k: &str| Span::styled(k.to_string(), Style::default().fg(Color::LightCyan).bold());
+    let row_line = |(k, v): (&String, &String)| {
         Line::from(vec![
             key(k),
             Span::raw("  "),
@@ -212,8 +227,8 @@ fn render_help_overlay(f: &mut Frame, size: Rect) {
         ])
     };
 
-    let left_lines: Vec<Line> = left.iter().map(|&(k, v)| row_line((k, v))).collect();
-    let right_lines: Vec<Line> = right.iter().map(|&(k, v)| row_line((k, v))).collect();
+    let left_lines: Vec<Line> = left.iter().map(|(k, v)| row_line((k, v))).collect();
+    let right_lines: Vec<Line> = right.iter().map(|(k, v)| row_line((k, v))).collect();
 
     let body_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -263,7 +278,7 @@ fn render_locale_overlay(
         .split(area);
 
     let header = Paragraph::new(Line::from(vec![Span::styled(
-        "Locale",
+        fl!("tui-locale-title"),
         Style::default().fg(Color::LightCyan).bold(),
     )]))
     .style(bg_style);
@@ -312,7 +327,7 @@ fn render_locale_overlay(
 
     // Controls footer
     let footer = Paragraph::new(Line::from(vec![Span::raw(
-        "↑/↓ select   Enter apply   Esc close",
+        fl!("tui-locale-footer"),
     )]))
     .style(bg_style)
     .alignment(Alignment::Center);
@@ -361,7 +376,7 @@ fn render_format_overlay(
     // Time list with scrolling
     let mut time_lines: Vec<Line> = Vec::new();
     time_lines.push(Line::from(vec![Span::styled(
-        "Time",
+        fl!("tui-format-time-title"),
         Style::default().fg(Color::LightCyan).bold(),
     )]));
     let time_visible = columns[0].height as usize - 1;
@@ -400,7 +415,7 @@ fn render_format_overlay(
     // Date list with scrolling
     let mut date_lines: Vec<Line> = Vec::new();
     date_lines.push(Line::from(vec![Span::styled(
-        "Date",
+        fl!("tui-format-date-title"),
         Style::default().fg(Color::LightCyan).bold(),
     )]));
     let date_visible = columns[1].height as usize - 1;
@@ -440,7 +455,7 @@ fn render_format_overlay(
 
     // Controls footer at bottom of overlay
     let controls = Paragraph::new(Line::from(vec![Span::raw(
-        "↑/↓ select   ←/→ switch list   Enter apply   Esc close",
+        fl!("tui-format-footer"),
     )]))
     .style(bg_style)
     .alignment(Alignment::Left);
@@ -462,18 +477,21 @@ fn render_save_prompt(f: &mut Frame, size: Rect, prompt: &str) {
     };
 
     let filename_span = if prompt.is_empty() {
-        Span::styled("untitled.numby", Style::default().fg(Color::White))
+        Span::styled(fl!("tui-save-default-filename"), Style::default().fg(Color::White))
     } else {
         Span::styled(prompt.to_string(), Style::default().fg(Color::White))
     };
 
     let content = Line::from(vec![
-        Span::styled("Save as:", Style::default().fg(Color::LightCyan).bold()),
+        Span::styled(
+            fl!("tui-save-label"),
+            Style::default().fg(Color::LightCyan).bold(),
+        ),
         Span::raw(" "),
         filename_span,
         Span::raw("  "),
         Span::styled(
-            "(Enter to save, Esc to cancel)",
+            fl!("tui-save-hint"),
             Style::default().fg(Color::Gray),
         ),
     ]);
@@ -600,8 +618,8 @@ fn render_cursor(f: &mut Frame, ctx: &mut RenderContext, text_height: u16, size:
     let padding_top = ctx.config.padding_top;
 
     if ctx.save_prompt_active {
-        const LABEL: &str = "Save as: ";
-        let x = LABEL.len() as u16 + ctx.save_prompt.len() as u16;
+        let label = format!("{} ", fl!("tui-save-label"));
+        let x = label.len() as u16 + ctx.save_prompt.len() as u16;
         let y = size.height.saturating_sub(1);
         f.set_cursor(x, y);
     } else {
