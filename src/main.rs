@@ -45,6 +45,10 @@ struct Args {
     /// Skip automatic rate update check on startup
     #[arg(long)]
     no_update: bool,
+
+    /// Output format for CLI mode: plain, markdown, table
+    #[arg(long, default_value = "plain")]
+    format: String,
 }
 
 fn determine_filename(file_arg: Option<String>, expression_arg: Option<&String>) -> Option<String> {
@@ -128,7 +132,7 @@ fn main() -> Result<()> {
     state.current_filename = current_filename;
 
     if let Some(expr) = args.expression {
-        cli::evaluate_expression(&expr, &mut state, &registry);
+        cli::evaluate_expression(&expr, &mut state, &registry, &args.format);
         return Ok(());
     }
 

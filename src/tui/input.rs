@@ -165,7 +165,22 @@ pub fn handle_normal_mode(
                 clear_selection(selection_start);
             }
             KeyCode::Char('i') => {
-                utils::copy_to_clipboard(&input.to_string());
+                // If a selection exists, copy it raw. Otherwise, copy a formatted
+                // expression/result table for sharing.
+                if let Some(start) = selection_start {
+                    let start_idx = *start;
+                    let end_idx = *cursor_pos;
+                    let (from, to) = if start_idx < end_idx {
+                        (start_idx, end_idx)
+                    } else {
+                        (end_idx, start_idx)
+                    };
+                    let snippet = input.slice(from..to).to_string();
+                    utils::copy_to_clipboard(&snippet);
+                } else {
+                    let formatted = format_buffer_as_markdown_table(input, state, registry);
+                    utils::copy_to_clipboard(&formatted);
+                }
                 clear_selection(selection_start);
             }
             _ => {}
@@ -326,6 +341,42 @@ pub fn handle_normal_mode(
     }
 
     text_changed
+}
+
+/// Format the entire buffer as a Markdown table with expression and result columns.
+/// Uses evaluate_for_display to avoid mutating state.
+fn format_buffer_as_markdown_table(
+    input: &Rope,
+    state: &AppState,
+    registry: &crate::evaluator::AgentRegistry,
+) -> String {
+    let mut rows: Vec<(String, String)> = Vec::new();
+    for line in input.lines() {
+        let expr = line.to_string();
+        let trimmed = expr.trim();
+        if trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with('#') {
+            continue;
+        }
+        let result = registry
+            .evaluate_for_display(trimmed, state)
+            .map(|(r, _)| r)
+            .unwrap_or_else(|| crate::fl!("error-evaluating-expression"));
+        rows.push((trimmed.to_string(), result));
+    }
+
+    if rows.is_empty() {
+        return String::new();
+    }
+
+    let mut out = String::from("| Expression | Result |\n|---|---|\n");
+    for (expr, res) in rows {
+        out.push_str(&format!(
+            "| `{}` | `{}` |\n",
+            expr.replace('|', "\\|"),
+            res.replace('|', "\\|")
+        ));
+    }
+    out
 }
 
 /// Handles keyboard input in Command mode
