@@ -46,8 +46,8 @@ struct Args {
     #[arg(long)]
     no_update: bool,
 
-    /// Output format for CLI mode: plain, markdown, table
-    #[arg(long, default_value = "plain")]
+    /// Output format for CLI mode: pretty (default), markdown, table/box, plain
+    #[arg(long, default_value = "pretty")]
     format: String,
 }
 

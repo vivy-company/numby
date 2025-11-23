@@ -167,6 +167,7 @@ pub fn handle_normal_mode(
             KeyCode::Char('i') => {
                 // If a selection exists, copy it raw. Otherwise, copy a formatted
                 // expression/result table for sharing.
+                let buf_len = input.len_chars();
                 if let Some(start) = selection_start {
                     let start_idx = *start;
                     let end_idx = *cursor_pos;
@@ -175,10 +176,17 @@ pub fn handle_normal_mode(
                     } else {
                         (end_idx, start_idx)
                     };
-                    let snippet = input.slice(from..to).to_string();
-                    utils::copy_to_clipboard(&snippet);
+
+                    // If user selected the whole buffer, share a formatted table instead of raw text
+                    if from == 0 && to == buf_len {
+                        let formatted = format_buffer_as_markdown_list(input, state, registry);
+                        utils::copy_to_clipboard(&formatted);
+                    } else {
+                        let snippet = input.slice(from..to).to_string();
+                        utils::copy_to_clipboard(&snippet);
+                    }
                 } else {
-                    let formatted = format_buffer_as_markdown_table(input, state, registry);
+                    let formatted = format_buffer_as_markdown_list(input, state, registry);
                     utils::copy_to_clipboard(&formatted);
                 }
                 clear_selection(selection_start);
@@ -343,9 +351,9 @@ pub fn handle_normal_mode(
     text_changed
 }
 
-/// Format the entire buffer as a Markdown table with expression and result columns.
+/// Format the entire buffer as a Markdown bullet list with expression and result.
 /// Uses evaluate_for_display to avoid mutating state.
-fn format_buffer_as_markdown_table(
+fn format_buffer_as_markdown_list(
     input: &Rope,
     state: &AppState,
     registry: &crate::evaluator::AgentRegistry,
@@ -368,13 +376,9 @@ fn format_buffer_as_markdown_table(
         return String::new();
     }
 
-    let mut out = String::from("| Expression | Result |\n|---|---|\n");
+    let mut out = String::from("### Results\n\n");
     for (expr, res) in rows {
-        out.push_str(&format!(
-            "| `{}` | `{}` |\n",
-            expr.replace('|', "\\|"),
-            res.replace('|', "\\|")
-        ));
+        out.push_str(&format!("- `{}` → `{}`\n", expr, res));
     }
     out
 }
