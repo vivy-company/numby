@@ -65,6 +65,7 @@ impl AgentRegistry {
             Box::new(agents::HistoryAgent),
             Box::new(agents::VariableAgent),
             Box::new(agents::PercentageAgent),
+            Box::new(agents::DateTimeAgent),
             Box::new(agents::UnitAgent),
             Box::new(agents::MathAgent),
         ];

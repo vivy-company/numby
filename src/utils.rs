@@ -35,9 +35,48 @@ pub fn highlight_word_owned(
         Span::styled(word.to_string(), Style::default().fg(Color::Yellow).bold())
     } else if config.currencies.contains_key(&clean_word.to_uppercase()) {
         Span::styled(word.to_string(), Style::default().fg(Color::Magenta).bold())
+    } else if is_datetime_keyword(&lower) || is_timezone_keyword(&lower, config) {
+        Span::styled(word.to_string(), Style::default().fg(Color::Cyan).bold())
     } else {
         Span::raw(word.to_string())
     }
+}
+
+fn is_datetime_keyword(word: &str) -> bool {
+    matches!(
+        word,
+        "time"
+            | "now"
+            | "today"
+            | "tomorrow"
+            | "yesterday"
+            | "ago"
+            | "before"
+            | "after"
+            | "next"
+            | "last"
+            | "this"
+            | "between"
+            | "from"
+            | "in"
+            | "to"
+    )
+}
+
+fn is_timezone_keyword(word: &str, config: &crate::config::Config) -> bool {
+    // Common abbreviations plus ability to parse IANA names
+    let abbrs = [
+        "utc", "gmt", "est", "edt", "cst", "cdt", "mst", "mdt", "pst", "pdt", "bst", "cet",
+        "cest", "eet", "eest", "ist", "jst", "kst", "aest", "aedt", "acst", "acdt", "awst",
+    ];
+    if abbrs.contains(&word) {
+        return true;
+    }
+    if config.city_aliases.contains_key(word) {
+        return true;
+    }
+    // Quick heuristic: looks like IANA tz with slash
+    word.contains('/')
 }
 
 pub fn copy_to_clipboard(text: &str) {

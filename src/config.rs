@@ -3,6 +3,7 @@
 //! This module handles loading, saving, and providing default configurations
 //! for unit conversions, currency rates, and other calculator settings.
 
+use chrono_tz::TZ_VARIANTS;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -36,6 +37,15 @@ pub struct Config {
     pub scales: HashMap<String, f64>,
     pub functions: HashMap<String, String>,
     pub custom_units: HashMap<String, HashMap<String, f64>>,
+    /// City name aliases to IANA time zones (lowercase keys).
+    #[serde(default = "create_city_aliases")]
+    pub city_aliases: HashMap<String, String>,
+    /// Preferred datetime format (iso|long|short|time|12h) shared by CLI and TUI.
+    #[serde(default = "default_time_format")]
+    pub time_format: String,
+    /// Preferred date-only format (iso|long|short) shared by CLI and TUI.
+    #[serde(default = "default_date_format")]
+    pub date_format: String,
     #[serde(default)]
     pub locale: Option<String>,
     #[serde(default = "default_padding_left")]
@@ -48,6 +58,10 @@ pub struct Config {
     pub padding_bottom: u16,
     #[serde(default)]
     pub rates_updated_at: Option<String>,
+    /// Optional default timezone identifier (IANA database, e.g., "UTC", "America/New_York").
+    /// If not set, the local system timezone is used.
+    #[serde(default)]
+    pub default_timezone: Option<String>,
 }
 
 fn default_padding_left() -> u16 {
@@ -420,6 +434,26 @@ fn create_custom_units() -> HashMap<String, HashMap<String, f64>> {
     custom_units
 }
 
+fn create_city_aliases() -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    for tz in TZ_VARIANTS.iter() {
+        let name = tz.name();
+        if let Some(last) = name.rsplit('/').next() {
+            let city = last.replace('_', " ").to_lowercase();
+            map.entry(city).or_insert_with(|| name.to_string());
+        }
+    }
+    map
+}
+
+fn default_time_format() -> String {
+    "iso".to_string()
+}
+
+fn default_date_format() -> String {
+    "iso".to_string()
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
@@ -437,12 +471,16 @@ impl Default for Config {
             scales: create_scales(),
             functions: create_functions(),
             custom_units: create_custom_units(),
+            city_aliases: create_city_aliases(),
+            time_format: default_time_format(),
+            date_format: default_date_format(),
             locale: None,
             padding_left: default_padding_left(),
             padding_right: default_padding_right(),
             padding_top: default_padding_top(),
             padding_bottom: default_padding_bottom(),
             rates_updated_at: None,
+            default_timezone: None,
         }
     }
 }

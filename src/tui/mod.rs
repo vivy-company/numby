@@ -63,6 +63,12 @@ pub fn run(
     let mut pending_eval_line: Option<usize> = None;
     let mut help_visible = false;
     let mut locale_picker_visible = false;
+    let mut format_picker_visible = false;
+    let mut format_selection_time: usize = 0;
+    let mut format_selection_date: usize = 0;
+    let mut format_time_offset: usize = 0;
+    let mut format_date_offset: usize = 0;
+    let mut format_focus_time: bool = true;
     let mut locale_selection: usize = 0;
     let mut locale_scroll_offset: usize = 0;
     let mut save_prompt_active = false;
@@ -111,6 +117,12 @@ pub fn run(
                     show_status: status_timer > 0,
                     scroll_offset: &mut scroll_offset,
                     help_visible,
+                    format_picker_visible,
+                    format_selection_time,
+                    format_selection_date,
+                    format_time_offset,
+                    format_date_offset,
+                    format_focus_time,
                     locale_picker_visible,
                     locale_selection,
                     current_locale: &current_locale_string,
@@ -131,11 +143,82 @@ pub fn run(
             }
         }
 
-        // Handle input events (16ms = ~60fps for smooth updates)
-        if event::poll(std::time::Duration::from_millis(16))? {
-            if let Event::Key(key) = event::read()? {
-                // Handle save prompt input first
-                if save_prompt_active {
+                // Handle input events (16ms = ~60fps for smooth updates)
+                if event::poll(std::time::Duration::from_millis(16))? {
+                    if let Event::Key(key) = event::read()? {
+                        if format_picker_visible {
+                            const TIME_OPTS: [&str; 5] = ["iso", "long", "short", "time", "12h"];
+                            const DATE_OPTS: [&str; 3] = ["iso", "long", "short"];
+                            const VISIBLE: usize = 6;
+                            match key.code {
+                                KeyCode::Up => {
+                                    if format_focus_time {
+                                        if format_selection_time > 0 {
+                                            format_selection_time -= 1;
+                                            if format_selection_time < format_time_offset {
+                                                format_time_offset = format_selection_time;
+                                            }
+                                        }
+                                    } else if format_selection_date > 0 {
+                                        format_selection_date -= 1;
+                                        if format_selection_date < format_date_offset {
+                                            format_date_offset = format_selection_date;
+                                        }
+                                    }
+                                }
+                                KeyCode::Down => {
+                                    if format_focus_time {
+                                        let max = TIME_OPTS.len() - 1;
+                                        if format_selection_time < max {
+                                            format_selection_time += 1;
+                                            if format_selection_time
+                                                >= format_time_offset + VISIBLE
+                                            {
+                                                format_time_offset =
+                                                    format_selection_time + 1 - VISIBLE;
+                                            }
+                                        }
+                                    } else {
+                                        let max = DATE_OPTS.len() - 1;
+                                        if format_selection_date < max {
+                                            format_selection_date += 1;
+                                            if format_selection_date
+                                                >= format_date_offset + VISIBLE
+                                            {
+                                                format_date_offset =
+                                                    format_selection_date + 1 - VISIBLE;
+                                            }
+                                        }
+                                    }
+                                }
+                                KeyCode::Left => {
+                                    format_focus_time = true;
+                                }
+                                KeyCode::Right => {
+                                    format_focus_time = false;
+                                }
+                                KeyCode::Enter => {
+                                    state.time_format =
+                                        TIME_OPTS[format_selection_time].to_string();
+                                    state.date_format =
+                                        DATE_OPTS[format_selection_date].to_string();
+                                    let _ = state.set_status(format!(
+                                        "Formats set to time: {}, date: {}",
+                                        state.time_format, state.date_format
+                                    ));
+                                    status_timer = STATUS_TIMER_DURATION;
+                                    format_picker_visible = false;
+                                }
+                                KeyCode::Esc => {
+                                    format_picker_visible = false;
+                                }
+                                _ => {}
+                            }
+                            continue;
+                        }
+
+                        // Handle save prompt input first
+                        if save_prompt_active {
                     match key.code {
                         KeyCode::Esc => {
                             save_prompt_active = false;
@@ -242,12 +325,51 @@ pub fn run(
                         KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::SHIFT) => {
                             help_visible = false;
                             locale_picker_visible = true;
+                            format_picker_visible = false;
                             let current = i18n::get_locale().to_string();
                             locale_selection = i18n::AVAILABLE_LOCALES
                                 .iter()
                                 .position(|(code, _)| *code == current)
                                 .unwrap_or(0);
                             locale_scroll_offset = locale_selection.saturating_sub(3);
+                            continue;
+                        }
+                        KeyCode::Char('t') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                            help_visible = false;
+                            locale_picker_visible = false;
+                            format_picker_visible = true;
+                            let time_opts = ["iso", "long", "short", "time", "12h"];
+                            let date_opts = ["iso", "long", "short"];
+                            format_selection_time = time_opts
+                                .iter()
+                                .position(|o| *o == state.time_format)
+                                .unwrap_or(0);
+                            format_selection_date = date_opts
+                                .iter()
+                                .position(|o| *o == state.date_format)
+                                .unwrap_or(0);
+                            format_focus_time = true;
+                            format_time_offset = format_selection_time.saturating_sub(2);
+                            format_date_offset = format_selection_date.saturating_sub(2);
+                            continue;
+                        }
+                        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                            help_visible = false;
+                            locale_picker_visible = false;
+                            format_picker_visible = true;
+                            let time_opts = ["iso", "long", "short", "time", "12h"];
+                            let date_opts = ["iso", "long", "short"];
+                            format_selection_time = time_opts
+                                .iter()
+                                .position(|o| *o == state.time_format)
+                                .unwrap_or(0);
+                            format_selection_date = date_opts
+                                .iter()
+                                .position(|o| *o == state.date_format)
+                                .unwrap_or(0);
+                            format_focus_time = false;
+                            format_time_offset = format_selection_time.saturating_sub(2);
+                            format_date_offset = format_selection_date.saturating_sub(2);
                             continue;
                         }
                         _ => {}
@@ -258,12 +380,18 @@ pub fn run(
                 if matches!(key.code, KeyCode::F(1)) {
                     help_visible = !help_visible;
                     locale_picker_visible = false;
+                    format_picker_visible = false;
                     status_timer = STATUS_TIMER_DURATION;
                     continue;
                 }
 
                 if help_visible && matches!(key.code, KeyCode::Esc) {
                     help_visible = false;
+                    continue;
+                }
+
+                if format_picker_visible && matches!(key.code, KeyCode::Esc) {
+                    format_picker_visible = false;
                     continue;
                 }
 

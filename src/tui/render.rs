@@ -20,6 +20,12 @@ pub struct RenderContext<'a> {
     pub show_status: bool,
     pub scroll_offset: &'a mut usize,
     pub help_visible: bool,
+    pub format_picker_visible: bool,
+    pub format_selection_time: usize,
+    pub format_selection_date: usize,
+    pub format_focus_time: bool,
+    pub format_time_offset: usize,
+    pub format_date_offset: usize,
     pub locale_picker_visible: bool,
     pub locale_selection: usize,
     pub current_locale: &'a str,
@@ -100,6 +106,17 @@ pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
             ctx.locale_scroll_offset,
             ctx.locale_visible,
         );
+    } else if ctx.format_picker_visible {
+        render_format_overlay(
+            f,
+            size,
+            ctx.format_selection_time,
+            ctx.format_selection_date,
+            ctx.format_time_offset,
+            ctx.format_date_offset,
+            ctx.format_focus_time,
+            ctx.state,
+        );
     } else if ctx.help_visible {
         render_help_overlay(f, size);
     }
@@ -176,6 +193,8 @@ fn render_help_overlay(f: &mut Frame, size: Rect) {
         ("Ctrl+Y", "copy current result"),
         ("Ctrl+L", "clear cache"),
         ("Ctrl+H", "toggle help"),
+        ("Ctrl+Shift+T", "time format picker"),
+        ("Ctrl+Shift+D", "date format picker"),
         ("Ctrl+Shift+L", "locale picker"),
         ("F1", "toggle help"),
         ("Esc", "close help or prompt"),
@@ -203,7 +222,7 @@ fn render_help_overlay(f: &mut Frame, size: Rect) {
 
     let bg_style = Style::default().bg(Color::Rgb(20, 22, 30)).fg(Color::White);
     let block = Block::default().style(bg_style);
-    f.render_widget(block, area);
+    f.render_widget(&block, area);
 
     let left_p = Paragraph::new(left_lines).style(bg_style);
     let right_p = Paragraph::new(right_lines).style(bg_style);
@@ -231,18 +250,29 @@ fn render_locale_overlay(
 
     let bg_style = Style::default().bg(Color::Rgb(16, 18, 24)).fg(Color::White);
     let block = Block::default().style(bg_style);
-    f.render_widget(block, area);
+    f.render_widget(&block, area);
+
+    // Vertical split: header / list / footer
+    let regions = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Min(1),
+            Constraint::Length(1),
+        ])
+        .split(area);
+
+    let header = Paragraph::new(Line::from(vec![Span::styled(
+        "Locale",
+        Style::default().fg(Color::LightCyan).bold(),
+    )]))
+    .style(bg_style);
+
+    // Compute how many rows fit
+    let max_rows = regions[1].height as usize;
+    let rows_to_show = visible.min(max_rows);
 
     let mut lines: Vec<Line> = Vec::new();
-    lines.push(Line::from(vec![
-        Span::styled("Locale", Style::default().fg(Color::LightCyan).bold()),
-        Span::raw("  ↑/↓ select   Enter apply   Esc close"),
-    ]));
-    lines.push(Line::from(vec![
-        Span::raw(" "),
-        Span::styled("Ctrl+Shift+L", Style::default().fg(Color::Gray)),
-        Span::raw(" to open"),
-    ]));
 
     for (idx, (code, name)) in locales.iter().enumerate().skip(scroll_offset).take(visible) {
         let is_selected = idx == selected;
@@ -271,8 +301,156 @@ fn render_locale_overlay(
         }
     }
 
-    let paragraph = Paragraph::new(lines).style(bg_style);
-    f.render_widget(paragraph, area);
+    // Trim to rows_to_show
+    let lines: Vec<Line> = lines.into_iter().take(rows_to_show).collect();
+
+    // Draw header
+    f.render_widget(header, regions[0]);
+
+    // Draw list
+    f.render_widget(Paragraph::new(lines).style(bg_style), regions[1]);
+
+    // Controls footer
+    let footer = Paragraph::new(Line::from(vec![Span::raw(
+        "↑/↓ select   Enter apply   Esc close",
+    )]))
+    .style(bg_style)
+    .alignment(Alignment::Center);
+    f.render_widget(footer, regions[2]);
+}
+
+fn render_format_overlay(
+    f: &mut Frame,
+    size: Rect,
+    time_idx: usize,
+    date_idx: usize,
+    time_offset: usize,
+    date_offset: usize,
+    focus_time: bool,
+    _state: &AppState,
+) {
+    let options_time = ["iso", "long", "short", "time", "12h"];
+    let options_date = ["iso", "long", "short"];
+
+    let height = 12u16;
+    let area = Rect {
+        x: 0,
+        y: size.height.saturating_sub(height).saturating_sub(2),
+        width: size.width,
+        height,
+    };
+
+    let bg_style = Style::default().bg(Color::Rgb(16, 18, 24)).fg(Color::White);
+    let block = Block::default().style(bg_style);
+    f.render_widget(block, area);
+
+    let selected_style = Style::default().fg(Color::Yellow).bold();
+    let focus_bg = Color::Rgb(48, 52, 63);
+
+    // Split area into two columns below the header
+    let columns = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(Rect {
+            x: area.x,
+            y: area.y + 1,
+            width: area.width,
+            height: area.height.saturating_sub(1),
+        });
+
+    // Time list with scrolling
+    let mut time_lines: Vec<Line> = Vec::new();
+    time_lines.push(Line::from(vec![Span::styled(
+        "Time",
+        Style::default().fg(Color::LightCyan).bold(),
+    )]));
+    let time_visible = columns[0].height as usize - 1;
+    for (i, opt) in options_time
+        .iter()
+        .enumerate()
+        .skip(time_offset)
+        .take(time_visible)
+    {
+        let is_selected = i == time_idx;
+        let marker = if is_selected { "●" } else { "○" };
+        let preview = match *opt {
+            "iso" => "2025-11-23 14:05 +00:00",
+            "long" => "Sunday, 2025-11-23 14:05 +00:00",
+            "short" => "11/23 14:05 UTC",
+            "time" => "14:05 +00:00",
+            "12h" => "2025-11-23 02:05 PM +00:00",
+            _ => "",
+        };
+        let mut line = Line::from(vec![
+            Span::styled(marker, Style::default().fg(Color::Gray)),
+            Span::raw(" "),
+            Span::styled(*opt, Style::default().fg(Color::White)),
+            Span::raw("   "),
+            Span::styled(preview, Style::default().fg(Color::Gray)),
+        ]);
+        if focus_time {
+            line = line.style(Style::default().bg(focus_bg));
+        }
+        if is_selected {
+            line = line.style(selected_style);
+        }
+        time_lines.push(line);
+    }
+
+    // Date list with scrolling
+    let mut date_lines: Vec<Line> = Vec::new();
+    date_lines.push(Line::from(vec![Span::styled(
+        "Date",
+        Style::default().fg(Color::LightCyan).bold(),
+    )]));
+    let date_visible = columns[1].height as usize - 1;
+    for (i, opt) in options_date
+        .iter()
+        .enumerate()
+        .skip(date_offset)
+        .take(date_visible)
+    {
+        let is_selected = i == date_idx;
+        let marker = if is_selected { "●" } else { "○" };
+        let preview = match *opt {
+            "iso" => "2025-11-23",
+            "long" => "Sunday, 2025-11-23",
+            "short" => "11/23/25",
+            _ => "",
+        };
+        let mut line = Line::from(vec![
+            Span::styled(marker, Style::default().fg(Color::Gray)),
+            Span::raw(" "),
+            Span::styled(*opt, Style::default().fg(Color::White)),
+            Span::raw("   "),
+            Span::styled(preview, Style::default().fg(Color::Gray)),
+        ]);
+        if !focus_time {
+            line = line.style(Style::default().bg(focus_bg));
+        }
+        if is_selected {
+            line = line.style(selected_style);
+        }
+        date_lines.push(line);
+    }
+
+    // Draw lists
+    f.render_widget(Paragraph::new(time_lines).style(bg_style), columns[0]);
+    f.render_widget(Paragraph::new(date_lines).style(bg_style), columns[1]);
+
+    // Controls footer at bottom of overlay
+    let controls = Paragraph::new(Line::from(vec![Span::raw(
+        "↑/↓ select   ←/→ switch list   Enter apply   Esc close",
+    )]))
+    .style(bg_style)
+    .alignment(Alignment::Left);
+    let footer_area = Rect {
+        x: area.x,
+        y: area.y + area.height.saturating_sub(1),
+        width: area.width,
+        height: 1,
+    };
+    f.render_widget(controls, footer_area);
 }
 
 fn render_save_prompt(f: &mut Frame, size: Rect, prompt: &str) {
