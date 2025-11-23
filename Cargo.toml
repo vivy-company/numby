@@ -1,6 +1,6 @@
 [package]
 name = "numby"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 description = "A powerful natural language calculator with a terminal user interface"
 repository = "https://github.com/vivy-company/numby"
