@@ -50,9 +50,35 @@ pub fn run(
     let mut status_timer: u32 = 0;
     let mut scroll_offset = 0;
     let mut selection_start: Option<usize> = None;
+    let mut last_edit_time: Option<std::time::Instant> = None;
+    let mut pending_eval_line: Option<usize> = None;
 
     // Main event loop
     loop {
+        // Check if we should re-evaluate a pending line (after 150ms of no typing)
+        if let (Some(edit_time), Some(line_idx)) = (last_edit_time, pending_eval_line) {
+            if edit_time.elapsed() >= std::time::Duration::from_millis(150) {
+                // Re-evaluate the pending line
+                if line_idx < input.len_lines() {
+                    let line_text = input.line(line_idx).to_string();
+                    let trimmed = line_text.trim();
+                    if !trimmed.is_empty() && input::contains_assignment_check(trimmed) {
+                        if let Ok(mut current_line) = state.current_line.write() {
+                            *current_line = Some(line_idx);
+                        }
+                        // Re-evaluate without mutating history
+                        registry.evaluate_without_history(trimmed, state);
+                        if let Ok(mut current_line) = state.current_line.write() {
+                            *current_line = None;
+                        }
+                    }
+                }
+                // Clear pending evaluation
+                last_edit_time = None;
+                pending_eval_line = None;
+            }
+        }
+
         // Render UI
         terminal.draw(|f| {
             render::render_ui(
@@ -78,12 +104,12 @@ pub fn run(
             }
         }
 
-        // Handle input events
-        if event::poll(std::time::Duration::from_millis(100))? {
+        // Handle input events (16ms = ~60fps for smooth updates)
+        if event::poll(std::time::Duration::from_millis(16))? {
             if let Event::Key(key) = event::read()? {
                 match mode {
                     Mode::Normal => {
-                        input::handle_normal_mode(
+                        let changed = input::handle_normal_mode(
                             key,
                             &mut input,
                             &mut cursor_pos,
@@ -92,6 +118,12 @@ pub fn run(
                             registry,
                             &mut selection_start,
                         );
+
+                        // If text was edited, mark for re-evaluation
+                        if changed {
+                            last_edit_time = Some(std::time::Instant::now());
+                            pending_eval_line = Some(input.char_to_line(cursor_pos));
+                        }
 
                         // Set status timer when entering command mode
                         if matches!(mode, Mode::Command(_)) {

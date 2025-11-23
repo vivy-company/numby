@@ -5,7 +5,7 @@ fn run_command(args: &[&str]) -> (String, String) {
     // Insert --locale en-US after "--" to force English error messages
     let mut full_args = Vec::new();
     let mut after_separator = false;
-    let has_locale = args.iter().any(|&a| a == "--locale");
+    let has_locale = args.contains(&"--locale");
 
     for &arg in args {
         full_args.push(arg);
@@ -453,7 +453,20 @@ fn test_history_commands_dont_add_to_history() {
     let registry =
         numby::evaluator::AgentRegistry::new(&config).expect("Failed to initialize agent registry");
     let mut state = numby::models::AppState::builder(&config).build();
-    *state.history.write().unwrap() = vec![10.0, 20.0, 30.0];
+    *state.history.write().unwrap() = vec![
+        numby::models::HistoryEntry {
+            value: 10.0,
+            unit: None,
+        },
+        numby::models::HistoryEntry {
+            value: 20.0,
+            unit: None,
+        },
+        numby::models::HistoryEntry {
+            value: 30.0,
+            unit: None,
+        },
+    ];
 
     // Test sum command
     let result = registry.evaluate("sum", &mut state);
@@ -484,7 +497,9 @@ fn test_history_commands_dont_add_to_history() {
     assert_eq!(result, Some(("45.00".to_string(), true)));
     // History should now have 4 items
     assert_eq!(state.history.read().unwrap().len(), 4);
-    assert_eq!(*state.history.read().unwrap(), vec![10.0, 20.0, 30.0, 45.0]);
+    let hist = state.history.read().unwrap();
+    let values: Vec<f64> = hist.iter().map(|h| h.value).collect();
+    assert_eq!(values, vec![10.0, 20.0, 30.0, 45.0]);
 }
 
 #[test]
@@ -556,26 +571,56 @@ fn test_tui_display_doesnt_modify_history() {
     let registry =
         numby::evaluator::AgentRegistry::new(&config).expect("Failed to initialize agent registry");
     let mut state = numby::models::AppState::builder(&config).build();
-    *state.history.write().unwrap() = vec![40.0, 50.0];
+    *state.history.write().unwrap() = vec![
+        numby::models::HistoryEntry {
+            value: 40.0,
+            unit: None,
+        },
+        numby::models::HistoryEntry {
+            value: 50.0,
+            unit: None,
+        },
+    ];
 
     // Simulate TUI display evaluation (should not modify history at all)
     let _ = registry.evaluate_for_display("sum", &state);
     // History should still have 2 items
     assert_eq!(state.history.read().unwrap().len(), 2);
-    assert_eq!(*state.history.read().unwrap(), vec![40.0, 50.0]);
+    let values: Vec<f64> = state
+        .history
+        .read()
+        .unwrap()
+        .iter()
+        .map(|h| h.value)
+        .collect();
+    assert_eq!(values, vec![40.0, 50.0]);
 
     // Simulate TUI display evaluation of regular expression (should not modify history)
     let _ = registry.evaluate_for_display("40 + 50", &state);
     // History should still have 2 items
     assert_eq!(state.history.read().unwrap().len(), 2);
-    assert_eq!(*state.history.read().unwrap(), vec![40.0, 50.0]);
+    let values: Vec<f64> = state
+        .history
+        .read()
+        .unwrap()
+        .iter()
+        .map(|h| h.value)
+        .collect();
+    assert_eq!(values, vec![40.0, 50.0]);
 
     // Now simulate actual execution of regular expression (should add to history)
     let result = registry.evaluate("40 + 50", &mut state);
     assert_eq!(result, Some(("90.00".to_string(), true)));
     // History should now have 3 items
     assert_eq!(state.history.read().unwrap().len(), 3);
-    assert_eq!(*state.history.read().unwrap(), vec![40.0, 50.0, 90.0]);
+    let values: Vec<f64> = state
+        .history
+        .read()
+        .unwrap()
+        .iter()
+        .map(|h| h.value)
+        .collect();
+    assert_eq!(values, vec![40.0, 50.0, 90.0]);
 
     std::thread::sleep(std::time::Duration::from_millis(60));
 
@@ -584,7 +629,14 @@ fn test_tui_display_doesnt_modify_history() {
     assert_eq!(result2, Some(("180".to_string(), true)));
     // History should still have 3 items
     assert_eq!(state.history.read().unwrap().len(), 3);
-    assert_eq!(*state.history.read().unwrap(), vec![40.0, 50.0, 90.0]);
+    let values: Vec<f64> = state
+        .history
+        .read()
+        .unwrap()
+        .iter()
+        .map(|h| h.value)
+        .collect();
+    assert_eq!(values, vec![40.0, 50.0, 90.0]);
 }
 
 #[test]

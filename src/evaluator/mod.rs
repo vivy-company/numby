@@ -175,6 +175,24 @@ impl AgentRegistry {
         self.evaluate_with_history(input, &mut temp_state, false)
     }
 
+    /// Evaluate an expression mutating state but without adding to history.
+    ///
+    /// Used by background re-evaluation in the TUI so that variables update
+    /// immediately while history remains untouched until the user explicitly
+    /// submits the expression.
+    pub fn evaluate_without_history(
+        &self,
+        input: &str,
+        state: &mut AppState,
+    ) -> Option<(String, bool)> {
+        // Validate input size
+        if let Err(e) = validate_input_size(input) {
+            eprintln!("{}", crate::fl!("input-validation-error", "error" => &e));
+            return None;
+        }
+        self.evaluate_with_history(input, state, false)
+    }
+
     fn evaluate_with_history(
         &self,
         input: &str,
@@ -195,16 +213,19 @@ impl AgentRegistry {
         for agent in &self.agents {
             if agent.can_handle(&preprocessed, state) {
                 let result = agent.process(&preprocessed, state, &self.config);
-                if let Some((_res, add_to_history, raw_value)) = &result {
+                if let Some((_res, add_to_history, raw_value, unit)) = &result {
                     if modify_history && *add_to_history && !is_history_command {
                         // Add to history if it's an expression and modify_history is true
                         // but NOT if it's a history command
                         if let Some(value) = raw_value {
-                            let _ = state.add_history(*value);
+                            let _ = state.add_history(*value, unit.clone());
                         }
                     }
+                    return result.map(|(res, add_to_history, _, _)| (res, add_to_history));
                 }
-                return result.map(|(res, add_to_history, _)| (res, add_to_history));
+
+                // If this agent can't fully handle the input (returns None),
+                // fall through to lower-priority agents instead of aborting the pipeline.
             }
         }
         None
@@ -234,12 +255,12 @@ mod tests {
         // Check history contains all values
         let history = state.history.read().unwrap();
         assert_eq!(history.len(), 4, "All 4 values should be in history");
-        assert_eq!(history[0], 400.0);
-        assert_eq!(history[1], 300.0);
-        assert_eq!(history[2], 2000.0);
-        assert_eq!(history[3], 100.0);
+        assert_eq!(history[0].value, 400.0);
+        assert_eq!(history[1].value, 300.0);
+        assert_eq!(history[2].value, 2000.0);
+        assert_eq!(history[3].value, 100.0);
 
-        let sum: f64 = history.iter().sum();
+        let sum: f64 = history.iter().map(|h| h.value).sum();
         assert_eq!(sum, 2800.0, "Sum should be 2800, not 800");
         drop(history);
 
@@ -248,6 +269,50 @@ mod tests {
         assert!(result.is_some());
         let (sum_str, _) = result.unwrap();
         assert_eq!(sum_str, "2800", "sum command should return 2800");
+    }
+
+    #[test]
+    fn test_history_keywords_inside_math_expression() {
+        let config = Config::default();
+        let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+        let mut state = AppStateBuilder::new(&config).build();
+
+        let inputs = vec!["10", "5"];
+        for input in &inputs {
+            let _ = registry.evaluate(input, &mut state);
+            std::thread::sleep(std::time::Duration::from_millis(51));
+        }
+
+        let result = registry.evaluate("sum + 100", &mut state);
+        assert!(result.is_some(), "sum should be usable in expressions");
+        let (val, _) = result.unwrap();
+        assert!(val.contains("115"), "expected 115, got {}", val);
+    }
+
+    #[test]
+    fn test_sum_to_currency_with_trailing_math() {
+        let config = Config::default();
+        let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+        let mut state = AppStateBuilder::new(&config).build();
+
+        let inputs = vec!["400 USD", "300 USD"];
+        for input in &inputs {
+            let _ = registry.evaluate(input, &mut state);
+            std::thread::sleep(std::time::Duration::from_millis(51));
+        }
+
+        let result = registry.evaluate("sum to USD + 100", &mut state);
+        assert!(
+            result.is_some(),
+            "conversion with trailing math should work"
+        );
+        let (val, _) = result.unwrap();
+        assert!(
+            val.to_uppercase().contains("USD"),
+            "result should keep USD unit: {}",
+            val
+        );
+        assert!(val.contains("800"), "expected around 800, got {}", val);
     }
 
     #[test]
@@ -380,9 +445,122 @@ mod tests {
         let (total_str, _) = result.unwrap();
         // 215.2 * 8.50 ≈ 1829 USD
         // Result should be in USD, not feet
-        assert!(total_str.contains("USD") || total_str.to_uppercase().contains("USD"),
-                "Result should be in USD, got: {}", total_str);
-        assert!(total_str.contains("1") && total_str.contains("8"),
-                "Result should be around 1829, got: {}", total_str);
+        assert!(
+            total_str.contains("USD") || total_str.to_uppercase().contains("USD"),
+            "Result should be in USD, got: {}",
+            total_str
+        );
+        assert!(
+            total_str.contains("1") && total_str.contains("8"),
+            "Result should be around 1829, got: {}",
+            total_str
+        );
+    }
+
+    #[test]
+    fn test_comma_separated_numbers() {
+        let config = Config::default();
+        let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+        let mut state = AppStateBuilder::new(&config).build();
+
+        // Test single number with comma
+        let result = registry.evaluate("10,000", &mut state);
+        assert!(result.is_some(), "Failed to parse number with comma");
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // Test addition with comma-separated numbers
+        let result = registry.evaluate("10,000 + 5,000", &mut state);
+        assert!(result.is_some(), "Failed to add comma-separated numbers");
+        let (sum_str, _) = result.unwrap();
+        assert!(sum_str.contains("15"), "Result should contain 15");
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // Test with currency unit
+        let result = registry.evaluate("10,000 USD", &mut state);
+        assert!(
+            result.is_some(),
+            "Failed to parse comma number with currency"
+        );
+        let (val_str, _) = result.unwrap();
+        assert!(
+            val_str.contains("10") && val_str.contains("USD"),
+            "Result should contain 10 and USD, got: {}",
+            val_str
+        );
+    }
+
+    #[test]
+    fn test_variable_copy() {
+        let config = Config::default();
+        let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+        let mut state = AppStateBuilder::new(&config).build();
+
+        // Create variable x = 5
+        let result = registry.evaluate("x = 5", &mut state);
+        assert!(result.is_some(), "Failed to create variable x");
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // Verify x exists
+        let vars = state.variables.read().unwrap();
+        assert!(vars.contains_key("x"), "Variable x should exist");
+        assert_eq!(vars.get("x").unwrap().0, 5.0);
+        drop(vars);
+
+        // Copy x to y
+        let result = registry.evaluate("y = x", &mut state);
+        assert!(result.is_some(), "Failed to copy variable x to y");
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // Verify both x and y exist
+        let vars = state.variables.read().unwrap();
+        assert!(vars.contains_key("x"), "Variable x should still exist");
+        assert!(vars.contains_key("y"), "Variable y should exist");
+        assert_eq!(vars.get("x").unwrap().0, 5.0);
+        assert_eq!(vars.get("y").unwrap().0, 5.0);
+    }
+
+    #[test]
+    fn test_variable_line_cleanup() {
+        let config = Config::default();
+        let registry = AgentRegistry::new(&config).expect("Failed to create registry");
+        let mut state = AppStateBuilder::new(&config).build();
+
+        // Simulate line 0 creating variable n = 10
+        {
+            let mut current_line = state.current_line.write().unwrap();
+            *current_line = Some(0);
+        }
+        let result = registry.evaluate("n = 10", &mut state);
+        assert!(result.is_some(), "Failed to create variable n");
+        {
+            let mut current_line = state.current_line.write().unwrap();
+            *current_line = None;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // Verify n exists
+        let vars = state.variables.read().unwrap();
+        assert!(vars.contains_key("n"), "Variable n should exist");
+        assert_eq!(vars.get("n").unwrap().0, 10.0);
+        drop(vars);
+
+        // Now simulate editing line 0 to create ns = 10 instead
+        {
+            let mut current_line = state.current_line.write().unwrap();
+            *current_line = Some(0);
+        }
+        let result = registry.evaluate("ns = 10", &mut state);
+        assert!(result.is_some(), "Failed to create variable ns");
+        {
+            let mut current_line = state.current_line.write().unwrap();
+            *current_line = None;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(51));
+
+        // Verify n is deleted and ns exists
+        let vars = state.variables.read().unwrap();
+        assert!(!vars.contains_key("n"), "Variable n should be deleted");
+        assert!(vars.contains_key("ns"), "Variable ns should exist");
+        assert_eq!(vars.get("ns").unwrap().0, 10.0);
     }
 }

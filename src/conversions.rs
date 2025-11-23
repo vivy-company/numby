@@ -30,7 +30,7 @@ fn symbol_to_currency_code(symbol: &str) -> Option<&str> {
         "¥" => Some("JPY"),
         "₹" => Some("INR"),
         "￥" => Some("CNY"), // Chinese Yuan
-        "¢" => Some("USD"), // cents
+        "¢" => Some("USD"),  // cents
         "₽" => Some("RUB"),
         "₩" => Some("KRW"),
         "₪" => Some("ILS"),

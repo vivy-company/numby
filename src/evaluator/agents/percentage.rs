@@ -30,7 +30,7 @@ impl Agent for PercentageAgent {
         input: &str,
         state: &mut AppState,
         config: &crate::config::Config,
-    ) -> Option<(String, bool, Option<f64>)> {
+    ) -> Option<(String, bool, Option<f64>, Option<String>)> {
         // Handle "X% of Y" pattern
         let percent_of_re = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(.+)")
             .expect("Invalid regex pattern for percent-of expression");
@@ -69,9 +69,10 @@ impl Agent for PercentageAgent {
                                 format!("{} {}", pretty_result, unit),
                                 true,
                                 Some(result),
+                                Some(unit),
                             ));
                         } else {
-                            return Some((pretty_result, true, Some(result)));
+                            return Some((pretty_result, true, Some(result), None));
                         }
                     }
                 }
@@ -85,8 +86,14 @@ impl Agent for PercentageAgent {
                 .split_whitespace()
                 .next()
                 .and_then(|s| s.parse::<f64>().ok());
-            return Some((result, true, numeric_value));
+            return Some((result.clone(), true, numeric_value, extract_unit(&result)));
         }
         None
     }
+}
+
+fn extract_unit(result: &str) -> Option<String> {
+    let mut parts = result.split_whitespace();
+    let _value = parts.next()?;
+    parts.next().map(|s| s.to_string())
 }

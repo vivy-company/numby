@@ -18,7 +18,7 @@ impl Agent for UnitAgent {
         input: &str,
         state: &mut AppState,
         config: &crate::config::Config,
-    ) -> Option<(String, bool, Option<f64>)> {
+    ) -> Option<(String, bool, Option<f64>, Option<String>)> {
         let conversion_keyword = input
             .find(" in ")
             .map(|pos| (" in ", pos))
@@ -44,11 +44,10 @@ impl Agent for UnitAgent {
                 &config.custom_units,
             ) {
                 // Extract numeric value from result string for history
-                let numeric_value = val
-                    .split_whitespace()
-                    .next()
-                    .and_then(|s| s.parse::<f64>().ok());
-                return Some((val, true, numeric_value));
+                let mut parts = val.split_whitespace();
+                let numeric_value = parts.next().and_then(|s| s.parse::<f64>().ok());
+                let unit = parts.next().map(|s| s.to_string());
+                return Some((val, true, numeric_value, unit));
             }
 
             // If direct conversion failed, try evaluating the left side as an expression
@@ -98,11 +97,10 @@ impl Agent for UnitAgent {
                     &config.custom_units,
                 ) {
                     // Extract numeric value from result string for history
-                    let numeric_value = val
-                        .split_whitespace()
-                        .next()
-                        .and_then(|s| s.parse::<f64>().ok());
-                    return Some((val, true, numeric_value));
+                    let mut parts = val.split_whitespace();
+                    let numeric_value = parts.next().and_then(|s| s.parse::<f64>().ok());
+                    let unit = parts.next().map(|s| s.to_string());
+                    return Some((val, true, numeric_value, unit));
                 }
             }
         }

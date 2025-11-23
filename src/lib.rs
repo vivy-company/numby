@@ -133,7 +133,7 @@ mod event_tests {
         let _ = state.subscribe(subscriber);
 
         // Adding to history should publish an event
-        let _ = state.add_history(42.0);
+        let _ = state.add_history(42.0, None);
 
         assert_eq!(event_count.load(Ordering::SeqCst), 1);
     }
@@ -737,7 +737,7 @@ mod i18n_tests {
         let msg1 = crate::fl!("path-traversal-detected");
         let msg2 = crate::fl!("invalid-path");
         assert_eq!(
-            msg1, "Traversal de ruta detectado",
+            msg1, "Se detectó un recorrido de ruta",
             "Expected Spanish, got: {}",
             msg1
         );

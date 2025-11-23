@@ -169,7 +169,12 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
         let vars_hash = format!("{:?}", vars_sorted);
         drop(vars); // Release read lock
 
-        let cache_key = format!("{}::{}", line_trim, vars_hash);
+        let cache_key = format!(
+            "{}::{}::{}",
+            line_trim,
+            vars_hash,
+            ctx.state.cache.generation()
+        );
 
         // Check display cache
         let result = if let Some(cached) = ctx.state.cache.get_display(&cache_key) {

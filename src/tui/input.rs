@@ -33,6 +33,64 @@ fn clear_selection(selection_start: &mut Option<usize>) {
     *selection_start = None;
 }
 
+/// Check if string contains an assignment operator (not comparison)
+pub fn contains_assignment_check(s: &str) -> bool {
+    // Look for '=' that is not part of ==, !=, <=, >=
+    let bytes = s.as_bytes();
+    for i in 0..bytes.len() {
+        if bytes[i] == b'=' {
+            // Check character before
+            let has_op_before = i > 0 && matches!(bytes[i - 1], b'!' | b'<' | b'>' | b'=');
+            // Check character after
+            let has_eq_after = i + 1 < bytes.len() && bytes[i + 1] == b'=';
+
+            if !has_op_before && !has_eq_after {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Re-evaluate current line if it has been edited and contains an assignment
+fn reevaluate_if_changed(
+    input: &ropey::Rope,
+    cursor_pos: usize,
+    state: &mut AppState,
+    registry: &crate::evaluator::AgentRegistry,
+) {
+    let line_idx = input.char_to_line(cursor_pos);
+    let current_line = utils::get_current_line(input, cursor_pos);
+    let trimmed = current_line.trim();
+
+    // Only re-evaluate if line contains an assignment (not comparison)
+    if trimmed.is_empty() || !contains_assignment_check(trimmed) {
+        return;
+    }
+
+    // Check if this line's content has changed from last evaluation
+    if let Ok(line_content) = state.line_content.read() {
+        if let Some(last_content) = line_content.get(&line_idx) {
+            // If content hasn't changed, no need to re-evaluate
+            if last_content == trimmed {
+                return;
+            }
+        }
+    }
+
+    // Line was edited and contains assignment - re-evaluate
+    if validate_input_size(trimmed).is_ok() {
+        if let Ok(mut current_line) = state.current_line.write() {
+            *current_line = Some(line_idx);
+        }
+        // Re-evaluate without touching history to avoid double-counting
+        registry.evaluate_without_history(trimmed, state);
+        if let Ok(mut current_line) = state.current_line.write() {
+            *current_line = None;
+        }
+    }
+}
+
 /// Finds the current line index and column from cursor position
 fn find_cursor_line_col(input: &Rope, cursor_pos: usize) -> (usize, usize) {
     let line_idx = input.char_to_line(cursor_pos);
@@ -72,6 +130,7 @@ pub fn move_cursor_down(input: &Rope, cursor_pos: usize) -> usize {
 }
 
 /// Handles keyboard input in Normal mode
+/// Returns true if the text was modified
 pub fn handle_normal_mode(
     key: KeyEvent,
     input: &mut Rope,
@@ -80,7 +139,8 @@ pub fn handle_normal_mode(
     state: &mut AppState,
     registry: &crate::evaluator::AgentRegistry,
     selection_start: &mut Option<usize>,
-) {
+) -> bool {
+    let mut text_changed = false;
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         match key.code {
             KeyCode::Char(':') => {
@@ -120,12 +180,14 @@ pub fn handle_normal_mode(
                 // Delete selection if exists
                 if delete_selection(input, cursor_pos, *selection_start) {
                     clear_selection(selection_start);
+                    text_changed = true;
                 }
 
                 // Prevent input from exceeding maximum size
                 if input.len_chars() < MAX_EXPR_LENGTH {
                     input.insert(*cursor_pos, &c.to_string());
                     *cursor_pos += 1;
+                    text_changed = true;
                 } else {
                     let _ = state.set_status(
                         crate::fl!("input-size-limit", "max" => &MAX_EXPR_LENGTH.to_string()),
@@ -135,37 +197,86 @@ pub fn handle_normal_mode(
             KeyCode::Backspace => {
                 if !delete_selection(input, cursor_pos, *selection_start) {
                     if *cursor_pos > 0 {
+                        // Check if we're deleting a newline
+                        let char_before = input.char(*cursor_pos - 1);
+                        let deleting_newline = char_before == '\n';
+                        let line_idx = if deleting_newline {
+                            input.char_to_line(*cursor_pos)
+                        } else {
+                            0
+                        };
+
                         input.remove(*cursor_pos - 1..*cursor_pos);
                         *cursor_pos = cursor_pos.saturating_sub(1);
+                        text_changed = true;
+
+                        // If we deleted a newline, shift line tracking
+                        if deleting_newline {
+                            let _ = state.shift_lines_on_delete(line_idx);
+                        }
                     }
                 } else {
                     clear_selection(selection_start);
+                    text_changed = true;
                 }
             }
             KeyCode::Delete => {
                 if !delete_selection(input, cursor_pos, *selection_start) {
                     if *cursor_pos < input.len_chars() {
+                        // Check if we're deleting a newline
+                        let char_at_cursor = input.char(*cursor_pos);
+                        let deleting_newline = char_at_cursor == '\n';
+                        let line_idx = if deleting_newline {
+                            input.char_to_line(*cursor_pos) + 1
+                        } else {
+                            0
+                        };
+
                         input.remove(*cursor_pos..*cursor_pos + 1);
+                        text_changed = true;
+
+                        // If we deleted a newline, shift line tracking
+                        if deleting_newline {
+                            let _ = state.shift_lines_on_delete(line_idx);
+                        }
                     }
                 } else {
                     clear_selection(selection_start);
+                    text_changed = true;
                 }
             }
             KeyCode::Left => {
+                // Re-evaluate if moving to a different line
+                let old_line = input.char_to_line(*cursor_pos);
+                let old_cursor = *cursor_pos;
                 *cursor_pos = cursor_pos.saturating_sub(1);
+                let new_line = input.char_to_line(*cursor_pos);
+                if old_line != new_line {
+                    reevaluate_if_changed(input, old_cursor, state, registry);
+                }
                 clear_selection(selection_start);
             }
             KeyCode::Right => {
                 if *cursor_pos < input.len_chars() {
+                    let old_line = input.char_to_line(*cursor_pos);
+                    let old_cursor = *cursor_pos;
                     *cursor_pos += 1;
+                    let new_line = input.char_to_line(*cursor_pos);
+                    if old_line != new_line {
+                        reevaluate_if_changed(input, old_cursor, state, registry);
+                    }
                 }
                 clear_selection(selection_start);
             }
             KeyCode::Up => {
+                // Re-evaluate current line if it was edited
+                reevaluate_if_changed(input, *cursor_pos, state, registry);
                 *cursor_pos = move_cursor_up(input, *cursor_pos);
                 clear_selection(selection_start);
             }
             KeyCode::Down => {
+                // Re-evaluate current line if it was edited
+                reevaluate_if_changed(input, *cursor_pos, state, registry);
                 *cursor_pos = move_cursor_down(input, *cursor_pos);
                 clear_selection(selection_start);
             }
@@ -188,17 +299,33 @@ pub fn handle_normal_mode(
                             crate::fl!("line-validation-error", "error" => &e.to_string()),
                         );
                     } else {
+                        // Set current line index for variable tracking
+                        let line_idx = input.char_to_line(*cursor_pos);
+                        if let Ok(mut current_line) = state.current_line.write() {
+                            *current_line = Some(line_idx);
+                        }
                         registry.evaluate(trimmed, state);
+                        // Clear current line after evaluation
+                        if let Ok(mut current_line) = state.current_line.write() {
+                            *current_line = None;
+                        }
                     }
                 }
+                // Insert newline - shift line tracking
+                let line_idx = input.char_to_line(*cursor_pos);
                 input.insert(*cursor_pos, "\n");
                 *cursor_pos += 1;
+                text_changed = true;
+                // Shift all lines after the insertion point
+                let _ = state.shift_lines_on_insert(line_idx + 1);
             }
             _ => {
                 clear_selection(selection_start);
             }
         }
     }
+
+    text_changed
 }
 
 /// Handles keyboard input in Command mode
@@ -266,9 +393,7 @@ fn list_languages(state: &mut AppState) {
     let locales = crate::i18n::get_available_locales();
     let langs: Vec<String> = locales
         .iter()
-        .map(|locale| {
-            crate::i18n::get_locale_display_name(locale).to_string()
-        })
+        .map(|locale| crate::i18n::get_locale_display_name(locale).to_string())
         .collect();
 
     let _ = state.set_status(crate::fl!("available-languages", "list" => &langs.join(", ")));

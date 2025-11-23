@@ -10,6 +10,9 @@ const MAX_VARIABLES: usize = 1000;
 
 lazy_static! {
     static ref REGEX_CACHE: Mutex<HashMap<String, Regex>> = Mutex::new(HashMap::new());
+    static ref UNDERSCORE_RE: Regex =
+        Regex::new(r"(\d)_(\d)").expect("Invalid regex for underscore removal");
+    static ref COMMA_RE: Regex = Regex::new(r"(\d),(\d)").expect("Invalid regex for comma removal");
 }
 
 fn get_variable_regex(var: &str) -> Regex {
@@ -37,10 +40,12 @@ pub fn preprocess_input(
 ) -> String {
     let mut expr_str = input.to_string();
 
-    // Remove underscores from numbers (1_000_000 -> 1000000)
-    let underscore_re = Regex::new(r"(\d)_(\d)").expect("Invalid regex for underscore removal");
-    while underscore_re.is_match(&expr_str) {
-        expr_str = underscore_re.replace_all(&expr_str, "${1}${2}").to_string();
+    // Remove underscores and commas from numbers (1_000_000 -> 1000000, 10,000 -> 10000)
+    while UNDERSCORE_RE.is_match(&expr_str) {
+        expr_str = UNDERSCORE_RE.replace_all(&expr_str, "${1}${2}").to_string();
+    }
+    while COMMA_RE.is_match(&expr_str) {
+        expr_str = COMMA_RE.replace_all(&expr_str, "${1}${2}").to_string();
     }
 
     // Add spaces between numbers and currency symbols ($, €, etc.)
@@ -76,8 +81,8 @@ pub fn preprocess_input(
     // But we need to avoid breaking conversion expressions like "100$ to eur"
     // Check if this looks like a conversion first
     if !expr_str.contains(" to ") && !expr_str.contains(" in ") {
-        let suffix_currency_re =
-            Regex::new(r"(\d+(?:\.\d+)?)\s*([$€£¥₹￥])(?:\s|$)").expect("Invalid regex for suffix currency");
+        let suffix_currency_re = Regex::new(r"(\d+(?:\.\d+)?)\s*([$€£¥₹￥])(?:\s|$)")
+            .expect("Invalid regex for suffix currency");
         expr_str = suffix_currency_re
             .replace_all(&expr_str, |caps: &regex::Captures| {
                 let num = &caps[1];
@@ -98,14 +103,15 @@ pub fn preprocess_input(
         // For conversion expressions, only replace when it's at the end of the left part
         // Split by conversion keyword and process each part
         if let Some(pos) = expr_str.find(" to ").or_else(|| expr_str.find(" in ")) {
-            let keyword_len = if expr_str[pos..].starts_with(" to ") { 4 } else { 4 };
+            // keyword is always 4 chars: " to " or " in "
+            let keyword_len = 4;
             let left_part = &expr_str[..pos];
-            let right_part = &expr_str[pos+keyword_len..];
-            let keyword = &expr_str[pos..pos+keyword_len];
+            let right_part = &expr_str[pos + keyword_len..];
+            let keyword = &expr_str[pos..pos + keyword_len];
 
             // Only replace currency symbol if it's at the very end of the left part
-            let suffix_currency_re =
-                Regex::new(r"(\d+(?:\.\d+)?)\s*([$€£¥₹￥])$").expect("Invalid regex for suffix currency at end");
+            let suffix_currency_re = Regex::new(r"(\d+(?:\.\d+)?)\s*([$€£¥₹￥])$")
+                .expect("Invalid regex for suffix currency at end");
             let processed_left = suffix_currency_re
                 .replace_all(left_part, |caps: &regex::Captures| {
                     let num = &caps[1];

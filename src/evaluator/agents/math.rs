@@ -19,7 +19,7 @@ impl Agent for MathAgent {
         input: &str,
         state: &mut AppState,
         config: &crate::config::Config,
-    ) -> Option<(String, bool, Option<f64>)> {
+    ) -> Option<(String, bool, Option<f64>, Option<String>)> {
         let mut vars_guard = state.variables.write().ok()?;
         let history_guard = state.history.read().ok()?;
 
@@ -43,12 +43,12 @@ impl Agent for MathAgent {
 
         evaluate_expr(&preprocessed, &mut ctx).ok().map(|result| {
             let formatted = prettify_number(result.value);
-            let output = if let Some(unit) = result.unit {
+            let output = if let Some(unit) = &result.unit {
                 format!("{} {}", formatted, unit)
             } else {
                 formatted
             };
-            (output, true, Some(result.value))
+            (output, true, Some(result.value), result.unit)
         })
     }
 }

@@ -11,6 +11,7 @@ pub struct CacheManager {
     display_access: RwLock<HashMap<String, u64>>,
     highlight_access: RwLock<HashMap<String, u64>>,
     counter: RwLock<u64>,
+    generation: RwLock<u64>,
 }
 
 impl CacheManager {
@@ -21,7 +22,16 @@ impl CacheManager {
             display_access: RwLock::new(HashMap::new()),
             highlight_access: RwLock::new(HashMap::new()),
             counter: RwLock::new(0),
+            generation: RwLock::new(0),
         }
+    }
+
+    /// Returns the current cache generation. Increments whenever we invalidate.
+    pub fn generation(&self) -> u64 {
+        *self
+            .generation
+            .read()
+            .unwrap_or_else(|_| panic!("Failed to read cache generation"))
     }
 
     fn evict_lru_display(&self) {
@@ -122,18 +132,22 @@ impl CacheManager {
         if let Ok(mut access) = self.highlight_access.write() {
             access.clear();
         }
+        if let Ok(mut gen) = self.generation.write() {
+            *gen = gen.saturating_add(1);
+        }
     }
 
-    pub fn invalidate_prefix(&self, prefix: &str) {
-        if let (Ok(mut cache), Ok(mut access)) = (self.display.write(), self.display_access.write())
-        {
+    fn invalidate_prefix(&self, prefix: &str) {
+        if let Ok(mut cache) = self.display.write() {
             cache.retain(|k, _| !k.starts_with(prefix));
+        }
+        if let Ok(mut cache) = self.highlight.write() {
+            cache.retain(|k, _| !k.starts_with(prefix));
+        }
+        if let Ok(mut access) = self.display_access.write() {
             access.retain(|k, _| !k.starts_with(prefix));
         }
-        if let (Ok(mut cache), Ok(mut access)) =
-            (self.highlight.write(), self.highlight_access.write())
-        {
-            cache.retain(|k, _| !k.starts_with(prefix));
+        if let Ok(mut access) = self.highlight_access.write() {
             access.retain(|k, _| !k.starts_with(prefix));
         }
     }
@@ -148,11 +162,12 @@ impl Default for CacheManager {
 impl EventSubscriber for CacheManager {
     fn on_event(&self, event: &StateEvent) {
         match event {
-            StateEvent::VariableChanged(var_name) => {
-                self.invalidate_prefix(var_name);
+            StateEvent::VariableChanged(var) => {
+                // Invalidate entries that start with the variable name to avoid nuking unrelated cache
+                self.invalidate_prefix(var);
             }
-            StateEvent::VariableDeleted(var_name) => {
-                self.invalidate_prefix(var_name);
+            StateEvent::VariableDeleted(var) => {
+                self.invalidate_prefix(var);
             }
             StateEvent::AllVariablesCleared => {
                 self.invalidate_all();

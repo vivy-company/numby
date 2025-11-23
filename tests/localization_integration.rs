@@ -234,7 +234,9 @@ fn test_basic_calculation_chinese_traditional() {
 
 #[test]
 fn test_all_nine_locales() {
-    let locales = vec!["en-US", "es", "zh-CN", "zh-TW", "fr", "de", "ja", "ru", "be"];
+    let locales = vec![
+        "en-US", "es", "zh-CN", "zh-TW", "fr", "de", "ja", "ru", "be",
+    ];
 
     for locale in locales {
         let (stdout, _stderr, exit_code) = run_numby_with_locale(locale, "10 * 5");

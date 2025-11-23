@@ -1,12 +1,13 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::conversions::{
     evaluate_currency_conversion, evaluate_generic_conversion, evaluate_temperature_conversion,
 };
 use crate::evaluator::{EvaluatorError, Result};
-use crate::models::{Rates, TempUnits, Units};
+use crate::models::{HistoryEntry, Rates, TempUnits, Units};
 use crate::parser::{apply_function_parsing, apply_replacements, parse_percentage_op};
 use crate::prettify::prettify_number;
 
@@ -18,7 +19,7 @@ pub struct EvalResult {
 
 pub struct EvalContext<'a> {
     pub variables: &'a mut HashMap<String, (f64, Option<String>)>,
-    pub history: &'a [f64],
+    pub history: &'a [HistoryEntry],
     pub length_units: &'a Units,
     pub time_units: &'a Units,
     pub temperature_units: &'a TempUnits,
@@ -45,6 +46,88 @@ lazy_static! {
         .expect("Invalid regex pattern for percent-operation expression");
     static ref FUNC_RE: Regex =
         Regex::new(r"(\w+)\s+(\d+(?:\.\d+)?)").expect("Invalid regex pattern for function parsing");
+    static ref HISTORY_TOKEN_RE: Regex = Regex::new(r"\b(sum|total|average|avg|prev)\b")
+        .expect("Invalid regex pattern for history tokens");
+}
+
+/// Returns Some(unit) if all history entries share the same non-empty unit, else None.
+pub(crate) fn all_same_unit(history: &[HistoryEntry]) -> Option<String> {
+    let mut unit: Option<String> = None;
+    for entry in history {
+        if let Some(u) = &entry.unit {
+            if let Some(existing) = &unit {
+                if existing != u {
+                    return None;
+                }
+            } else {
+                unit = Some(u.clone());
+            }
+        } else {
+            // Mixed unitless and unitful -> treat as unitless
+            return None;
+        }
+    }
+    unit
+}
+
+fn history_token_value(keyword: &str, history: &[HistoryEntry]) -> Result<f64> {
+    match keyword {
+        "sum" | "total" => Ok(history.iter().map(|h| h.value).sum::<f64>()),
+        "average" | "avg" => {
+            if history.is_empty() {
+                Err(EvaluatorError::InvalidExpression(crate::fl!(
+                    "cannot-compute-average-empty"
+                )))
+            } else {
+                Ok(history.iter().map(|h| h.value).sum::<f64>() / history.len() as f64)
+            }
+        }
+        "prev" => history
+            .last()
+            .map(|h| h.value)
+            .ok_or_else(|| EvaluatorError::InvalidExpression(crate::fl!("no-previous-result"))),
+        _ => Err(EvaluatorError::InvalidExpression(
+            "Unknown history keyword".to_string(),
+        )),
+    }
+}
+
+/// Replace inline history keywords so they can be used in larger expressions
+/// (e.g., `sum + 100`, `avg to USD`).
+fn replace_history_tokens(expr: &str, history: &[HistoryEntry]) -> Result<String> {
+    let err: RefCell<Option<EvaluatorError>> = RefCell::new(None);
+
+    let replaced = HISTORY_TOKEN_RE
+        .replace_all(expr, |caps: &regex::Captures| {
+            match history_token_value(caps.get(1).unwrap().as_str(), history) {
+                Ok(val) => val.to_string(),
+                Err(e) => {
+                    *err.borrow_mut() = Some(e);
+                    String::new()
+                }
+            }
+        })
+        .to_string();
+
+    if let Some(e) = err.into_inner() {
+        Err(e)
+    } else {
+        Ok(replaced)
+    }
+}
+
+fn parse_conversion_result(val: String) -> EvalResult {
+    let parts: Vec<&str> = val.split_whitespace().collect();
+    let value = parts
+        .first()
+        .and_then(|v| crate::conversions::parse_number_with_scale(v))
+        .unwrap_or(0.0);
+    let unit = if parts.len() > 1 {
+        Some(parts[1].to_string())
+    } else {
+        None
+    };
+    EvalResult { value, unit }
 }
 
 /// Evaluate an expression
@@ -83,10 +166,9 @@ pub fn evaluate_expr_with_original(
     // Special commands
     let trimmed = expr_str.trim();
     if trimmed == "sum" || trimmed == "total" {
-        return Ok(EvalResult {
-            value: ctx.history.iter().sum::<f64>(),
-            unit: None,
-        });
+        let value = ctx.history.iter().map(|h| h.value).sum::<f64>();
+        let unit = all_same_unit(ctx.history);
+        return Ok(EvalResult { value, unit });
     }
     if trimmed == "average" || trimmed == "avg" {
         if ctx.history.is_empty() {
@@ -94,21 +176,23 @@ pub fn evaluate_expr_with_original(
                 "cannot-compute-average-empty"
             )));
         }
-        return Ok(EvalResult {
-            value: ctx.history.iter().sum::<f64>() / ctx.history.len() as f64,
-            unit: None,
-        });
+        let value = ctx.history.iter().map(|h| h.value).sum::<f64>() / ctx.history.len() as f64;
+        let unit = all_same_unit(ctx.history);
+        return Ok(EvalResult { value, unit });
     }
     if trimmed == "prev" {
         return ctx
             .history
             .last()
-            .map(|&v| EvalResult {
-                value: v,
-                unit: None,
+            .map(|h| EvalResult {
+                value: h.value,
+                unit: h.unit.clone(),
             })
             .ok_or_else(|| EvaluatorError::InvalidExpression(crate::fl!("no-previous-result")));
     }
+
+    // Allow history tokens inside larger expressions (e.g., "sum + 100")
+    expr_str = replace_history_tokens(&expr_str, ctx.history)?;
 
     expr_str = apply_replacements(expr_str);
     expr_str = apply_function_parsing(expr_str);
@@ -170,57 +254,30 @@ pub fn evaluate_expr_with_original(
         }
     }
 
-    // Unit conversion
+    // Unit conversion (supports trailing math, e.g., "sum to USD + 100")
     let conversion_keyword = expr_str
         .find(" in ")
         .map(|pos| (" in ", pos))
         .or_else(|| expr_str.find(" to ").map(|pos| (" to ", pos)));
     if let Some((kw, pos)) = conversion_keyword {
         let left = expr_str[..pos].trim();
-        let right = expr_str[pos + kw.len()..].trim();
+        let right_raw = expr_str[pos + kw.len()..].trim();
 
-        // First, try direct conversion (e.g., "100 USD" to "EUR")
-        if let Some(val) = evaluate_unit_conversion(
-            left,
-            right,
-            ctx.length_units,
-            ctx.time_units,
-            ctx.temperature_units,
-            ctx.area_units,
-            ctx.volume_units,
-            ctx.weight_units,
-            ctx.angular_units,
-            ctx.data_units,
-            ctx.speed_units,
-            ctx.rates,
-            ctx.custom_units,
-        ) {
-            // Parse the unit conversion result back into value and unit
-            let parts: Vec<&str> = val.split_whitespace().collect();
-            let value = parts
-                .first()
-                .and_then(|v| crate::conversions::parse_number_with_scale(v))
-                .unwrap_or(0.0);
-            let unit = if parts.len() > 1 {
-                Some(parts[1].to_string())
-            } else {
-                None
-            };
-            return Ok(EvalResult { value, unit });
-        }
+        // Split right side into target unit and optional trailing expression
+        let mut right_iter = right_raw.split_whitespace();
+        let target_unit = right_iter.next().unwrap_or("");
+        let trailing_expr: String = right_iter.collect::<Vec<&str>>().join(" ");
+        let has_trailing = !trailing_expr.trim().is_empty();
+        let right_for_conversion = if target_unit.is_empty() {
+            right_raw
+        } else {
+            target_unit
+        };
 
-        // If direct conversion failed, try evaluating left side first (e.g., "150 USD * 5" to "JPY")
-        if let Ok(left_result) = evaluate_expr(left, ctx) {
-            // Format as "value unit" for conversion
-            let left_with_unit = if let Some(unit) = left_result.unit {
-                format!("{} {}", left_result.value, unit)
-            } else {
-                left_result.value.to_string()
-            };
-
-            if let Some(val) = evaluate_unit_conversion(
-                &left_with_unit,
-                right,
+        let try_conversion = |source: &str| -> Option<EvalResult> {
+            evaluate_unit_conversion(
+                source,
+                right_for_conversion,
                 ctx.length_units,
                 ctx.time_units,
                 ctx.temperature_units,
@@ -232,18 +289,43 @@ pub fn evaluate_expr_with_original(
                 ctx.speed_units,
                 ctx.rates,
                 ctx.custom_units,
-            ) {
-                let parts: Vec<&str> = val.split_whitespace().collect();
-                let value = parts
-                    .first()
-                    .and_then(|v| crate::conversions::parse_number_with_scale(v))
-                    .unwrap_or(0.0);
-                let unit = if parts.len() > 1 {
-                    Some(parts[1].to_string())
+            )
+            .map(parse_conversion_result)
+        };
+
+        // First, try direct conversion (e.g., "100 USD" to "EUR")
+        if let Some(converted) = try_conversion(left) {
+            if has_trailing {
+                let base = if let Some(unit) = &converted.unit {
+                    format!("{} {}", converted.value, unit)
                 } else {
-                    None
+                    converted.value.to_string()
                 };
-                return Ok(EvalResult { value, unit });
+                let combined = format!("{} {}", base, trailing_expr);
+                return evaluate_expr(&combined, ctx);
+            }
+            return Ok(converted);
+        }
+
+        // If direct conversion failed, try evaluating left side first (e.g., "150 USD * 5" to "JPY")
+        if let Ok(left_result) = evaluate_expr(left, ctx) {
+            let left_with_unit = if let Some(unit) = left_result.unit.clone() {
+                format!("{} {}", left_result.value, unit)
+            } else {
+                left_result.value.to_string()
+            };
+
+            if let Some(converted) = try_conversion(&left_with_unit) {
+                if has_trailing {
+                    let base = if let Some(unit) = &converted.unit {
+                        format!("{} {}", converted.value, unit)
+                    } else {
+                        converted.value.to_string()
+                    };
+                    let combined = format!("{} {}", base, trailing_expr);
+                    return evaluate_expr(&combined, ctx);
+                }
+                return Ok(converted);
             }
         }
     }
@@ -312,27 +394,31 @@ pub fn evaluate_expr_with_original(
 fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalResult> {
     // Simple regex to match patterns like: "number unit * number unit" or "number unit * number"
     lazy_static! {
-        static ref MULT_DIV_RE: Regex = Regex::new(
-            r"^\s*([\d.]+)\s+([a-zA-Z]+)\s*([*/])\s*([\d.]+)\s*([a-zA-Z]*)\s*$"
-        ).expect("Invalid unit algebra regex");
+        static ref MULT_DIV_RE: Regex =
+            Regex::new(r"^\s*([\d.]+)\s+([a-zA-Z]+)\s*([*/])\s*([\d.]+)\s*([a-zA-Z]*)\s*$")
+                .expect("Invalid unit algebra regex");
     }
 
     if let Some(caps) = MULT_DIV_RE.captures(expr) {
-        let left_val: f64 = caps[1].parse().map_err(|_| {
-            EvaluatorError::ParseError("Failed to parse left operand".to_string())
-        })?;
+        let left_val: f64 = caps[1]
+            .parse()
+            .map_err(|_| EvaluatorError::ParseError("Failed to parse left operand".to_string()))?;
         let left_unit = caps[2].to_string();
         let op = &caps[3];
-        let right_val: f64 = caps[4].parse().map_err(|_| {
-            EvaluatorError::ParseError("Failed to parse right operand".to_string())
-        })?;
+        let right_val: f64 = caps[4]
+            .parse()
+            .map_err(|_| EvaluatorError::ParseError("Failed to parse right operand".to_string()))?;
         let right_unit = caps.get(5).map(|m| m.as_str().to_string());
 
         // Perform the operation
         let value = match op {
             "*" => left_val * right_val,
             "/" => left_val / right_val,
-            _ => return Err(EvaluatorError::InvalidExpression("Unsupported operation".to_string())),
+            _ => {
+                return Err(EvaluatorError::InvalidExpression(
+                    "Unsupported operation".to_string(),
+                ))
+            }
         };
 
         // Determine result unit based on operation and units
@@ -374,7 +460,9 @@ fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalR
 
         Ok(EvalResult { value, unit })
     } else {
-        Err(EvaluatorError::InvalidExpression("Not a unit algebra expression".to_string()))
+        Err(EvaluatorError::InvalidExpression(
+            "Not a unit algebra expression".to_string(),
+        ))
     }
 }
 

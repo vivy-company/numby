@@ -10,6 +10,13 @@ use std::sync::{Arc, RwLock};
 /// Thread-safe map of variable names to (value, optional_unit).
 pub type VarMap = Arc<RwLock<HashMap<String, (f64, Option<String>)>>>;
 
+/// Represents a single history entry with an optional unit.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HistoryEntry {
+    pub value: f64,
+    pub unit: Option<String>,
+}
+
 /// Map of unit names to conversion factors.
 pub type Units = HashMap<String, f64>;
 
@@ -30,7 +37,7 @@ pub trait Agent: Send + Sync {
         input: &str,
         state: &mut AppState,
         config: &crate::config::Config,
-    ) -> Option<(String, bool, Option<f64>)>;
+    ) -> Option<(String, bool, Option<f64>, Option<String>)>;
 }
 
 /// Editor mode for the TUI.
@@ -58,7 +65,7 @@ pub enum Mode {
 #[derive(Clone)]
 pub struct AppState {
     pub variables: VarMap,
-    pub history: Arc<RwLock<Vec<f64>>>,
+    pub history: Arc<RwLock<Vec<HistoryEntry>>>,
     pub status: Arc<RwLock<String>>,
     pub current_filename: Option<String>,
     pub length_units: HashMap<String, f64>,
@@ -77,6 +84,15 @@ pub struct AppState {
     /// Stores the original input (before preprocessing) temporarily during evaluation
     /// Used by agents that need to access variable names before they are replaced
     pub original_input: Arc<RwLock<Option<String>>>,
+    /// Tracks which line created which variable for cleanup when lines are edited
+    /// Maps line_index -> variable_name
+    pub line_variables: Arc<RwLock<HashMap<usize, String>>>,
+    /// The current line index being evaluated (set by TUI before evaluation)
+    /// None if not in TUI mode or line context not available
+    pub current_line: Arc<RwLock<Option<usize>>>,
+    /// Tracks the last evaluated content of each line to detect edits
+    /// Maps line_index -> evaluated_content
+    pub line_content: Arc<RwLock<HashMap<usize, String>>>,
 }
 
 pub struct AppStateBuilder {
@@ -112,6 +128,9 @@ impl AppStateBuilder {
             cache,
             subscribers,
             is_display_only: false,
+            line_variables: Arc::new(RwLock::new(HashMap::new())),
+            current_line: Arc::new(RwLock::new(None)),
+            line_content: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 }
@@ -150,6 +169,9 @@ impl AppState {
             subscribers,
             is_display_only: false,
             original_input: Arc::new(RwLock::new(None)),
+            line_variables: Arc::new(RwLock::new(HashMap::new())),
+            current_line: Arc::new(RwLock::new(None)),
+            line_content: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -254,7 +276,7 @@ impl AppState {
         Ok(())
     }
 
-    /// Add a value to history. Publishes HistoryAdded event.
+    /// Add a value (and optional unit) to history. Publishes HistoryAdded event.
     ///
     /// # Example
     /// ```
@@ -263,13 +285,16 @@ impl AppState {
     ///
     /// let config = Config::default();
     /// let state = AppState::builder(&config).build();
-    /// state.add_history(42.0).unwrap();
+    /// state.add_history(42.0, None).unwrap();
     /// ```
-    pub fn add_history(&self, value: f64) -> Result<()> {
+    pub fn add_history(&self, value: f64, unit: Option<String>) -> Result<()> {
         self.history
             .write()
             .map_err(|e| EvaluatorError::LockError(format!("History lock: {}", e)))?
-            .push(value);
+            .push(HistoryEntry {
+                value,
+                unit: unit.clone(),
+            });
         self.publish_event(StateEvent::HistoryAdded(value));
         Ok(())
     }
@@ -286,7 +311,7 @@ impl AppState {
     /// let history = state.get_history().unwrap();
     /// ```
     #[allow(unused)]
-    pub fn get_history(&self) -> Result<Vec<f64>> {
+    pub fn get_history(&self) -> Result<Vec<HistoryEntry>> {
         Ok(self
             .history
             .read()
@@ -339,6 +364,79 @@ impl AppState {
             .write()
             .map_err(|e| EvaluatorError::LockError(format!("Subscribers lock: {}", e)))?
             .push(subscriber);
+        Ok(())
+    }
+
+    /// Helper to shift HashMap entries based on a predicate and offset
+    fn shift_hashmap<T: Clone>(
+        map: &mut HashMap<usize, T>,
+        predicate: impl Fn(usize) -> bool,
+        offset: isize,
+    ) {
+        let entries: Vec<(usize, T)> = map
+            .iter()
+            .filter(|(idx, _)| predicate(**idx))
+            .map(|(idx, val)| (*idx, val.clone()))
+            .collect();
+
+        map.retain(|idx, _| !predicate(*idx));
+
+        for (old_idx, val) in entries {
+            let new_idx = (old_idx as isize + offset) as usize;
+            map.insert(new_idx, val);
+        }
+    }
+
+    /// Shift line indices when a line is inserted.
+    /// All lines at or after `at_line` are shifted down by 1.
+    pub fn shift_lines_on_insert(&self, at_line: usize) -> Result<()> {
+        let mut line_vars = self
+            .line_variables
+            .write()
+            .map_err(|e| EvaluatorError::LockError(format!("Line variables lock: {}", e)))?;
+
+        Self::shift_hashmap(&mut line_vars, |idx| idx >= at_line, 1);
+        drop(line_vars);
+
+        let mut line_content = self
+            .line_content
+            .write()
+            .map_err(|e| EvaluatorError::LockError(format!("Line content lock: {}", e)))?;
+
+        Self::shift_hashmap(&mut line_content, |idx| idx >= at_line, 1);
+
+        Ok(())
+    }
+
+    /// Shift line indices when a line is deleted.
+    /// The variable at `deleted_line` is removed, and all lines after it shift up by 1.
+    pub fn shift_lines_on_delete(&self, deleted_line: usize) -> Result<()> {
+        let mut line_vars = self
+            .line_variables
+            .write()
+            .map_err(|e| EvaluatorError::LockError(format!("Line variables lock: {}", e)))?;
+
+        // If this line had a variable, delete it
+        if let Some(var_name) = line_vars.remove(&deleted_line) {
+            // Also delete the variable itself
+            let mut vars = self
+                .variables
+                .write()
+                .map_err(|e| EvaluatorError::LockError(format!("Variables lock: {}", e)))?;
+            vars.remove(&var_name);
+        }
+
+        Self::shift_hashmap(&mut line_vars, |idx| idx > deleted_line, -1);
+        drop(line_vars);
+
+        let mut line_content = self
+            .line_content
+            .write()
+            .map_err(|e| EvaluatorError::LockError(format!("Line content lock: {}", e)))?;
+
+        line_content.remove(&deleted_line);
+        Self::shift_hashmap(&mut line_content, |idx| idx > deleted_line, -1);
+
         Ok(())
     }
 }
