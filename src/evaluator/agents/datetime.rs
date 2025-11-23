@@ -48,6 +48,11 @@ impl Agent for DateTimeAgent {
     ) -> Option<(String, bool, Option<f64>, Option<String>)> {
         let lower = input.trim().to_lowercase();
 
+        // Chains like "yesterday + 1 day + 2 days"
+        if let Some(res) = handle_base_day_chain(&lower, config, state) {
+            return Some(res);
+        }
+
         // Diff: "days between A and B"
         if let Some(caps) = DAYS_BETWEEN_RE.captures(&lower) {
             let left = caps.name("left")?.as_str().trim();
@@ -124,6 +129,26 @@ fn handle_named_keywords(
             return Some((format_datetime(now_fixed, true, fmt), false, None, None));
         }
     }
+
+    // Simple arithmetic with today/tomorrow/yesterday: "yesterday + 10 days"
+    if let Some(caps) = Regex::new(r"^(today|tomorrow|yesterday)\s*([+-])\s*(\d+)\s*days?$")
+        .unwrap()
+        .captures(lower)
+    {
+        let base_word = caps.get(1)?.as_str();
+        let op = caps.get(2)?.as_str();
+        let num: i64 = caps.get(3)?.as_str().parse().ok()?;
+        let base_date = match base_word {
+            "today" => now_in_tz(None, config).date_naive(),
+            "tomorrow" => now_in_tz(None, config).date_naive() + Duration::days(1),
+            "yesterday" => now_in_tz(None, config).date_naive() - Duration::days(1),
+            _ => now_in_tz(None, config).date_naive(),
+        };
+        let delta = if op == "+" { num } else { -num };
+        let result_date = base_date + Duration::days(delta);
+        let dfmt = current_date_format(state);
+        return Some((format_date(result_date, dfmt), false, None, None));
+    }
     if let Some(caps) = NOW_RE.captures(lower) {
         let tz = caps.name("tz").map(|m| m.as_str().trim());
         let fmt = current_time_format(state);
@@ -171,6 +196,38 @@ fn handle_named_keywords(
         return Some((format_date(result, fmt), false, None, None));
     }
     None
+}
+
+/// Handle simple chains like "yesterday + 2 days - 1 day"
+fn handle_base_day_chain(
+    lower: &str,
+    config: &Config,
+    state: &AppState,
+) -> Option<(String, bool, Option<f64>, Option<String>)> {
+    let lower_trim = lower.trim();
+    let bases = ["today", "tomorrow", "yesterday"];
+    let base = bases.iter().find(|b| lower_trim.starts_with(*b))?;
+
+    // Determine base date
+    let mut date = match *base {
+        "today" => now_in_tz(None, config).date_naive(),
+        "tomorrow" => now_in_tz(None, config).date_naive() + Duration::days(1),
+        "yesterday" => now_in_tz(None, config).date_naive() - Duration::days(1),
+        _ => now_in_tz(None, config).date_naive(),
+    };
+
+    // Parse operations
+    let tail = lower_trim.strip_prefix(base)?.trim();
+    let op_re = Regex::new(r"([+-])\s*(\d+)\s*days?").ok()?;
+    for caps in op_re.captures_iter(tail) {
+        let sign = caps.get(1).unwrap().as_str();
+        let n: i64 = caps.get(2).unwrap().as_str().parse().ok()?;
+        let delta = if sign == "+" { n } else { -n };
+        date = date + Duration::days(delta);
+    }
+
+    let dfmt = current_date_format(state);
+    Some((format_date(date, dfmt), false, None, None))
 }
 
 fn handle_relative(

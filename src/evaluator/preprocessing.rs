@@ -13,6 +13,10 @@ lazy_static! {
     static ref UNDERSCORE_RE: Regex =
         Regex::new(r"(\d)_(\d)").expect("Invalid regex for underscore removal");
     static ref COMMA_RE: Regex = Regex::new(r"(\d),(\d)").expect("Invalid regex for comma removal");
+    static ref WORD_NUMBER_RE: Regex = Regex::new(
+        r"(?i)\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b"
+    )
+    .expect("Invalid word-number regex");
 }
 
 fn get_variable_regex(var: &str) -> Regex {
@@ -54,6 +58,9 @@ pub fn preprocess_input(
     expr_str = currency_symbol_re
         .replace_all(&expr_str, "$1 $2")
         .to_string();
+
+    // Replace simple word numbers (one..ninety) with digits so "ten plus five" works
+    expr_str = replace_word_numbers(&expr_str);
 
     // Convert standalone currency symbols to their codes
     // This handles cases like "100 $" -> "100 USD" and "$100" -> "100 USD"
@@ -235,6 +242,13 @@ pub fn preprocess_input(
         expr_str = expr_str.replace(&format!("{} ", func), repl);
     }
 
+    // Case-insensitive operator words (e.g., MINUS)
+    for (op, repl) in &config.operators {
+        let re = Regex::new(&format!(r"(?i)\b{}\b", regex::escape(op)))
+            .expect("Invalid regex pattern in operator replacement");
+        expr_str = re.replace_all(&expr_str, repl.clone()).to_string();
+    }
+
     // Scales
     for (scale, factor) in &config.scales {
         let re = Regex::new(&format!(r"(\d+(?:\.\d+)?)\s*{}\b", regex::escape(scale)))
@@ -255,6 +269,50 @@ pub fn preprocess_input(
     expr_str = apply_function_parsing(expr_str);
 
     expr_str
+}
+
+fn word_to_number(word: &str) -> Option<&'static str> {
+    match word {
+        "zero" => Some("0"),
+        "one" => Some("1"),
+        "two" => Some("2"),
+        "three" => Some("3"),
+        "four" => Some("4"),
+        "five" => Some("5"),
+        "six" => Some("6"),
+        "seven" => Some("7"),
+        "eight" => Some("8"),
+        "nine" => Some("9"),
+        "ten" => Some("10"),
+        "eleven" => Some("11"),
+        "twelve" => Some("12"),
+        "thirteen" => Some("13"),
+        "fourteen" => Some("14"),
+        "fifteen" => Some("15"),
+        "sixteen" => Some("16"),
+        "seventeen" => Some("17"),
+        "eighteen" => Some("18"),
+        "nineteen" => Some("19"),
+        "twenty" => Some("20"),
+        "thirty" => Some("30"),
+        "forty" => Some("40"),
+        "fifty" => Some("50"),
+        "sixty" => Some("60"),
+        "seventy" => Some("70"),
+        "eighty" => Some("80"),
+        "ninety" => Some("90"),
+        _ => None,
+    }
+}
+
+fn replace_word_numbers(input: &str) -> String {
+    WORD_NUMBER_RE
+        .replace_all(input, |caps: &regex::Captures| {
+            let w = caps.get(0).unwrap().as_str();
+            let lower = w.to_lowercase();
+            word_to_number(&lower).map(|s| s.to_string()).unwrap_or_else(|| w.to_string())
+        })
+        .to_string()
 }
 
 pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String {

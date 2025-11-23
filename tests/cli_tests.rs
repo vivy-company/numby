@@ -34,6 +34,43 @@ fn test_simple_arithmetic() {
 }
 
 #[test]
+fn test_word_numbers_basic() {
+    let (stdout, _) = run_command(&["run", "--", "ten plus five"]);
+    // Strip color and input echo, keep numeric
+    let re = Regex::new(r"(15(?:\\.00)?)").unwrap();
+    assert!(re.is_match(stdout.trim()), "got {}", stdout);
+}
+
+#[test]
+fn test_word_numbers_mixed_case() {
+    let (stdout, _) = run_command(&["run", "--", "Twenty MINUS four"]);
+    let re = Regex::new(r"(16(?:\\.00)?)").unwrap();
+    assert!(re.is_match(stdout.trim()), "got {}", stdout);
+}
+
+#[test]
+fn test_yesterday_plus_days() {
+    let (stdout, _) = run_command(&["run", "--", "yesterday + 10 days"]);
+    // Expect date-like output yyyy-mm-dd somewhere in line
+    let re = Regex::new(r"\d{4}-\d{2}-\d{2}").unwrap();
+    assert!(re.is_match(&stdout), "expected date output, got {}", stdout);
+}
+
+#[test]
+fn test_tomorrow_minus_days() {
+    let (stdout, _) = run_command(&["run", "--", "tomorrow - 1 day"]);
+    let re = Regex::new(r"\d{4}-\d{2}-\d{2}").unwrap();
+    assert!(re.is_match(&stdout), "expected date output, got {}", stdout);
+}
+
+#[test]
+fn test_yesterday_plus_days_chain() {
+    let (stdout, _) = run_command(&["run", "--", "yesterday + 1 day + 2 days"]);
+    let re = Regex::new(r"\d{4}-\d{2}-\d{2}").unwrap();
+    assert!(re.is_match(&stdout), "expected date output, got {}", stdout);
+}
+
+#[test]
 fn test_currency_conversion() {
     // Use fixed rates for deterministic testing: 1 USD = 0.85 EUR
     let (stdout, _) = run_command(&[
