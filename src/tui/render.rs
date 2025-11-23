@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Alignment, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
     widgets::{Block, Paragraph},
@@ -8,7 +8,7 @@ use ratatui::{
 use ropey::Rope;
 
 use super::syntax;
-use crate::models::{AppState, Mode};
+use crate::models::AppState;
 
 /// Context for rendering to reduce parameter count
 pub struct RenderContext<'a> {
@@ -17,14 +17,22 @@ pub struct RenderContext<'a> {
     pub state: &'a AppState,
     pub config: &'a crate::config::Config,
     pub registry: &'a crate::evaluator::AgentRegistry,
-    pub mode: &'a Mode,
     pub show_status: bool,
     pub scroll_offset: &'a mut usize,
+    pub help_visible: bool,
+    pub locale_picker_visible: bool,
+    pub locale_selection: usize,
+    pub current_locale: &'a str,
+    pub locale_scroll_offset: usize,
+    pub locale_visible: usize,
+    pub save_prompt_active: bool,
+    pub save_prompt: &'a str,
+    pub available_locales: &'static [(&'static str, &'static str)],
 }
 
 /// Main UI rendering function
 pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
-    let show_status = ctx.show_status && !matches!(ctx.mode, Mode::Command(cmd) if !cmd.is_empty());
+    let show_status = ctx.show_status;
     let size = f.size();
 
     let padding_top = ctx.config.padding_top;
@@ -57,6 +65,9 @@ pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
     // Render status bar if needed
     render_status_bar(f, ctx.state, size, show_status);
 
+    // Minimal footer with core shortcuts (fixed position)
+    render_footer(f, size);
+
     // Calculate cursor line for highlighting across both panels
     let cursor_line = ctx.input.char_to_line(ctx.cursor_pos);
 
@@ -77,6 +88,26 @@ pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
     // Render input and results on top of the background
     render_input_panel(f, left_rect, &ctx);
     render_results_panel(f, right_rect, &ctx);
+
+    // Overlays
+    if ctx.locale_picker_visible {
+        render_locale_overlay(
+            f,
+            size,
+            ctx.available_locales,
+            ctx.locale_selection,
+            ctx.current_locale,
+            ctx.locale_scroll_offset,
+            ctx.locale_visible,
+        );
+    } else if ctx.help_visible {
+        render_help_overlay(f, size);
+    }
+
+    // Save prompt overlay (status-line style)
+    if ctx.save_prompt_active {
+        render_save_prompt(f, size, ctx.save_prompt);
+    }
 
     // Render cursor
     render_cursor(f, &mut ctx, text_height, size);
@@ -107,6 +138,170 @@ fn render_status_bar(f: &mut Frame, state: &AppState, size: Rect, show_status: b
 
     let status_paragraph = Paragraph::new(status_text).style(Style::default().fg(Color::Green));
     f.render_widget(status_paragraph, status_rect);
+}
+
+/// Renders a minimal footer with core shortcuts
+fn render_footer(f: &mut Frame, size: Rect) {
+    // Fixed two lines from bottom: last line reserved for status
+    let y = size.height.saturating_sub(2);
+    let footer_rect = Rect {
+        x: 0,
+        y,
+        width: size.width,
+        height: 1,
+    };
+
+    let key_style = Style::default().fg(Color::Cyan).bold();
+    let segments = vec![Span::styled("Ctrl+H", key_style), Span::raw(" help")];
+
+    let footer = Paragraph::new(Line::from(segments)).alignment(Alignment::Left);
+    f.render_widget(footer, footer_rect);
+}
+
+fn render_help_overlay(f: &mut Frame, size: Rect) {
+    // Bottom sheet style like Helix command palette
+    let height = 8u16;
+    let area = Rect {
+        x: 0,
+        y: size.height.saturating_sub(height),
+        width: size.width,
+        height,
+    };
+
+    let entries = [
+        ("Enter", "newline / eval"),
+        ("Ctrl+S", "save (prompt if unnamed)"),
+        ("Ctrl+Q", "quit"),
+        ("Ctrl+I", "copy shareable markdown"),
+        ("Ctrl+Y", "copy current result"),
+        ("Ctrl+L", "clear cache"),
+        ("Ctrl+H", "toggle help"),
+        ("Ctrl+Shift+L", "locale picker"),
+        ("F1", "toggle help"),
+        ("Esc", "close help or prompt"),
+    ];
+
+    let mid = entries.len().div_ceil(2);
+    let (left, right) = entries.split_at(mid);
+
+    let key = |k: &str| Span::styled(k.to_string(), Style::default().fg(Color::LightCyan).bold());
+    let row_line = |(k, v): (&str, &str)| {
+        Line::from(vec![
+            key(k),
+            Span::raw("  "),
+            Span::styled(v.to_string(), Style::default().fg(Color::White)),
+        ])
+    };
+
+    let left_lines: Vec<Line> = left.iter().map(|&(k, v)| row_line((k, v))).collect();
+    let right_lines: Vec<Line> = right.iter().map(|&(k, v)| row_line((k, v))).collect();
+
+    let body_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(area);
+
+    let bg_style = Style::default().bg(Color::Rgb(20, 22, 30)).fg(Color::White);
+    let block = Block::default().style(bg_style);
+    f.render_widget(block, area);
+
+    let left_p = Paragraph::new(left_lines).style(bg_style);
+    let right_p = Paragraph::new(right_lines).style(bg_style);
+
+    f.render_widget(left_p, body_chunks[0]);
+    f.render_widget(right_p, body_chunks[1]);
+}
+
+fn render_locale_overlay(
+    f: &mut Frame,
+    size: Rect,
+    locales: &[(&str, &str)],
+    selected: usize,
+    current_locale: &str,
+    scroll_offset: usize,
+    visible: usize,
+) {
+    let height = 12u16; // taller to sit above footer/status
+    let area = Rect {
+        x: 0,
+        y: size.height.saturating_sub(height).saturating_sub(2), // sit above footer + status
+        width: size.width,
+        height,
+    };
+
+    let bg_style = Style::default().bg(Color::Rgb(16, 18, 24)).fg(Color::White);
+    let block = Block::default().style(bg_style);
+    f.render_widget(block, area);
+
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(Line::from(vec![
+        Span::styled("Locale", Style::default().fg(Color::LightCyan).bold()),
+        Span::raw("  ↑/↓ select   Enter apply   Esc close"),
+    ]));
+    lines.push(Line::from(vec![
+        Span::raw(" "),
+        Span::styled("Ctrl+Shift+L", Style::default().fg(Color::Gray)),
+        Span::raw(" to open"),
+    ]));
+
+    for (idx, (code, name)) in locales.iter().enumerate().skip(scroll_offset).take(visible) {
+        let is_selected = idx == selected;
+        let is_active = *code == current_locale;
+        let marker = if is_active { "●" } else { "○" };
+        let spans = vec![
+            Span::styled(
+                marker,
+                Style::default().fg(if is_active {
+                    Color::LightGreen
+                } else {
+                    Color::Gray
+                }),
+            ),
+            Span::raw(" "),
+            Span::styled(*name, Style::default().fg(Color::White)),
+            Span::raw("  "),
+            Span::styled(format!("({})", code), Style::default().fg(Color::Gray)),
+        ];
+
+        let line = Line::from(spans);
+        if is_selected {
+            lines.push(line.style(Style::default().bg(Color::Rgb(48, 52, 63))));
+        } else {
+            lines.push(line);
+        }
+    }
+
+    let paragraph = Paragraph::new(lines).style(bg_style);
+    f.render_widget(paragraph, area);
+}
+
+fn render_save_prompt(f: &mut Frame, size: Rect, prompt: &str) {
+    let area = Rect {
+        x: 0,
+        y: size.height.saturating_sub(1),
+        width: size.width,
+        height: 1,
+    };
+
+    let filename_span = if prompt.is_empty() {
+        Span::styled("untitled.numby", Style::default().fg(Color::White))
+    } else {
+        Span::styled(prompt.to_string(), Style::default().fg(Color::White))
+    };
+
+    let content = Line::from(vec![
+        Span::styled("Save as:", Style::default().fg(Color::LightCyan).bold()),
+        Span::raw(" "),
+        filename_span,
+        Span::raw("  "),
+        Span::styled(
+            "(Enter to save, Esc to cancel)",
+            Style::default().fg(Color::Gray),
+        ),
+    ]);
+
+    let paragraph = Paragraph::new(content).style(Style::default().bg(Color::Rgb(48, 52, 63)));
+    f.render_widget(paragraph, area);
 }
 
 /// Renders the left panel with syntax-highlighted input
@@ -226,41 +421,12 @@ fn render_cursor(f: &mut Frame, ctx: &mut RenderContext, text_height: u16, size:
     let padding_left = ctx.config.padding_left;
     let padding_top = ctx.config.padding_top;
 
-    // Command mode UI
-    if let Mode::Command(cmd) = ctx.mode {
-        render_command_mode(f, cmd, size);
-        f.set_cursor((cmd.len() + 1) as u16, size.height - 1);
+    if ctx.save_prompt_active {
+        const LABEL: &str = "Save as: ";
+        let x = LABEL.len() as u16 + ctx.save_prompt.len() as u16;
+        let y = size.height.saturating_sub(1);
+        f.set_cursor(x, y);
     } else {
         f.set_cursor(cursor_x + padding_left, cursor_y as u16 + padding_top);
     }
-}
-
-/// Renders the command mode interface
-fn render_command_mode(f: &mut Frame, cmd: &str, size: Rect) {
-    // Help tooltip above command
-    let help_rect = Rect {
-        x: 0,
-        y: size.height - 3,
-        width: size.width,
-        height: 2,
-    };
-    let help_block = Block::default().style(Style::default().bg(Color::Black).fg(Color::White));
-    let help_text = format!(
-        "{}\n{}",
-        crate::fl!("help-commands"),
-        crate::fl!("help-shortcuts")
-    );
-    let help_paragraph = Paragraph::new(help_text).block(help_block);
-    f.render_widget(help_paragraph, help_rect);
-
-    // Command prompt
-    let prompt = format!(":{}", cmd);
-    let prompt_rect = Rect {
-        x: 0,
-        y: size.height - 1,
-        width: size.width,
-        height: 1,
-    };
-    let prompt_paragraph = Paragraph::new(prompt).block(Block::default());
-    f.render_widget(prompt_paragraph, prompt_rect);
 }

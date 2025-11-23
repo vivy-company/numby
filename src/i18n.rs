@@ -4,6 +4,19 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use unic_langid::{langid, LanguageIdentifier};
 
+/// List of supported locales with user-friendly display names.
+pub const AVAILABLE_LOCALES: &[(&str, &str)] = &[
+    ("en-US", "English"),
+    ("es", "Español"),
+    ("zh-CN", "简体中文"),
+    ("zh-TW", "繁體中文"),
+    ("fr", "Français"),
+    ("de", "Deutsch"),
+    ("ja", "日本語"),
+    ("ru", "Русский"),
+    ("be", "Беларуская"),
+];
+
 static_loader! {
     static LOCALES = {
         locales: "./locales",
@@ -77,29 +90,6 @@ pub fn fl(message_id: &str, args: Option<&HashMap<String, String>>) -> String {
         eprintln!("Missing translation: {} for locale: {}", message_id, locale);
         message_id.to_string()
     })
-}
-
-/// Get list of available locales
-pub fn get_available_locales() -> Vec<&'static str> {
-    vec![
-        "en-US", "es", "zh-CN", "zh-TW", "fr", "de", "ja", "ru", "be",
-    ]
-}
-
-/// Get display name for a locale
-pub fn get_locale_display_name(locale: &str) -> &'static str {
-    match locale {
-        "en-US" => "English",
-        "es" => "Español",
-        "zh-CN" => "简体中文",
-        "zh-TW" => "繁體中文",
-        "fr" => "Français",
-        "de" => "Deutsch",
-        "ja" => "日本語",
-        "ru" => "Русский",
-        "be" => "Беларуская",
-        _ => "Unknown",
-    }
 }
 
 /// Macro for easy localization without arguments

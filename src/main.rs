@@ -68,6 +68,9 @@ fn determine_filename(file_arg: Option<String>, expression_arg: Option<&String>)
 fn main() -> Result<()> {
     let args = Args::parse();
 
+    let run_cli = args.expression.is_some();
+    let mut startup_msgs: Vec<String> = Vec::new();
+
     config::save_default_config_if_missing()?;
 
     let mut config = config::load_config();
@@ -100,16 +103,15 @@ fn main() -> Result<()> {
         };
 
         if should_update {
-            eprintln!("Currency rates are stale, updating in background...");
+            let msg = "Currency rates are stale, updating in background...".to_string();
+            if run_cli {
+                eprintln!("{}", msg);
+            } else {
+                startup_msgs.push(msg);
+            }
             std::thread::spawn(|| {
                 if let Ok((rates, date)) = currency_fetcher::fetch_latest_rates() {
-                    let count = rates.len();
-                    if config::update_currency_rates(rates, date.clone()).is_ok() {
-                        eprintln!(
-                            "Currency rates updated in background ({} currencies, date: {})",
-                            count, date
-                        );
-                    }
+                    if config::update_currency_rates(rates, date.clone()).is_ok() {}
                 }
             });
         }
@@ -130,6 +132,10 @@ fn main() -> Result<()> {
         crate::evaluator::AgentRegistry::new(&config).expect("Failed to initialize agent registry");
     let mut state = AppState::builder(&config).build();
     state.current_filename = current_filename;
+
+    if !run_cli && !startup_msgs.is_empty() {
+        let _ = state.set_status(startup_msgs.join(" | "));
+    }
 
     if let Some(expr) = args.expression {
         cli::evaluate_expression(&expr, &mut state, &registry, &args.format);

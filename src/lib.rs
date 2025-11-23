@@ -414,7 +414,7 @@ pub unsafe extern "C" fn libnumby_get_locale() -> *mut c_char {
 /// This function is safe to call
 #[no_mangle]
 pub unsafe extern "C" fn libnumby_get_locales_count() -> i32 {
-    crate::i18n::get_available_locales().len() as i32
+    crate::i18n::AVAILABLE_LOCALES.len() as i32
 }
 
 /// Get locale code at index
@@ -424,12 +424,12 @@ pub unsafe extern "C" fn libnumby_get_locales_count() -> i32 {
 /// Returns a C string that must be freed with libnumby_free_string
 #[no_mangle]
 pub unsafe extern "C" fn libnumby_get_locale_code(index: i32) -> *mut c_char {
-    let locales = crate::i18n::get_available_locales();
+    let locales = crate::i18n::AVAILABLE_LOCALES;
     if index < 0 || index >= locales.len() as i32 {
         return std::ptr::null_mut();
     }
 
-    let locale = locales[index as usize];
+    let (locale, _) = locales[index as usize];
     CString::new(locale)
         .map(|s| s.into_raw())
         .unwrap_or(std::ptr::null_mut())
@@ -442,13 +442,12 @@ pub unsafe extern "C" fn libnumby_get_locale_code(index: i32) -> *mut c_char {
 /// Returns a C string that must be freed with libnumby_free_string
 #[no_mangle]
 pub unsafe extern "C" fn libnumby_get_locale_name(index: i32) -> *mut c_char {
-    let locales = crate::i18n::get_available_locales();
+    let locales = crate::i18n::AVAILABLE_LOCALES;
     if index < 0 || index >= locales.len() as i32 {
         return std::ptr::null_mut();
     }
 
-    let locale = locales[index as usize];
-    let display_name = crate::i18n::get_locale_display_name(locale);
+    let (_, display_name) = locales[index as usize];
     CString::new(display_name)
         .map(|s| s.into_raw())
         .unwrap_or(std::ptr::null_mut())

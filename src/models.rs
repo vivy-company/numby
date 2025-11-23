@@ -40,15 +40,6 @@ pub trait Agent: Send + Sync {
     ) -> Option<(String, bool, Option<f64>, Option<String>)>;
 }
 
-/// Editor mode for the TUI.
-#[derive(Clone)]
-pub enum Mode {
-    /// Normal editing mode.
-    Normal,
-    /// Command mode with current command string.
-    Command(String),
-}
-
 /// Main application state containing all runtime data.
 ///
 /// Stores variables, history, unit configurations, and event subscribers.

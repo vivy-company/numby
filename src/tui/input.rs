@@ -1,8 +1,13 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::{
+    event::{KeyCode, KeyEvent, KeyModifiers},
+    execute,
+    terminal::SetTitle,
+};
 use ropey::Rope;
 use std::fs;
+use std::path::PathBuf;
 
-use crate::models::{AppState, Mode};
+use crate::models::AppState;
 use crate::security::{
     sanitize_terminal_string, validate_file_path, validate_input_size, MAX_EXPR_LENGTH,
 };
@@ -135,7 +140,6 @@ pub fn handle_normal_mode(
     key: KeyEvent,
     input: &mut Rope,
     cursor_pos: &mut usize,
-    mode: &mut Mode,
     state: &mut AppState,
     registry: &crate::evaluator::AgentRegistry,
     selection_start: &mut Option<usize>,
@@ -143,11 +147,6 @@ pub fn handle_normal_mode(
     let mut text_changed = false;
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         match key.code {
-            KeyCode::Char(':') => {
-                *mode = Mode::Command(String::new());
-                let _ = state.set_status(crate::fl!("commands-help"));
-                clear_selection(selection_start);
-            }
             KeyCode::Char('a') => {
                 // Select all
                 *selection_start = Some(0);
@@ -195,10 +194,6 @@ pub fn handle_normal_mode(
         }
     } else {
         match key.code {
-            KeyCode::Char(':') => {
-                *mode = Mode::Command(String::new());
-                clear_selection(selection_start);
-            }
             KeyCode::Char(c) => {
                 // Delete selection if exists
                 if delete_selection(input, cursor_pos, *selection_start) {
@@ -383,115 +378,42 @@ fn format_buffer_as_markdown_list(
     out
 }
 
-/// Handles keyboard input in Command mode
-pub fn handle_command_mode(
-    key: KeyEvent,
-    mode: &mut Mode,
-    state: &mut AppState,
-    input: &Rope,
-) -> bool {
-    if let Mode::Command(ref mut cmd) = mode {
-        match key.code {
-            KeyCode::Char(c) => {
-                cmd.push(c);
-            }
-            KeyCode::Backspace => {
-                cmd.pop();
-            }
-            KeyCode::Enter => {
-                let command = cmd.clone();
-                *mode = Mode::Normal;
-
-                if command == "q" || command == "q!" {
-                    return true; // Signal to quit
-                } else if command == "w" {
-                    save_file(state, input, None);
-                } else if let Some(filename) = command.strip_prefix("w ") {
-                    let filename = filename.trim();
-                    match validate_file_path(filename) {
-                        Ok(validated_path) => {
-                            save_file(state, input, Some(validated_path.to_str().unwrap()));
-                        }
-                        Err(e) => {
-                            let _ = state.set_status(
-                                crate::fl!("invalid-file-path", "error" => &e.to_string()),
-                            );
-                        }
-                    }
-                } else if command == "langs" {
-                    list_languages(state);
-                } else if let Some(locale) = command.strip_prefix("lang ") {
-                    set_language(state, locale.trim());
-                } else if command == "lang" {
-                    show_current_language(state);
-                }
-            }
-            KeyCode::Esc => {
-                *mode = Mode::Normal;
-            }
-            _ => {}
-        }
-    }
-
-    false // Don't quit
-}
-
-/// Shows the current language
-fn show_current_language(state: &mut AppState) {
-    let locale = crate::i18n::get_locale();
-    let display_name = crate::i18n::get_locale_display_name(&locale.to_string());
-    let _ = state.set_status(crate::fl!("current-language", "name" => display_name));
-}
-
-/// Lists all available languages
-fn list_languages(state: &mut AppState) {
-    let locales = crate::i18n::get_available_locales();
-    let langs: Vec<String> = locales
-        .iter()
-        .map(|locale| crate::i18n::get_locale_display_name(locale).to_string())
-        .collect();
-
-    let _ = state.set_status(crate::fl!("available-languages", "list" => &langs.join(", ")));
-}
-
-/// Sets the current language
-fn set_language(state: &mut AppState, locale: &str) {
-    match crate::i18n::set_locale(locale) {
-        Ok(_) => {
-            let display_name = crate::i18n::get_locale_display_name(locale);
-            let _ = state.set_status(crate::fl!("language-changed", "name" => display_name));
-
-            // Try to update and save config
-            let mut config = crate::config::load_config();
-            config.locale = Some(locale.to_string());
-            let _ = crate::config::save_config(&config);
-        }
-        Err(e) => {
-            let _ = state.set_status(crate::fl!("failed-set-language", "error" => &e.to_string()));
-        }
-    }
-}
-
 /// Saves the current file
-fn save_file(state: &mut AppState, input: &Rope, new_filename: Option<&str>) {
-    let filename = if let Some(new_name) = new_filename {
-        state.current_filename = Some(new_name.to_string());
-        // Update terminal title with sanitized string
-        use crossterm::execute;
-        use crossterm::terminal::SetTitle;
-        let sanitized_title = sanitize_terminal_string(new_name);
-        let _ = execute!(std::io::stdout(), SetTitle(&sanitized_title));
-        new_name
+pub(crate) fn save_file(state: &mut AppState, input: &Rope, new_filename: Option<&str>) {
+    let path: PathBuf = if let Some(new_name) = new_filename {
+        match validate_file_path(new_name) {
+            Ok(p) => p,
+            Err(e) => {
+                let _ = state.set_status(crate::fl!("invalid-file-path", "error" => &e));
+                return;
+            }
+        }
     } else if let Some(ref current) = state.current_filename {
-        current.as_str()
+        PathBuf::from(current)
     } else {
-        let _ = state.set_status(crate::fl!("no-file-to-save"));
-        return;
+        PathBuf::from("untitled.numby")
     };
 
-    match fs::write(filename, input.to_string().as_bytes()) {
+    // Ensure parent directories exist
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            if let Err(e) = fs::create_dir_all(parent) {
+                let _ =
+                    state.set_status(crate::fl!("error-saving-file", "error" => &e.to_string()));
+                return;
+            }
+        }
+    }
+
+    state.current_filename = Some(path.to_string_lossy().to_string());
+    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+        let sanitized_title = sanitize_terminal_string(name);
+        let _ = execute!(std::io::stdout(), SetTitle(&sanitized_title));
+    }
+
+    match fs::write(&path, input.to_string().as_bytes()) {
         Ok(_) => {
-            let _ = state.set_status(crate::fl!("file-saved", "path" => filename));
+            let _ = state.set_status(crate::fl!("file-saved", "path" => path.to_string_lossy()));
         }
         Err(e) => {
             let _ = state.set_status(crate::fl!("error-saving-file", "error" => &e.to_string()));
