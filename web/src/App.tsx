@@ -20,6 +20,14 @@ import appStoreBadge from "./app-store-badge.svg";
 import { useLanguage, LanguageProvider } from "./i18n/LanguageContext";
 import { LanguageSelector } from "./i18n/LanguageSelector";
 
+declare global {
+  interface Window {
+    umami?: {
+      track: (eventName: string) => void;
+    };
+  }
+}
+
 const FAQSection = lazy(() => import("./components/FAQSection"));
 
 function AppContent() {
@@ -27,12 +35,19 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState("macos");
   const [copied, setCopied] = useState(false);
 
+  const trackEvent = (eventName: string) => {
+    if (typeof window !== "undefined" && window.umami) {
+      window.umami.track(eventName);
+    }
+  };
+
   const screenshots = {
     macos: screenshotFinance,
     cli: screenshotTui,
   };
 
   const copyInstallCommand = () => {
+    trackEvent("cli_install_copy");
     navigator.clipboard.writeText("curl -fsSL https://numby.vivy.app/install.sh | bash");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -52,7 +67,7 @@ function AppContent() {
           </p>
           <div className="flex flex-col items-center gap-3 mb-6">
             <div className="flex justify-center mb-2">
-              <a href="https://apps.apple.com/app/numby-pro/id6755249901" target="_blank" rel="noopener noreferrer" className="transition-opacity duration-200 hover:opacity-80">
+              <a href="https://apps.apple.com/app/numby-pro/id6755249901" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent("appstore_click")} className="transition-opacity duration-200 hover:opacity-80">
                 <img src={appStoreBadge} alt="Download on the App Store" className="h-[52px] block rounded-[8px]" />
               </a>
             </div>
@@ -97,7 +112,7 @@ function AppContent() {
             {(["macos", "cli"] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => { trackEvent(`showcase_tab_${tab}`); setActiveTab(tab); }}
                 className={`px-4 py-2 rounded-full text-[17px] cursor-pointer transition-all duration-200 border-none ${
                   activeTab === tab
                     ? "bg-[#1d1d1f] text-[#f5f5f7]"

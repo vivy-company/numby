@@ -48,6 +48,23 @@ log_step() {
     echo -e "${BLUE}[$1/$2]${NC} $3"
 }
 
+track_analytics() {
+    local name="$1"
+    local os="$2"
+    local arch="$3"
+    local version="$4"
+    local data='{"name":"'"${name}"'"}'
+    [ -n "$os" ] && data+=',"os":"'"${os}"'"'
+    [ -n "$arch" ] && data+=',"arch":"'"${arch}"'"'
+    [ -n "$version" ] && data+=',"version":"'"${version}"'"'
+    if command -v curl >/dev/null 2>&1; then
+        curl -s --max-time 5 -X POST https://analytics.vivy.app/api/send \
+            -H "Content-Type: application/json" \
+            -d "{\"type\":\"event\",\"payload\":{\"website\":\"077e9dc0-07f8-440e-935e-a74cd5f170d6\",\"hostname\":\"numby.vivy.app\",\"url\":\"/install\",\"data\":${data}}}" \
+            > /dev/null 2>&1 || true
+    fi
+}
+
 # Check prerequisites
 check_prerequisites() {
     local missing_deps=()
@@ -189,6 +206,8 @@ main() {
     ARCH=$(detect_arch)
     log_success "Detected: $OS / $ARCH"
 
+        track_analytics "cli_install_start" "$OS" "$ARCH"
+
     # Step 3: Fetch latest release
     log_step 3 6 "Fetching latest release..."
     if command -v jq &> /dev/null; then
@@ -273,6 +292,8 @@ main() {
     fi
 
     log_success "Installation verified"
+
+        track_analytics "cli_install_success" "$OS" "$ARCH" "$VERSION"
 
     # Final status
     echo ""
