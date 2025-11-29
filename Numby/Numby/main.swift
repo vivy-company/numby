@@ -5,7 +5,7 @@
 //  Main entry point for AppDelegate-based app
 //
 
-#if os(iOS)
+#if os(iOS) || os(visionOS)
 import UIKit
 import Foundation
 

@@ -45,9 +45,10 @@ struct SettingsView: View {
     private var localizedUpdating: String { _ = localeVersion; return NSLocalizedString("settings.currency.updating", comment: "") }
     private var localizedCurrencyDesc: String { _ = localeVersion; return NSLocalizedString("settings.currency.description", comment: "") }
     private var localizedCLISection: String { _ = localeVersion; return NSLocalizedString("settings.cli.section", comment: "") }
-    private var localizedInstallViaHomebrew: String { _ = localeVersion; return NSLocalizedString("settings.cli.installViaHomebrew", comment: "") }
+    private var localizedInstallViaCargo: String { _ = localeVersion; return NSLocalizedString("settings.cli.installViaCargo", comment: "") }
     private var localizedCopyTooltip: String { _ = localeVersion; return NSLocalizedString("settings.cli.copyTooltip", comment: "") }
-    private var localizedInstallHomebrew: String { _ = localeVersion; return NSLocalizedString("settings.cli.installHomebrew", comment: "") }
+    private var localizedInstallRust: String { _ = localeVersion; return NSLocalizedString("settings.cli.installRust", comment: "") }
+    private var localizedOrInstaller: String { _ = localeVersion; return NSLocalizedString("settings.cli.orInstaller", comment: "") }
     private var localizedOrDownload: String { _ = localeVersion; return NSLocalizedString("settings.cli.orDownload", comment: "") }
     private var localizedGithubReleases: String { _ = localeVersion; return NSLocalizedString("settings.cli.githubReleases", comment: "") }
 
@@ -141,12 +142,12 @@ struct SettingsView: View {
             }
 
             Section(localizedCLISection) {
-                Text(localizedInstallViaHomebrew)
+                Text(localizedInstallViaCargo)
                     .font(.caption)
                     .foregroundColor(.secondary)
 
                 HStack {
-                    Text("brew install numby")
+                    Text("cargo install numby")
                         .font(.system(.body, design: .monospaced))
                         .textSelection(.enabled)
                         .padding(8)
@@ -155,7 +156,7 @@ struct SettingsView: View {
 
                     Button(action: {
                         NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString("brew install numby", forType: .string)
+                        NSPasteboard.general.setString("cargo install numby", forType: .string)
                     }) {
                         Image(systemName: "doc.on.doc")
                     }
@@ -164,14 +165,37 @@ struct SettingsView: View {
                 }
 
                 Button(action: {
-                    NSWorkspace.shared.open(URL(string: "https://brew.sh")!)
+                    NSWorkspace.shared.open(URL(string: "https://rustup.rs")!)
                 }) {
                     HStack {
                         Image(systemName: "arrow.up.right.square")
-                        Text(localizedInstallHomebrew)
+                        Text(localizedInstallRust)
                     }
                 }
                 .buttonStyle(.link)
+
+                Text(localizedOrInstaller)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 4)
+
+                HStack {
+                    Text("curl -fsSL https://numby.vivy.app/install.sh | bash")
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .padding(8)
+                        .background(Color.secondary.opacity(0.1))
+                        .cornerRadius(4)
+
+                    Button(action: {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString("curl -fsSL https://numby.vivy.app/install.sh | bash", forType: .string)
+                    }) {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    .buttonStyle(.plain)
+                    .help(localizedCopyTooltip)
+                }
 
                 Text(localizedOrDownload)
                     .font(.caption)
@@ -179,7 +203,7 @@ struct SettingsView: View {
                     .padding(.top, 4)
 
                 Button(action: {
-                    NSWorkspace.shared.open(URL(string: "https://github.com/wiedymi/numby/releases")!)
+                    NSWorkspace.shared.open(URL(string: "https://github.com/vivy-company/numby/releases")!)
                 }) {
                     HStack {
                         Image(systemName: "arrow.down.circle")

@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
 import UIKit
 
 class SearchablePickerViewController: UIViewController {
@@ -25,7 +25,9 @@ class SearchablePickerViewController: UIViewController {
         table.dataSource = self
         table.register(UITableViewCell.self, forCellReuseIdentifier: "PickerCell")
         table.translatesAutoresizingMaskIntoConstraints = false
+        #if !os(visionOS)
         table.keyboardDismissMode = .onDrag
+        #endif
         table.estimatedRowHeight = 44
         table.rowHeight = UITableView.automaticDimension
         return table
@@ -40,6 +42,7 @@ class SearchablePickerViewController: UIViewController {
         self.selectedItem = selectedItem
         self.onSelect = onSelect
         super.init(nibName: nil, bundle: nil)
+        overrideUserInterfaceStyle = .dark
     }
 
     required init?(coder: NSCoder) {
@@ -107,12 +110,24 @@ class SearchablePickerViewController: UIViewController {
     }
 
     private func updateTheme() {
-        // Always use dark mode
-        overrideUserInterfaceStyle = .dark
+        let darkBg = UIColor(red: 28/255, green: 28/255, blue: 30/255, alpha: 1) // iOS dark mode background
+        let darkSecondary = UIColor(red: 44/255, green: 44/255, blue: 46/255, alpha: 1)
 
-        view.backgroundColor = .systemBackground
-        tableView.backgroundColor = .systemBackground
-        searchBar.barTintColor = .systemBackground
+        view.backgroundColor = darkBg
+        tableView.backgroundColor = darkBg
+        searchBar.barTintColor = darkBg
+        searchBar.searchBarStyle = .minimal
+        searchBar.tintColor = .systemBlue
+        searchBar.searchTextField.backgroundColor = darkSecondary
+        searchBar.searchTextField.textColor = .white
+        searchBar.searchTextField.tintColor = .systemBlue
+
+        // Force navigation bar dark
+        navigationController?.navigationBar.barTintColor = darkBg
+        navigationController?.navigationBar.backgroundColor = darkBg
+        navigationController?.navigationBar.titleTextAttributes = [.foregroundColor: UIColor.white]
+
+        tableView.reloadData()
     }
 }
 
@@ -130,6 +145,15 @@ extension SearchablePickerViewController: UITableViewDelegate, UITableViewDataSo
 
         cell.textLabel?.text = item
         cell.accessoryType = (item == selectedItem) ? .checkmark : .none
+        cell.tintColor = .systemBlue
+
+        // Hardcoded dark colors
+        let darkBg = UIColor(red: 28/255, green: 28/255, blue: 30/255, alpha: 1)
+        let darkSelected = UIColor(red: 58/255, green: 58/255, blue: 60/255, alpha: 1)
+        cell.backgroundColor = darkBg
+        cell.selectedBackgroundView = UIView()
+        cell.selectedBackgroundView?.backgroundColor = darkSelected
+        cell.textLabel?.textColor = .white
 
         return cell
     }

@@ -15,6 +15,8 @@ MACOS_APP_LIB="Numby/Numby/libnumby.a"
 MACOS_APP_RESOURCES="Numby/Numby/Resources"
 IOS_DEVICE_LIB="Numby/iOS/libnumby-ios.a"
 IOS_SIM_LIB="Numby/iOS/libnumby-ios-sim.a"
+VISIONOS_DEVICE_LIB="Numby/visionOS/libnumby-visionos.a"
+VISIONOS_SIM_LIB="Numby/visionOS/libnumby-visionos-sim.a"
 XCFRAMEWORK_PATH="Numby/libnumby.xcframework"
 
 # Temp file tracking for cleanup
@@ -74,6 +76,35 @@ build_ios() {
     echo -e "${GREEN}✓ iOS simulator (ARM64): ${IOS_SIM_LIB} (${IOS_SIM_SIZE})${NC}"
 }
 
+build_visionos() {
+    echo -e "${BLUE}🥽 Building static library for visionOS (ARM64 only)...${NC}"
+
+    # visionOS device (arm64)
+    echo "  Building for visionOS device (arm64)..."
+    export XROS_DEPLOYMENT_TARGET=1.0
+    cargo +nightly build --profile release-lib --lib --target aarch64-apple-visionos \
+        -Zbuild-std=std,panic_abort --no-default-features --features visionos
+    unset XROS_DEPLOYMENT_TARGET
+
+    # visionOS simulator (arm64)
+    echo "  Building for visionOS simulator (arm64)..."
+    cargo +nightly build --profile release-lib --lib --target aarch64-apple-visionos-sim \
+        -Zbuild-std=std,panic_abort --no-default-features --features visionos
+
+    # Create visionOS device library
+    mkdir -p "$(dirname "$VISIONOS_DEVICE_LIB")"
+    cp target/aarch64-apple-visionos/release-lib/libnumby.a "$VISIONOS_DEVICE_LIB"
+
+    # Create visionOS simulator library
+    mkdir -p "$(dirname "$VISIONOS_SIM_LIB")"
+    cp target/aarch64-apple-visionos-sim/release-lib/libnumby.a "$VISIONOS_SIM_LIB"
+
+    VISIONOS_DEV_SIZE=$(ls -lh "$VISIONOS_DEVICE_LIB" | awk '{print $5}')
+    VISIONOS_SIM_SIZE=$(ls -lh "$VISIONOS_SIM_LIB" | awk '{print $5}')
+    echo -e "${GREEN}✓ visionOS device (ARM64): ${VISIONOS_DEVICE_LIB} (${VISIONOS_DEV_SIZE})${NC}"
+    echo -e "${GREEN}✓ visionOS simulator (ARM64): ${VISIONOS_SIM_LIB} (${VISIONOS_SIM_SIZE})${NC}"
+}
+
 create_xcframework() {
     echo -e "${BLUE}📦 Creating XCFramework...${NC}"
 
@@ -83,6 +114,8 @@ create_xcframework() {
         -library "$MACOS_APP_LIB" \
         -library "$IOS_DEVICE_LIB" \
         -library "$IOS_SIM_LIB" \
+        -library "$VISIONOS_DEVICE_LIB" \
+        -library "$VISIONOS_SIM_LIB" \
         -output "$XCFRAMEWORK_PATH"
 
     echo -e "${GREEN}✓ XCFramework created: ${XCFRAMEWORK_PATH}${NC}"
@@ -91,15 +124,18 @@ create_xcframework() {
 # Build all platforms
 build_macos
 build_ios
+build_visionos
 create_xcframework
 
 echo ""
 echo -e "${GREEN}✅ Build complete!${NC}"
 echo ""
 echo "Artifacts:"
-echo "  • macOS library:     ${MACOS_APP_LIB}"
-echo "  • iOS device:        ${IOS_DEVICE_LIB}"
-echo "  • iOS simulator:     ${IOS_SIM_LIB}"
-echo "  • XCFramework:       ${XCFRAMEWORK_PATH}"
+echo "  • macOS library:        ${MACOS_APP_LIB}"
+echo "  • iOS device:           ${IOS_DEVICE_LIB}"
+echo "  • iOS simulator:        ${IOS_SIM_LIB}"
+echo "  • visionOS device:      ${VISIONOS_DEVICE_LIB}"
+echo "  • visionOS simulator:   ${VISIONOS_SIM_LIB}"
+echo "  • XCFramework:          ${XCFRAMEWORK_PATH}"
 echo ""
 echo "To build the app, open Numby.xcodeproj in Xcode and select your target."

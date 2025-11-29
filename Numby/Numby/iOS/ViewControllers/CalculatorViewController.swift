@@ -1,72 +1,144 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
 import UIKit
 
 class CalculatorViewController: UIViewController {
 
-    // MARK: - Properties
+    // MARK: - Accessory Bar View
 
-    private let numbyWrapper = NumbyWrapper()
-    private var inputText: String = "" {
-        didSet {
-            evaluateInput()
-            applySyntaxHighlighting()
+    private class AccessoryBarView: UIView {
+        override var intrinsicContentSize: CGSize {
+            CGSize(width: UIView.noIntrinsicMetric, height: 120)
         }
     }
+
+    // MARK: - Properties
+
+    private var numbyWrapper = NumbyWrapper()
     private var results: [String] = []
+    private var accessoryButtons: [UIButton] = []
+
+    // Reference to tab container (iPad only)
+    weak var tabContainer: iPadTabContainerViewController?
+
+    // MARK: - Tab State
+
+    func saveState(to tab: CalculatorTab) {
+        tab.text = textView.text ?? ""
+        tab.results = results
+    }
+
+    func restoreState(from tab: CalculatorTab) {
+        numbyWrapper = tab.numbyWrapper
+        textView.text = tab.text
+        results = tab.results
+        applySyntaxHighlighting()
+        updateResultsOverlay()
+    }
 
     // MARK: - UI Components
 
-    private lazy var containerStack: UIStackView = {
-        let stack = UIStackView()
-        stack.axis = .horizontal
-        stack.distribution = .fill
-        stack.spacing = 0
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        return stack
+    private lazy var textView: UITextView = {
+        let tv = UITextView()
+        tv.isEditable = true
+        tv.isScrollEnabled = true
+        tv.alwaysBounceVertical = true
+        tv.autocorrectionType = .no
+        tv.autocapitalizationType = .none
+        tv.smartQuotesType = .no
+        tv.smartDashesType = .no
+        tv.spellCheckingType = .no
+        tv.keyboardType = .default
+        tv.delegate = self
+        tv.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        tv.translatesAutoresizingMaskIntoConstraints = false
+        return tv
     }()
 
-    private lazy var inputTextView: UITextView = {
-        let textView = UITextView()
-        textView.isEditable = true
-        textView.isScrollEnabled = true
-        textView.autocorrectionType = .no
-        textView.autocapitalizationType = .none
-        textView.smartQuotesType = .no
-        textView.smartDashesType = .no
-        textView.spellCheckingType = .no
-        textView.keyboardType = .default
-        textView.delegate = self
-        textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-        textView.translatesAutoresizingMaskIntoConstraints = false
-
-        // Custom cursor width
-        textView.tintColor = Theme.current.textColor
-
-        return textView
+    private lazy var resultsOverlay: ResultsOverlayView = {
+        let overlay = ResultsOverlayView()
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.isUserInteractionEnabled = false
+        return overlay
     }()
 
-    private lazy var resultsTextView: UITextView = {
-        let textView = UITextView()
-        textView.isEditable = false
-        textView.isScrollEnabled = true
-        textView.isUserInteractionEnabled = false
-        textView.textAlignment = .right
-        textView.textContainerInset = UIEdgeInsets(top: 16, left: 8, bottom: 16, right: 16)
-        textView.translatesAutoresizingMaskIntoConstraints = false
-        return textView
+    private lazy var inputAccessoryBar: UIView = {
+        let barHeight: CGFloat = 120
+        let rowHeight: CGFloat = 32
+        let buttonSpacing: CGFloat = 6
+        let rowSpacing: CGFloat = 4
+        let padding: CGFloat = 8
+
+        let container = AccessoryBarView()
+
+        let scrollView = UIScrollView()
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.alwaysBounceHorizontal = true
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(scrollView)
+
+        NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: container.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+
+        // Row 1: Units + Currencies (top)
+        let row1: [(String, String)] = [
+            ("USD", "USD"), ("EUR", "EUR"), ("GBP", "GBP"), ("JPY", "JPY"),
+            ("CNY", "CNY"), ("RUB", "RUB"), ("BYN", "BYN"),
+            ("km", "km"), ("m", "m"), ("cm", "cm"), ("mi", "mi"),
+            ("kg", "kg"), ("g", "g"), ("lb", "lb"), ("oz", "oz")
+        ]
+
+        // Row 2: Operators + Functions (middle)
+        let row2: [(String, String)] = [
+            ("+", "+"), ("−", "-"), ("×", "*"), ("÷", "/"), ("=", "="),
+            ("^", "^"), ("%", "%"),
+            ("sqrt", "sqrt("), ("sin", "sin("), ("cos", "cos("),
+            ("tan", "tan("), ("ln", "ln("), ("log", "log(")
+        ]
+
+        // Row 3: Numbers (bottom, closest to keyboard)
+        let row3: [(String, String)] = [
+            ("1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5"),
+            ("6", "6"), ("7", "7"), ("8", "8"), ("9", "9"), ("0", "0"),
+            (".", "."), ("(", "("), (")", ")")
+        ]
+
+        let rows = [row1, row2, row3]
+        var maxWidth: CGFloat = 0
+
+        for (rowIndex, rowData) in rows.enumerated() {
+            var xOffset: CGFloat = padding
+            let yOffset = padding + CGFloat(rowIndex) * (rowHeight + rowSpacing)
+
+            for (title, insert) in rowData {
+                let btn = UIButton(type: .system)
+                btn.setTitle(title, for: .normal)
+                btn.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+                btn.accessibilityIdentifier = insert
+                btn.addTarget(self, action: #selector(accessoryButtonTapped(_:)), for: .touchUpInside)
+                btn.layer.cornerRadius = 6
+
+                let width: CGFloat = title.count > 2 ? 44 : 36
+                btn.frame = CGRect(x: xOffset, y: yOffset, width: width, height: rowHeight)
+
+                scrollView.addSubview(btn)
+                accessoryButtons.append(btn)
+                xOffset += width + buttonSpacing
+            }
+            maxWidth = max(maxWidth, xOffset)
+        }
+
+        scrollView.contentSize = CGSize(width: maxWidth, height: barHeight)
+        return container
     }()
 
-    private lazy var dividerView: UIView = {
-        let view = UIView()
-        view.backgroundColor = .separator
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    private var inputWidthConstraint: NSLayoutConstraint!
-    private var resultsWidthConstraint: NSLayoutConstraint!
-    private var splitRatio: CGFloat = 0.8
-    private var isDraggingDivider = false
+    @objc private func accessoryButtonTapped(_ sender: UIButton) {
+        guard let text = sender.accessibilityIdentifier else { return }
+        textView.insertText(text)
+    }
 
     // MARK: - Lifecycle
 
@@ -75,292 +147,221 @@ class CalculatorViewController: UIViewController {
         setupUI()
         updateTheme()
 
-        // Keyboard notifications for scroll sync
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillShow(_:)),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillHide(_:)),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(themeDidChange),
-            name: NSNotification.Name("ThemeDidChange"),
-            object: nil
-        )
+        title = "Numby"
+
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(_:)), name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(themeDidChange), name: NSNotification.Name("ThemeDidChange"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(loadHistoryEntry(_:)), name: NSNotification.Name("LoadHistoryEntry"), object: nil)
+    }
+
+    private var hasAppearedOnce = false
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if !hasAppearedOnce {
+            // Set up navigation items after layout is ready
+            navigationItem.leftBarButtonItems = [
+                UIBarButtonItem(image: UIImage(systemName: "gear"), style: .plain, target: self, action: #selector(openSettings)),
+                UIBarButtonItem(image: UIImage(systemName: "clock"), style: .plain, target: self, action: #selector(openHistory))
+            ]
+            navigationItem.rightBarButtonItems = [
+                UIBarButtonItem(image: UIImage(systemName: "plus"), style: .plain, target: self, action: #selector(newCalculation)),
+                UIBarButtonItem(image: UIImage(systemName: "square.and.arrow.up"), style: .plain, target: self, action: #selector(shareResult))
+            ]
+        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        if !hasAppearedOnce {
+            hasAppearedOnce = true
+            textView.becomeFirstResponder()
+        }
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
 
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-
-        // Respond to system dark mode changes
-        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
-            updateTheme()
-        }
-    }
-
     // MARK: - UI Setup
 
     private func setupUI() {
         view.backgroundColor = .systemBackground
-
-        view.addSubview(inputTextView)
-        view.addSubview(dividerView)
-        view.addSubview(resultsTextView)
-
-        inputWidthConstraint = inputTextView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: splitRatio)
-        resultsWidthConstraint = resultsTextView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 1 - splitRatio)
+        view.addSubview(textView)
+        view.addSubview(resultsOverlay)
 
         NSLayoutConstraint.activate([
-            inputTextView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            inputTextView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            inputTextView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            inputWidthConstraint,
-
-            dividerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            dividerView.leadingAnchor.constraint(equalTo: inputTextView.trailingAnchor),
-            dividerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            dividerView.widthAnchor.constraint(equalToConstant: 1),
-
-            resultsTextView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            resultsTextView.leadingAnchor.constraint(equalTo: dividerView.trailingAnchor),
-            resultsTextView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            resultsTextView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            resultsWidthConstraint
+            textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            textView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            resultsOverlay.topAnchor.constraint(equalTo: textView.topAnchor),
+            resultsOverlay.leadingAnchor.constraint(equalTo: textView.leadingAnchor),
+            resultsOverlay.trailingAnchor.constraint(equalTo: textView.trailingAnchor),
+            resultsOverlay.bottomAnchor.constraint(equalTo: textView.bottomAnchor)
         ])
 
-        // Add pan gesture to divider for dragging
-        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleDividerPan(_:)))
-        dividerView.addGestureRecognizer(panGesture)
-
-        // Make divider hit area larger
-        let tapArea = UIView()
-        tapArea.backgroundColor = .clear
-        tapArea.translatesAutoresizingMaskIntoConstraints = false
-        view.insertSubview(tapArea, aboveSubview: dividerView)
-
-        NSLayoutConstraint.activate([
-            tapArea.topAnchor.constraint(equalTo: dividerView.topAnchor),
-            tapArea.bottomAnchor.constraint(equalTo: dividerView.bottomAnchor),
-            tapArea.centerXAnchor.constraint(equalTo: dividerView.centerXAnchor),
-            tapArea.widthAnchor.constraint(equalToConstant: 44)
-        ])
-
-        tapArea.addGestureRecognizer(panGesture)
-
-        // Add swipe down gesture to dismiss keyboard
-        let swipeGesture = UISwipeGestureRecognizer(target: self, action: #selector(dismissKeyboard))
-        swipeGesture.direction = .down
-        inputTextView.addGestureRecognizer(swipeGesture)
+        #if !os(visionOS)
+        textView.inputAccessoryView = inputAccessoryBar
+        #endif
     }
 
-    @objc private func dismissKeyboard() {
-        inputTextView.resignFirstResponder()
-    }
-
-    @objc private func handleDividerPan(_ gesture: UIPanGestureRecognizer) {
-        let location = gesture.location(in: view)
-        let viewWidth = view.bounds.width
-
-        switch gesture.state {
-        case .began:
-            isDraggingDivider = true
-            inputTextView.resignFirstResponder()
-
-        case .changed:
-            // Calculate new ratio (constrain between 30% and 90%)
-            let newRatio = location.x / viewWidth
-            splitRatio = max(0.3, min(0.9, newRatio))
-
-            // Update constraints
-            inputWidthConstraint.isActive = false
-            resultsWidthConstraint.isActive = false
-
-            inputWidthConstraint = inputTextView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: splitRatio)
-            resultsWidthConstraint = resultsTextView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 1 - splitRatio)
-
-            inputWidthConstraint.isActive = true
-            resultsWidthConstraint.isActive = true
-
-            view.layoutIfNeeded()
-
-        case .ended, .cancelled:
-            isDraggingDivider = false
-
-        default:
-            break
-        }
-    }
-
-    // MARK: - Keyboard Handling
+    // MARK: - Keyboard
 
     @objc private func keyboardWillShow(_ notification: Notification) {
-        // Sync scroll if needed
+        guard let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue else { return }
+        let keyboardFrame = frame.cgRectValue
+        let height = keyboardFrame.height - view.safeAreaInsets.bottom
+
+        #if !os(visionOS)
+        // Hide accessory bar when hardware keyboard is connected (keyboard height is small)
+        // Hardware keyboard shows a small floating bar (~55pt), software keyboard is much taller
+        let isHardwareKeyboard = keyboardFrame.height < 100
+        textView.inputAccessoryView = isHardwareKeyboard ? nil : inputAccessoryBar
+        textView.reloadInputViews()
+        #endif
+
+        textView.contentInset.bottom = max(0, height)
+        textView.verticalScrollIndicatorInsets.bottom = max(0, height)
     }
 
     @objc private func keyboardWillHide(_ notification: Notification) {
-        // Handle keyboard hide if needed
+        textView.contentInset = .zero
+        textView.verticalScrollIndicatorInsets = .zero
     }
 
     // MARK: - Evaluation
 
-    private func evaluateInput() {
-        let lines = inputText.components(separatedBy: .newlines)
-        results = []
+    private var evalWorkItem: DispatchWorkItem?
+    private let evalQueue = DispatchQueue(label: "numby.eval", qos: .userInitiated)
+    private var currentEvalID: Int = 0
 
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty || trimmed.hasPrefix("//") || trimmed.hasPrefix("#") {
-                results.append("")
-            } else {
-                let result = numbyWrapper.evaluate(trimmed)
-                if let formatted = result.formatted {
-                    results.append(formatted)
-
-                    // Save to history
-                    Persistence.shared.addHistoryEntry(expression: trimmed, result: formatted)
-                } else {
-                    results.append("")
-                }
-            }
+    private func scheduleEvaluation() {
+        evalWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.evaluate()
         }
-
-        updateResultsDisplay()
+        evalWorkItem = work
+        // Increased debounce to 250ms
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)
     }
 
-    private func updateResultsDisplay() {
-        let config = Configuration.shared.config
-        let fontSize = config.fontSize
-        let fontName = config.fontName ?? "Menlo-Regular"
-        let font = UIFont(name: fontName, size: fontSize) ?? .monospacedSystemFont(ofSize: fontSize, weight: .regular)
+    private func evaluate() {
+        let text = textView.text ?? ""
+        let lines = text.components(separatedBy: .newlines)
+        currentEvalID += 1
+        let evalID = currentEvalID
 
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.lineHeightMultiple = 1.0
-        paragraph.paragraphSpacing = 0
-        paragraph.lineSpacing = 8
-        paragraph.alignment = .right
+        evalQueue.async { [weak self] in
+            guard let self = self else { return }
+            guard evalID == self.currentEvalID else { return }
 
-        let resultsText = results.joined(separator: "\n")
-        let attributedString = NSMutableAttributedString(string: resultsText)
-        let fullRange = NSRange(location: 0, length: attributedString.length)
+            let newResults = lines.map { line -> String in
+                // Check if cancelled
+                guard evalID == self.currentEvalID else { return "" }
 
-        attributedString.addAttribute(.foregroundColor, value: Theme.current.syntaxColor(for: .results), range: fullRange)
-        attributedString.addAttribute(.font, value: font, range: fullRange)
-        attributedString.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty || trimmed.hasPrefix("//") || trimmed.hasPrefix("#") {
+                    return ""
+                }
+                return self.numbyWrapper.evaluate(trimmed).formatted?.replacingOccurrences(of: "\n", with: "  ") ?? ""
+            }
 
-        resultsTextView.attributedText = attributedString
+            // Skip updating if stale
+            guard evalID == self.currentEvalID else { return }
+
+            DispatchQueue.main.async {
+                guard evalID == self.currentEvalID else { return }
+                self.results = newResults
+                self.updateResultsOverlay()
+            }
+        }
+    }
+
+    private func updateResultsOverlay() {
+        let font = textView.font ?? .monospacedSystemFont(ofSize: 16, weight: .regular)
+        resultsOverlay.update(results: results, font: font, textColor: Theme.current.syntaxColor(for: .results), textView: textView)
     }
 
     // MARK: - Syntax Highlighting
 
     private func applySyntaxHighlighting() {
-        guard Configuration.shared.config.syntaxHighlighting else {
-            // No highlighting, just apply basic styling
-            let config = Configuration.shared.config
-            let fontSize = config.fontSize
-            let fontName = config.fontName ?? "Menlo-Regular"
-            let font = UIFont(name: fontName, size: fontSize) ?? .monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        guard Configuration.shared.config.syntaxHighlighting else { return }
+        guard let storage = textView.textStorage as? NSTextStorage else { return }
 
-            inputTextView.font = font
-            inputTextView.textColor = Theme.current.textColor
-            return
-        }
+        // Save cursor position before modifying storage
+        let savedSelectedRange = textView.selectedRange
 
-        let config = Configuration.shared.config
-        let fontSize = config.fontSize
-        let fontName = config.fontName ?? "Menlo-Regular"
-        let font = UIFont(name: fontName, size: fontSize) ?? .monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        let text = storage.string
+        let fullRange = NSRange(location: 0, length: storage.length)
+        let theme = Theme.current
+        let font = textView.font ?? .monospacedSystemFont(ofSize: 16, weight: .regular)
 
         let paragraph = NSMutableParagraphStyle()
-        paragraph.lineHeightMultiple = 1.0
-        paragraph.paragraphSpacing = 0
         paragraph.lineSpacing = 8
 
-        let attributedString = NSMutableAttributedString(string: inputText)
-        let fullRange = NSRange(location: 0, length: attributedString.length)
+        storage.beginEditing()
+        storage.addAttribute(.foregroundColor, value: theme.textColor, range: fullRange)
+        storage.addAttribute(.font, value: font, range: fullRange)
+        storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
 
-        // Reset to base styling with system label color
-        attributedString.addAttribute(.foregroundColor, value: UIColor.label, range: fullRange)
-        attributedString.addAttribute(.font, value: font, range: fullRange)
-        attributedString.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
-
-        let theme = Theme.current
-
-        // Apply syntax patterns (same order as macOS)
-        applySyntaxPattern(attributedString, pattern: "\\b\\d+(\\.\\d+)?\\b", colorType: .numbers)
-        applySyntaxPattern(attributedString, pattern: "[+\\-*/()^%]", colorType: .operators)
-        applySyntaxPattern(attributedString, pattern: "\\b(USD|EUR|JPY|GBP|CNY|CHF|AUD|CAD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|HRK|RUB|TRY|BRL|MXN|ARS|CLP|COP|PEN|INR|IDR|MYR|PHP|THB|VND|KRW|TWD|HKD|SGD|ZAR|EGP|NGN|KES|GHS|XOF|XAF|MAD|TND|AED|SAR|QAR|KWD|BHD|OMR|ILS|JOD|LBP|IQD|IRR|AFN|PKR|BDT|NPR|LKR|MMK|KHR|LAK|MNT|KZT|UZS|TJS|KGS|TMT|GEL|AZN|AMD|BYN|MDL|UAH|RSD|MKD|ALL|BAM|ISK)\\b", colorType: .currency, options: .caseInsensitive)
-        applySyntaxPattern(attributedString, pattern: "\\b(km|mi|m|cm|mm|ft|in|yd|kg|g|mg|lb|oz|ton|L|mL|gal|qt|pt|cup|tbsp|tsp|°C|°F|K|ms|s|min|h|day|week|month|year|Hz|kHz|MHz|GHz|b|B|KB|MB|GB|TB|W|kW|MW|V|A|mA|Ω|J|cal|kcal|Pa|bar|atm|psi|mph|kmh|kph)\\b", colorType: .units, options: .caseInsensitive)
-        applySyntaxPattern(attributedString, pattern: "\\b(in|to|as|of|per|from)\\b", colorType: .keywords, options: .caseInsensitive)
-        applySyntaxPattern(attributedString, pattern: "\\b(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|sqrt|cbrt|ln|log|log10|log2|exp|abs|ceil|floor|round|min|max|pow|mod|gcd|lcm|factorial|rand|random)\\b", colorType: .functions, options: .caseInsensitive)
-        applySyntaxPattern(attributedString, pattern: "\\b(pi|e|phi|tau|true|false)\\b", colorType: .constants, options: .caseInsensitive)
-
-        // Variables (assignment pattern)
-        if let regex = try? NSRegularExpression(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*=") {
-            regex.enumerateMatches(in: inputText, range: fullRange) { match, _, _ in
+        // Numbers
+        applyPattern("\\b\\d+(\\.\\d+)?\\b", color: theme.syntaxColor(for: .numbers), to: storage, text: text)
+        // Operators (symbols)
+        applyPattern("[+\\-*/()^%]", color: theme.syntaxColor(for: .operators), to: storage, text: text)
+        // Word operators
+        applyPattern("\\b(plus|minus|times|multiplied by|divided by|divide by|subtract|and|with)\\b", color: theme.syntaxColor(for: .operators), to: storage, text: text, options: .caseInsensitive)
+        // Currency (including crypto)
+        applyPattern("\\b(USD|EUR|JPY|GBP|CNY|CHF|AUD|CAD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|HRK|RUB|TRY|BRL|MXN|ARS|CLP|COP|PEN|INR|IDR|MYR|PHP|THB|VND|KRW|TWD|HKD|SGD|ZAR|EGP|NGN|KES|GHS|XOF|XAF|MAD|TND|AED|SAR|QAR|KWD|BHD|OMR|ILS|JOD|LBP|IQD|IRR|AFN|PKR|BDT|NPR|LKR|MMK|KHR|LAK|MNT|KZT|UZS|TJS|KGS|TMT|GEL|AZN|AMD|BYN|MDL|UAH|RSD|MKD|ALL|BAM|ISK|BTC|ETH|BNB)\\b", color: theme.syntaxColor(for: .currency), to: storage, text: text, options: .caseInsensitive)
+        // Units (extended)
+        applyPattern("\\b(km|mi|m|cm|mm|ft|in|yd|kg|g|mg|lb|oz|ton|L|mL|gal|qt|pt|cup|tbsp|tsp|°C|°F|K|ms|s|min|h|day|week|month|year|Hz|kHz|MHz|GHz|b|B|KB|MB|GB|TB|W|kW|MW|V|A|mA|Ω|J|cal|kcal|Pa|bar|atm|psi|mph|kmh|kph|meter|meters|centimeter|centimeters|millimeter|millimeters|kilometer|kilometers|foot|feet|inch|inches|yard|yards|mile|miles|sec|second|seconds|minute|minutes|hour|hours|days|weeks|months|years|kelvin|kelvins|celsius|fahrenheit|liter|liters|milliliter|milliliters|pint|pints|quart|quarts|gallon|gallons|teaspoon|teaspoons|tablespoon|tablespoons|gram|grams|kilogram|kilograms|tonne|tonnes|carat|carats|pound|pounds|stone|stones|ounce|ounces|bit|bits|byte|bytes|knot|knots|radian|radians|degree|degrees)\\b", color: theme.syntaxColor(for: .units), to: storage, text: text, options: .caseInsensitive)
+        // Scales
+        applyPattern("\\b(k|kilo|thousand|M|mega|million|G|giga|billion|T|tera)\\b", color: theme.syntaxColor(for: .units), to: storage, text: text, options: .caseInsensitive)
+        // Keywords
+        applyPattern("\\b(in|to|as|of|per|from)\\b", color: theme.syntaxColor(for: .keywords), to: storage, text: text, options: .caseInsensitive)
+        // DateTime keywords
+        applyPattern("\\b(time|now|today|tomorrow|yesterday|ago|before|after|next|last|this|between)\\b", color: theme.syntaxColor(for: .keywords), to: storage, text: text, options: .caseInsensitive)
+        // Functions
+        applyPattern("\\b(sin|cos|tan|asin|acos|atan|arcsin|arccos|arctan|sinh|cosh|tanh|sqrt|cbrt|ln|log|log10|log2|exp|abs|ceil|floor|round|min|max|pow|mod|gcd|lcm|factorial|rand|random)\\b", color: theme.syntaxColor(for: .functions), to: storage, text: text, options: .caseInsensitive)
+        // Constants
+        applyPattern("\\b(pi|e|phi|tau|true|false)\\b", color: theme.syntaxColor(for: .constants), to: storage, text: text, options: .caseInsensitive)
+        // Variables (assignment)
+        if let regex = try? NSRegularExpression(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*=", options: []) {
+            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range(at: 1) {
-                    attributedString.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variables), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variables), range: range)
                 }
             }
         }
-
         // Variable usage
-        if let regex = try? NSRegularExpression(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b") {
-            regex.enumerateMatches(in: inputText, range: fullRange) { match, _, _ in
+        if let regex = try? NSRegularExpression(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b", options: []) {
+            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    let currentColor = attributedString.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? UIColor
-                    if currentColor == UIColor.label {
-                        attributedString.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variableUsage), range: range)
+                    let currentColor = storage.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? UIColor
+                    if currentColor == theme.textColor {
+                        storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variableUsage), range: range)
                     }
                 }
             }
         }
+        // Assignment equals
+        applyPattern("\\s(=)\\s", color: theme.syntaxColor(for: .assignment), to: storage, text: text, captureGroup: 1)
+        // Comments (last - overrides all)
+        applyPattern("(//|#).*$", color: theme.syntaxColor(for: .comments), to: storage, text: text, options: .anchorsMatchLines)
 
-        // Assignment operator
-        applySyntaxPattern(attributedString, pattern: "\\s(=)\\s", colorType: .assignment, captureGroup: 1)
+        storage.endEditing()
 
-        // Comments (must be last to override other colors)
-        applySyntaxPattern(attributedString, pattern: "(//|#).*$", colorType: .comments, options: .anchorsMatchLines)
-
-        // Preserve cursor position
-        let selectedRange = inputTextView.selectedRange
-        inputTextView.attributedText = attributedString
-        inputTextView.selectedRange = selectedRange
-
-        // Keep cursor color matching text color
-        inputTextView.tintColor = theme.textColor
+        // Restore cursor position after modifying storage
+        textView.selectedRange = savedSelectedRange
     }
 
-    private func applySyntaxPattern(_ attributedString: NSMutableAttributedString,
-                                   pattern: String,
-                                   colorType: SyntaxColorType,
-                                   options: NSRegularExpression.Options = [],
-                                   captureGroup: Int = 0) {
+    private func applyPattern(_ pattern: String, color: UIColor, to storage: NSTextStorage, text: String, options: NSRegularExpression.Options = [], captureGroup: Int = 0) {
         guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else { return }
-
-        let fullRange = NSRange(location: 0, length: attributedString.length)
-        let color = Theme.current.syntaxColor(for: colorType)
-
-        regex.enumerateMatches(in: inputText, range: fullRange) { match, _, _ in
-            var range: NSRange?
-            if captureGroup > 0, let matchRange = match?.range(at: captureGroup) {
-                range = matchRange
-            } else if let matchRange = match?.range {
-                range = matchRange
-            }
-
-            if let range = range {
-                attributedString.addAttribute(.foregroundColor, value: color, range: range)
+        let range = NSRange(location: 0, length: text.utf16.count)
+        regex.enumerateMatches(in: text, range: range) { match, _, _ in
+            if let r = match?.range(at: captureGroup), r.location != NSNotFound {
+                storage.addAttribute(.foregroundColor, value: color, range: r)
             }
         }
     }
@@ -373,25 +374,126 @@ class CalculatorViewController: UIViewController {
 
     private func updateTheme() {
         let theme = Theme.current
+        let config = Configuration.shared.config
+        let font = UIFont(name: config.fontName ?? "Menlo-Regular", size: config.fontSize) ?? .monospacedSystemFont(ofSize: config.fontSize, weight: .regular)
 
-        // Always use dark mode
         overrideUserInterfaceStyle = .dark
+        view.backgroundColor = theme.backgroundColor
+        textView.backgroundColor = theme.backgroundColor
+        textView.textColor = theme.textColor
+        textView.tintColor = theme.textColor
+        textView.font = font
+        textView.keyboardAppearance = .dark
 
-        // Use system background colors
-        view.backgroundColor = .systemBackground
-        inputTextView.backgroundColor = .systemBackground
-        resultsTextView.backgroundColor = .systemBackground
+        // Update accessory bar
+        inputAccessoryBar.backgroundColor = theme.backgroundColor
+        let buttonBg = theme.textColor.withAlphaComponent(0.08)
+        accessoryButtons.forEach {
+            $0.setTitleColor(theme.textColor.withAlphaComponent(0.9), for: .normal)
+            $0.backgroundColor = buttonBg
+        }
 
-        // Text colors from system
-        inputTextView.textColor = .label
-        inputTextView.tintColor = .label
-        inputTextView.keyboardAppearance = .dark
+        if let nav = navigationController {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = theme.backgroundColor
+            appearance.titleTextAttributes = [.foregroundColor: theme.textColor]
+            appearance.shadowColor = .clear
+            nav.navigationBar.standardAppearance = appearance
+            nav.navigationBar.scrollEdgeAppearance = appearance
+            nav.navigationBar.tintColor = theme.textColor
+        }
 
-        resultsTextView.textColor = theme.syntaxColor(for: .results)
-
-        // Reapply syntax highlighting with theme colors
         applySyntaxHighlighting()
-        updateResultsDisplay()
+    }
+
+    // MARK: - Actions
+
+    @objc private func openSettings() {
+        textView.resignFirstResponder()
+        let nav = UINavigationController(rootViewController: SettingsViewController())
+        nav.modalPresentationStyle = .pageSheet
+        present(nav, animated: true)
+    }
+
+    @objc private func openHistory() {
+        textView.resignFirstResponder()
+        let nav = UINavigationController(rootViewController: HistoryViewController())
+        nav.modalPresentationStyle = .pageSheet
+        present(nav, animated: true)
+    }
+
+    @objc private func newCalculation() {
+        // On iPad with tab container, create a new tab
+        if let container = tabContainer {
+            container.createNewTab()
+            return
+        }
+
+        // On iPhone, just clear and start fresh
+        let text = textView.text ?? ""
+        if !text.isEmpty {
+            let result = results.filter { !$0.isEmpty }.joined(separator: "\n")
+            Persistence.shared.addHistoryEntry(expression: text, result: result.isEmpty ? "No result" : result)
+            NotificationCenter.default.post(name: NSNotification.Name("HistoryDidUpdate"), object: nil)
+        }
+        textView.text = ""
+        results = []
+        updateResultsOverlay()
+    }
+
+    @objc private func shareResult() {
+        let text = textView.text ?? ""
+        guard !text.isEmpty else { return }
+
+        let lines = text.components(separatedBy: "\n")
+        var output: [String] = []
+        var imageLines: [(expression: String, result: String)] = []
+
+        for (index, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && index < results.count && !results[index].isEmpty {
+                output.append("\(trimmed) → \(results[index])")
+                imageLines.append((expression: trimmed, result: results[index]))
+            }
+        }
+
+        guard !output.isEmpty else { return }
+        let shareText = output.joined(separator: "\n")
+
+        var items: [Any] = []
+
+        // Render styled image (put first so it's the primary share item)
+        let config = Configuration.shared.config
+        if let image = CalculatorImageRenderer.render(
+            lines: imageLines,
+            theme: Theme.current,
+            fontSize: config.fontSize,
+            fontName: config.fontName ?? "Menlo-Regular"
+        ) {
+            items.append(image)
+            print("[Numby] Image rendered: \(image.size)")
+        } else {
+            print("[Numby] Image render FAILED")
+        }
+
+        // Also include text as fallback
+        items.append(shareText)
+        print("[Numby] Sharing \(items.count) items")
+
+        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        if let popover = activityVC.popoverPresentationController {
+            popover.barButtonItem = navigationItem.rightBarButtonItems?.last
+        }
+        present(activityVC, animated: true)
+    }
+
+    @objc private func loadHistoryEntry(_ notification: Notification) {
+        guard let expr = notification.userInfo?["expression"] as? String else { return }
+        textView.text = expr
+        textView.becomeFirstResponder()
+        applySyntaxHighlighting()
+        scheduleEvaluation()
     }
 }
 
@@ -399,7 +501,80 @@ class CalculatorViewController: UIViewController {
 
 extension CalculatorViewController: UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) {
-        inputText = textView.text
+        applySyntaxHighlighting()
+        scheduleEvaluation()
+    }
+}
+
+// MARK: - Results Overlay
+
+class ResultsOverlayView: UIView {
+    private var labels: [UILabel] = []
+
+    func update(results: [String], font: UIFont, textColor: UIColor, textView: UITextView) {
+        let layoutManager = textView.layoutManager
+        let textContainer = textView.textContainer
+        let textStorage = textView.textStorage
+        let insets = textView.textContainerInset
+        let rightPadding: CGFloat = 16
+        let minGap: CGFloat = 20
+
+        while labels.count < results.count {
+            let label = UILabel()
+            label.textAlignment = .right
+            addSubview(label)
+            labels.append(label)
+        }
+
+        let text = textView.text ?? ""
+        let lines = text.components(separatedBy: "\n")
+        var charIndex = 0
+
+        for (i, label) in labels.enumerated() {
+            guard i < results.count && i < lines.count else {
+                label.isHidden = true
+                continue
+            }
+
+            let lineLength = lines[i].utf16.count
+            let hasResult = !results[i].isEmpty
+
+            if hasResult && charIndex < textStorage.length {
+                label.text = results[i]
+                label.font = font
+                label.textColor = textColor
+                label.isHidden = false
+                label.sizeToFit()
+
+                let lineRange = NSRange(location: charIndex, length: max(1, min(lineLength, textStorage.length - charIndex)))
+                let glyphRange = layoutManager.glyphRange(forCharacterRange: lineRange, actualCharacterRange: nil)
+                let lineRect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+
+                let resultWidth = label.frame.width
+                let availableWidth = bounds.width - rightPadding
+                let resultX = availableWidth - resultWidth
+
+                // Check if line wraps (height > single line)
+                let singleLineHeight = font.lineHeight + 8
+                let lineY: CGFloat
+                if lineRect.height > singleLineHeight * 1.5 {
+                    // Line wraps - position result at the bottom-right of the wrapped block
+                    lineY = insets.top + lineRect.maxY - font.lineHeight
+                } else {
+                    lineY = insets.top + lineRect.minY
+                }
+
+                label.frame.origin = CGPoint(x: resultX, y: lineY)
+            } else {
+                label.isHidden = true
+            }
+
+            charIndex += lineLength + 1
+        }
+
+        for i in results.count..<labels.count {
+            labels[i].isHidden = true
+        }
     }
 }
 #endif

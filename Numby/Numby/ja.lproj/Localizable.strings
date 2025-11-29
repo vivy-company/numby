@@ -27,18 +27,18 @@
 
 /* Settings - CLI Section */
 "settings.cli.section" = "コマンドラインツール";
-"settings.cli.installViaHomebrew" = "Homebrew経由でインストール:";
+"settings.cli.installViaCargo" = "Cargo (Rust)経由でインストール:";
 "settings.cli.copyTooltip" = "クリップボードにコピー";
-"settings.cli.installHomebrew" = "Homebrewをインストール";
-"settings.cli.orDownload" = "またはGitHubリリースからダウンロード";
+"settings.cli.installRust" = "Rustをインストール";
+"settings.cli.orInstaller" = "または自動インストーラーを使用:";
+"settings.cli.orDownload" = "またはGitHubリリースからダウンロード:";
 "settings.cli.githubReleases" = "GitHubリリース";
 
 /* CLI Installer Window */
 "cliInstaller.title" = "コマンドラインツール";
 "cliInstaller.subtitle" = "ターミナルでnumbyを使用";
-"cliInstaller.installViaHomebrew" = "Homebrew経由でインストール";
 "cliInstaller.runCommand" = "ターミナルでこのコマンドを実行:";
-"cliInstaller.noHomebrew" = "Homebrewがインストールされていない場合:";
+"cliInstaller.noRust" = "Rustがインストールされていない場合:";
 "cliInstaller.alternative" = "代替方法: 手動インストール";
 "cliInstaller.downloadRelease" = "最新リリースをダウンロード:";
 "cliInstaller.moveToPath" = "その後PATHに移動:";
@@ -126,3 +126,20 @@
 "alert.saveAndClose" = "保存して閉じる";
 "alert.closeWithoutSavingButton" = "保存せずに閉じる";
 "alert.cancel" = "キャンセル";
+"alert.updateFailed" = "更新に失敗しました";
+"alert.currencyUpdateError" = "為替レートを更新できませんでした。インターネット接続を確認してください。";
+
+/* iOS Settings */
+"settings.title" = "設定";
+"settings.language.openSettings" = "設定を開く";
+"settings.about.section" = "情報";
+"settings.about.version" = "バージョン";
+"settings.about.github" = "GitHub";
+"settings.theme.select" = "テーマを選択";
+"settings.font.select" = "フォントを選択";
+
+/* iOS Navigation */
+"nav.new" = "新規";
+"nav.history" = "履歴";
+"nav.done" = "完了";
+"nav.close" = "閉じる";

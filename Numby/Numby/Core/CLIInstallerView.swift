@@ -14,10 +14,11 @@ struct CLIInstallerView: View {
 
     private var localizedTitle: String { _ = localeVersion; return NSLocalizedString("cliInstaller.title", comment: "") }
     private var localizedSubtitle: String { _ = localeVersion; return NSLocalizedString("cliInstaller.subtitle", comment: "") }
-    private var localizedInstallViaHomebrew: String { _ = localeVersion; return NSLocalizedString("cliInstaller.installViaHomebrew", comment: "") }
+    private var localizedInstallViaCargo: String { _ = localeVersion; return NSLocalizedString("settings.cli.installViaCargo", comment: "") }
     private var localizedRunCommand: String { _ = localeVersion; return NSLocalizedString("cliInstaller.runCommand", comment: "") }
-    private var localizedNoHomebrew: String { _ = localeVersion; return NSLocalizedString("cliInstaller.noHomebrew", comment: "") }
-    private var localizedInstallHomebrew: String { _ = localeVersion; return NSLocalizedString("settings.cli.installHomebrew", comment: "") }
+    private var localizedNoRust: String { _ = localeVersion; return NSLocalizedString("cliInstaller.noRust", comment: "") }
+    private var localizedInstallRust: String { _ = localeVersion; return NSLocalizedString("settings.cli.installRust", comment: "") }
+    private var localizedOrInstaller: String { _ = localeVersion; return NSLocalizedString("settings.cli.orInstaller", comment: "") }
     private var localizedAlternative: String { _ = localeVersion; return NSLocalizedString("cliInstaller.alternative", comment: "") }
     private var localizedDownloadRelease: String { _ = localeVersion; return NSLocalizedString("cliInstaller.downloadRelease", comment: "") }
     private var localizedGithubReleases: String { _ = localeVersion; return NSLocalizedString("settings.cli.githubReleases", comment: "") }
@@ -48,7 +49,7 @@ struct CLIInstallerView: View {
 
             // Installation instructions
             VStack(alignment: .leading, spacing: 16) {
-                Text(localizedInstallViaHomebrew)
+                Text(localizedInstallViaCargo)
                     .font(.headline)
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -57,7 +58,7 @@ struct CLIInstallerView: View {
                         .foregroundColor(.secondary)
 
                     HStack {
-                        Text("brew install numby")
+                        Text("cargo install numby")
                             .font(.system(.title3, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -67,7 +68,7 @@ struct CLIInstallerView: View {
 
                         Button(action: {
                             NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString("brew install numby", forType: .string)
+                            NSPasteboard.general.setString("cargo install numby", forType: .string)
                         }) {
                             Image(systemName: "doc.on.doc")
                                 .font(.title2)
@@ -76,17 +77,17 @@ struct CLIInstallerView: View {
                         .help(localizedCopyTooltip)
                     }
 
-                    Text(localizedNoHomebrew)
+                    Text(localizedNoRust)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 8)
 
                     Button(action: {
-                        NSWorkspace.shared.open(URL(string: "https://brew.sh")!)
+                        NSWorkspace.shared.open(URL(string: "https://rustup.rs")!)
                     }) {
                         HStack {
                             Image(systemName: "arrow.up.right.square")
-                            Text(localizedInstallHomebrew)
+                            Text(localizedInstallRust)
                         }
                     }
                     .buttonStyle(.link)
@@ -94,6 +95,29 @@ struct CLIInstallerView: View {
                 .padding(16)
                 .background(Color.accentColor.opacity(0.05))
                 .cornerRadius(12)
+
+                Text(localizedOrInstaller)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                HStack {
+                    Text("curl -fsSL https://numby.vivy.app/install.sh | bash")
+                        .font(.system(.callout, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color.secondary.opacity(0.1))
+                        .cornerRadius(6)
+
+                    Button(action: {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString("curl -fsSL https://numby.vivy.app/install.sh | bash", forType: .string)
+                    }) {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    .buttonStyle(.plain)
+                    .help(localizedCopyTooltip)
+                }
 
                 Divider()
                     .padding(.vertical, 8)
@@ -107,7 +131,7 @@ struct CLIInstallerView: View {
                         .foregroundColor(.secondary)
 
                     Button(action: {
-                        NSWorkspace.shared.open(URL(string: "https://github.com/wiedymi/numby/releases")!)
+                        NSWorkspace.shared.open(URL(string: "https://github.com/vivy-company/numby/releases")!)
                     }) {
                         HStack {
                             Image(systemName: "arrow.down.circle")

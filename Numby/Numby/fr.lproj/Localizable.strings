@@ -27,18 +27,18 @@
 
 /* Settings - CLI Section */
 "settings.cli.section" = "Outil en ligne de commande";
-"settings.cli.installViaHomebrew" = "Installer via Homebrew :";
+"settings.cli.installViaCargo" = "Installer via Cargo (Rust) :";
 "settings.cli.copyTooltip" = "Copier dans le presse-papiers";
-"settings.cli.installHomebrew" = "Installer Homebrew";
-"settings.cli.orDownload" = "Ou télécharger depuis les versions GitHub";
+"settings.cli.installRust" = "Installer Rust";
+"settings.cli.orInstaller" = "Ou utiliser le script d'installation automatique :";
+"settings.cli.orDownload" = "Ou télécharger depuis les versions GitHub :";
 "settings.cli.githubReleases" = "Versions GitHub";
 
 /* CLI Installer Window */
 "cliInstaller.title" = "Outil en ligne de commande";
 "cliInstaller.subtitle" = "Utilisez numby depuis votre terminal";
-"cliInstaller.installViaHomebrew" = "Installer via Homebrew";
 "cliInstaller.runCommand" = "Exécutez cette commande dans votre terminal :";
-"cliInstaller.noHomebrew" = "Si vous n'avez pas Homebrew installé :";
+"cliInstaller.noRust" = "Si vous n'avez pas Rust installé :";
 "cliInstaller.alternative" = "Alternative : Installation manuelle";
 "cliInstaller.downloadRelease" = "Téléchargez la dernière version :";
 "cliInstaller.moveToPath" = "Puis déplacez vers votre PATH :";
@@ -126,3 +126,20 @@
 "alert.saveAndClose" = "Enregistrer et fermer";
 "alert.closeWithoutSavingButton" = "Fermer sans enregistrer";
 "alert.cancel" = "Annuler";
+"alert.updateFailed" = "Échec de la mise à jour";
+"alert.currencyUpdateError" = "Impossible de mettre à jour les taux de change. Vérifiez votre connexion Internet.";
+
+/* iOS Settings */
+"settings.title" = "Réglages";
+"settings.language.openSettings" = "Ouvrir les réglages";
+"settings.about.section" = "À propos";
+"settings.about.version" = "Version";
+"settings.about.github" = "GitHub";
+"settings.theme.select" = "Sélectionner un thème";
+"settings.font.select" = "Sélectionner une police";
+
+/* iOS Navigation */
+"nav.new" = "Nouveau";
+"nav.history" = "Historique";
+"nav.done" = "Terminé";
+"nav.close" = "Fermer";

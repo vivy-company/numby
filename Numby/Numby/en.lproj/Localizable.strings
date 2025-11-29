@@ -27,18 +27,18 @@
 
 /* Settings - CLI Section */
 "settings.cli.section" = "Command Line Tool";
-"settings.cli.installViaHomebrew" = "Install via Homebrew:";
+"settings.cli.installViaCargo" = "Install via Cargo (Rust):";
 "settings.cli.copyTooltip" = "Copy to clipboard";
-"settings.cli.installHomebrew" = "Install Homebrew";
-"settings.cli.orDownload" = "Or download from GitHub releases";
+"settings.cli.installRust" = "Install Rust";
+"settings.cli.orInstaller" = "Or use the automated installer:";
+"settings.cli.orDownload" = "Or download from GitHub releases:";
 "settings.cli.githubReleases" = "GitHub Releases";
 
 /* CLI Installer Window */
 "cliInstaller.title" = "Command Line Tool";
 "cliInstaller.subtitle" = "Use numby from your terminal";
-"cliInstaller.installViaHomebrew" = "Install via Homebrew";
 "cliInstaller.runCommand" = "Run this command in your terminal:";
-"cliInstaller.noHomebrew" = "If you don't have Homebrew installed:";
+"cliInstaller.noRust" = "If you don't have Rust installed:";
 "cliInstaller.alternative" = "Alternative: Manual Installation";
 "cliInstaller.downloadRelease" = "Download the latest release:";
 "cliInstaller.moveToPath" = "Then move to your PATH:";
@@ -126,3 +126,26 @@
 "alert.saveAndClose" = "Save and Close";
 "alert.closeWithoutSavingButton" = "Close without Saving";
 "alert.cancel" = "Cancel";
+"alert.updateFailed" = "Update Failed";
+"alert.currencyUpdateError" = "Could not update currency rates. Check your internet connection.";
+
+/* iOS Settings */
+"settings.title" = "Settings";
+"settings.language.openSettings" = "Open Settings";
+"settings.about.section" = "About";
+"settings.about.version" = "Version";
+"settings.about.github" = "GitHub";
+"settings.theme.select" = "Select Theme";
+"settings.font.select" = "Select Font";
+
+/* iOS Navigation */
+"nav.new" = "New";
+"nav.history" = "History";
+"nav.done" = "Done";
+"nav.close" = "Close";
+"nav.clear" = "Clear";
+
+/* iOS History */
+"history.title" = "History";
+"history.clearTitle" = "Clear History";
+"history.clearMessage" = "Are you sure you want to clear all history?";

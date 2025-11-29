@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
 import UIKit
 
 class SettingsViewController: UIViewController {
@@ -13,10 +13,10 @@ class SettingsViewController: UIViewController {
 
         var title: String {
             switch self {
-            case .language: return "Language"
-            case .appearance: return "Appearance"
-            case .currency: return "Currency"
-            case .about: return "About"
+            case .language: return NSLocalizedString("settings.language.section", comment: "")
+            case .appearance: return NSLocalizedString("settings.appearance.section", comment: "")
+            case .currency: return NSLocalizedString("settings.currency.section", comment: "")
+            case .about: return NSLocalizedString("settings.about.section", comment: "")
             }
         }
     }
@@ -42,8 +42,9 @@ class SettingsViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Settings"
+        title = NSLocalizedString("settings.title", comment: "")
         setupUI()
+        setupNavigationBar()
         updateTheme()
         loadCurrencyUpdateTime()
 
@@ -88,6 +89,18 @@ class SettingsViewController: UIViewController {
         ])
     }
 
+    private func setupNavigationBar() {
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .close,
+            target: self,
+            action: #selector(dismissSettings)
+        )
+    }
+
+    @objc private func dismissSettings() {
+        dismiss(animated: true)
+    }
+
     // MARK: - Currency Update
 
     private func loadCurrencyUpdateTime() {
@@ -112,11 +125,11 @@ class SettingsViewController: UIViewController {
                     UserDefaults.standard.set(Date(), forKey: "lastCurrencyUpdate")
                 } else {
                     let alert = UIAlertController(
-                        title: "Update Failed",
-                        message: "Could not update currency rates. Check your internet connection.",
+                        title: NSLocalizedString("alert.updateFailed", comment: ""),
+                        message: NSLocalizedString("alert.currencyUpdateError", comment: ""),
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    alert.addAction(UIAlertAction(title: NSLocalizedString("alert.ok", comment: ""), style: .default))
                     self.present(alert, animated: true)
                 }
 
@@ -148,6 +161,9 @@ class SettingsViewController: UIViewController {
 
         view.backgroundColor = .systemGroupedBackground
         tableView.backgroundColor = .systemGroupedBackground
+        tableView.separatorColor = .separator
+        tableView.indicatorStyle = .default
+        tableView.reloadData()
     }
 }
 
@@ -223,8 +239,8 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
         var config = cell.defaultContentConfiguration()
         config.image = UIImage(systemName: "globe")
-        config.text = "Language & Region"
-        config.secondaryText = "Open Settings"
+        config.text = NSLocalizedString("settings.language.picker", comment: "")
+        config.secondaryText = NSLocalizedString("settings.language.openSettings", comment: "")
         cell.contentConfiguration = config
         cell.accessoryType = .disclosureIndicator
         return cell
@@ -238,7 +254,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
             var cellConfig = cell.defaultContentConfiguration()
             cellConfig.image = UIImage(systemName: "paintbrush.fill")
-            cellConfig.text = "Theme"
+            cellConfig.text = NSLocalizedString("settings.appearance.theme", comment: "")
             cellConfig.secondaryText = Theme.current.name
             cell.contentConfiguration = cellConfig
             cell.accessoryType = .disclosureIndicator
@@ -249,7 +265,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
                 return UITableViewCell()
             }
             cell.configure(
-                title: "Font Size",
+                title: NSLocalizedString("settings.appearance.fontSize", comment: ""),
                 value: Float(config.fontSize),
                 min: 10,
                 max: 24,
@@ -266,7 +282,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
             var cellConfig = cell.defaultContentConfiguration()
             cellConfig.image = UIImage(systemName: "textformat")
-            cellConfig.text = "Font"
+            cellConfig.text = NSLocalizedString("settings.appearance.font", comment: "")
             cellConfig.secondaryText = config.fontName ?? "SFMono-Regular"
             cell.contentConfiguration = cellConfig
             cell.accessoryType = .disclosureIndicator
@@ -277,7 +293,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
                 return UITableViewCell()
             }
             cell.configure(
-                title: "Syntax Highlighting",
+                title: NSLocalizedString("settings.appearance.syntaxHighlighting", comment: ""),
                 isOn: config.syntaxHighlighting,
                 icon: "highlighter",
                 onChange: { isOn in
@@ -301,7 +317,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         switch indexPath.row {
         case 0: // Last update timestamp
             config.image = UIImage(systemName: "dollarsign.circle")
-            config.text = "Last Updated"
+            config.text = NSLocalizedString("settings.currency.lastUpdated", comment: "")
             if let lastUpdate = lastCurrencyUpdate {
                 let formatter = DateFormatter()
                 formatter.dateStyle = .short
@@ -312,13 +328,13 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
                     config.secondaryTextProperties.color = .systemRed
                 }
             } else {
-                config.secondaryText = "Never"
+                config.secondaryText = NSLocalizedString("settings.currency.never", comment: "")
                 config.secondaryTextProperties.color = .systemRed
             }
 
         case 1: // Update button
             config.image = UIImage(systemName: "arrow.clockwise")
-            config.text = isUpdatingCurrency ? "Updating..." : "Update Currency Rates"
+            config.text = isUpdatingCurrency ? NSLocalizedString("settings.currency.updating", comment: "") : NSLocalizedString("settings.currency.update", comment: "")
             config.textProperties.color = .systemBlue
             cell.accessoryType = isUpdatingCurrency ? .none : .disclosureIndicator
 
@@ -337,14 +353,14 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         switch indexPath.row {
         case 0: // Version
             config.image = UIImage(systemName: "info.circle")
-            config.text = "Version"
+            config.text = NSLocalizedString("settings.about.version", comment: "")
             if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
                 config.secondaryText = version
             }
 
         case 1: // GitHub
             config.image = UIImage(systemName: "link")
-            config.text = "GitHub"
+            config.text = NSLocalizedString("settings.about.github", comment: "")
             config.secondaryText = "github.com/vivy-company/numby"
             cell.accessoryType = .disclosureIndicator
 
@@ -368,7 +384,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         let themeNames = Theme.allThemes.map { $0.name }
 
         let picker = SearchablePickerViewController(
-            title: "Select Theme",
+            title: NSLocalizedString("settings.theme.select", comment: ""),
             items: themeNames,
             selectedItem: Theme.current.name
         ) { [weak self] selectedThemeName in
@@ -380,10 +396,13 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         }
 
         let nav = UINavigationController(rootViewController: picker)
+        nav.overrideUserInterfaceStyle = .dark
+        #if !os(visionOS)
         if let sheet = nav.sheetPresentationController {
             sheet.detents = [.custom { _ in 500 }]
             sheet.prefersGrabberVisible = true
         }
+        #endif
         present(nav, animated: true)
     }
 
@@ -413,7 +432,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         }
 
         let picker = SearchablePickerViewController(
-            title: "Select Font",
+            title: NSLocalizedString("settings.font.select", comment: ""),
             items: monospacedFonts.sorted(),
             selectedItem: Configuration.shared.config.fontName
         ) { [weak self] selectedFont in
@@ -424,10 +443,13 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         }
 
         let nav = UINavigationController(rootViewController: picker)
+        nav.overrideUserInterfaceStyle = .dark
+        #if !os(visionOS)
         if let sheet = nav.sheetPresentationController {
             sheet.detents = [.custom { _ in 500 }]
             sheet.prefersGrabberVisible = true
         }
+        #endif
         present(nav, animated: true)
     }
 }
@@ -443,6 +465,7 @@ class SliderCell: UITableViewCell {
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
+        selectionStyle = .none
         setupUI()
     }
 
@@ -456,11 +479,14 @@ class SliderCell: UITableViewCell {
         iconView.tintColor = .systemBlue
 
         titleLabel.font = .systemFont(ofSize: 17)
+        titleLabel.textColor = .label
         valueLabel.font = .systemFont(ofSize: 17)
         valueLabel.textColor = .secondaryLabel
         valueLabel.textAlignment = .right
 
         slider.addTarget(self, action: #selector(sliderChanged), for: .valueChanged)
+        slider.minimumTrackTintColor = .systemBlue
+        slider.maximumTrackTintColor = .systemGray4
 
         let topStack = UIStackView(arrangedSubviews: [iconView, titleLabel, valueLabel])
         topStack.axis = .horizontal
@@ -522,6 +548,7 @@ class SwitchCell: UITableViewCell {
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
+        selectionStyle = .none
         setupUI()
     }
 
@@ -535,16 +562,21 @@ class SwitchCell: UITableViewCell {
         iconView.tintColor = .systemBlue
 
         titleLabel.font = .systemFont(ofSize: 17)
+        titleLabel.textColor = .label
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         toggle.addTarget(self, action: #selector(toggleChanged), for: .valueChanged)
         toggle.translatesAutoresizingMaskIntoConstraints = false
+        toggle.onTintColor = .systemBlue
+        toggle.thumbTintColor = .white
 
         contentView.addSubview(iconView)
         contentView.addSubview(titleLabel)
         contentView.addSubview(toggle)
 
         NSLayoutConstraint.activate([
+            contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+
             iconView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             iconView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             iconView.widthAnchor.constraint(equalToConstant: 28),
@@ -552,6 +584,8 @@ class SwitchCell: UITableViewCell {
 
             titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 12),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            titleLabel.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 11),
+            titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -11),
 
             toggle.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             toggle.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)

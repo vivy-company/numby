@@ -26,7 +26,7 @@ struct PersistenceController {
             try viewContext.save()
         } catch {
             let nsError = error as NSError
-            fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+            print("Preview Core Data error: \(nsError), \(nsError.userInfo)")
         }
         return result
     }()
@@ -43,7 +43,8 @@ struct PersistenceController {
         }
         container.loadPersistentStores(completionHandler: { (storeDescription, error) in
             if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+                // Log error but don't crash - CloudKit may not be available in simulator
+                print("Core Data error: \(error), \(error.userInfo)")
             }
         })
         container.viewContext.automaticallyMergesChangesFromParent = true
@@ -51,45 +52,65 @@ struct PersistenceController {
     }
 }
 
-// iOS-compatible Persistence class
+// Shared Persistence via CoreData + CloudKit for iCloud sync between macOS/iOS
+import CoreData
+
 class Persistence {
     static let shared = Persistence()
 
-    private var history: [(expression: String, result: String)] = []
+    private let container: NSPersistentCloudKitContainer
 
     private init() {
-        loadHistory()
+        container = PersistenceController.shared.container
     }
 
     func addHistoryEntry(expression: String, result: String) {
-        history.append((expression: expression, result: result))
-        saveHistory()
+        let context = container.viewContext
+        let session = CalculationSession(context: context)
+        session.id = NSUUID()
+        session.timestamp = NSDate()
+        let txt = "\(expression)\n= \(result)"
+        if let data = txt.data(using: .utf8) {
+            session.sessionData = NSData(data: data)
+        }
+        session.searchableText = txt
+        try? context.save()
     }
 
     func getHistory() -> [(expression: String, result: String)] {
-        return history
+        let context = container.viewContext
+        let request: NSFetchRequest<CalculationSession> = CalculationSession.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \CalculationSession.timestamp, ascending: false)]
+        do {
+            let sessions = try context.fetch(request)
+            return sessions.compactMap { session in
+                guard let nsData = session.sessionData as? NSData,
+                      let data = nsData as Data?,
+                      let txt = String(data: data, encoding: .utf8),
+                      let range = txt.range(of: "\n= ") else { return nil }
+                let expr = String(txt[..<range.lowerBound])
+                let res = String(txt[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+                return (expression: expr, result: res)
+            }
+        } catch {
+            print("Error fetching history: \(error)")
+            return []
+        }
     }
 
     func clearHistory() {
-        history.removeAll()
-        saveHistory()
+        let context = container.viewContext
+        let request: NSFetchRequest<NSFetchRequestResult> = CalculationSession.fetchRequest()
+        let delete = NSBatchDeleteRequest(fetchRequest: request)
+        do {
+            try context.execute(delete)
+            try context.save()
+        } catch {
+            print("Error clearing history: \(error)")
+        }
     }
 
     func save() {
-        saveHistory()
-    }
-
-    private func saveHistory() {
-        let historyData = history.map { ["expression": $0.expression, "result": $0.result] }
-        UserDefaults.standard.set(historyData, forKey: "calculatorHistory")
-    }
-
-    private func loadHistory() {
-        if let historyData = UserDefaults.standard.array(forKey: "calculatorHistory") as? [[String: String]] {
-            history = historyData.compactMap { dict in
-                guard let expression = dict["expression"], let result = dict["result"] else { return nil }
-                return (expression: expression, result: result)
-            }
-        }
+        try? container.viewContext.save()
     }
 }

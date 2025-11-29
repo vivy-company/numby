@@ -27,18 +27,18 @@
 
 /* Settings - CLI Section */
 "settings.cli.section" = "Інструмент каманднага радка";
-"settings.cli.installViaHomebrew" = "Усталяваць праз Homebrew:";
+"settings.cli.installViaCargo" = "Усталяваць праз Cargo (Rust):";
 "settings.cli.copyTooltip" = "Капіяваць у буфер абмену";
-"settings.cli.installHomebrew" = "Усталяваць Homebrew";
-"settings.cli.orDownload" = "Або спампаваць з GitHub releases";
+"settings.cli.installRust" = "Усталяваць Rust";
+"settings.cli.orInstaller" = "Або выкарыстаць аўтаматычны ўсталёўшчык:";
+"settings.cli.orDownload" = "Або спампаваць з GitHub releases:";
 "settings.cli.githubReleases" = "Рэлізы GitHub";
 
 /* CLI Installer Window */
 "cliInstaller.title" = "Інструмент каманднага радка";
 "cliInstaller.subtitle" = "Выкарыстоўвайце numby з тэрмінала";
-"cliInstaller.installViaHomebrew" = "Усталяваць праз Homebrew";
 "cliInstaller.runCommand" = "Выканайце гэту каманду ў тэрмінале:";
-"cliInstaller.noHomebrew" = "Калі ў вас не ўсталяваны Homebrew:";
+"cliInstaller.noRust" = "Калі ў вас не ўсталяваны Rust:";
 "cliInstaller.alternative" = "Альтэрнатыва: Ручная ўсталёўка";
 "cliInstaller.downloadRelease" = "Спампуйце апошнюю версію:";
 "cliInstaller.moveToPath" = "Затым перамясціце ў ваш PATH:";
@@ -126,3 +126,26 @@
 "alert.saveAndClose" = "Захаваць і зачыніць";
 "alert.closeWithoutSavingButton" = "Зачыніць без захавання";
 "alert.cancel" = "Адмяніць";
+"alert.updateFailed" = "Памылка абнаўлення";
+"alert.currencyUpdateError" = "Не атрымалася абнавіць курсы валют. Праверце падключэнне да інтэрнэту.";
+
+/* iOS Settings */
+"settings.title" = "Налады";
+"settings.language.openSettings" = "Адкрыць налады";
+"settings.about.section" = "Пра праграму";
+"settings.about.version" = "Версія";
+"settings.about.github" = "GitHub";
+"settings.theme.select" = "Выбраць тэму";
+"settings.font.select" = "Выбраць шрыфт";
+
+/* iOS Navigation */
+"nav.new" = "Новы";
+"nav.history" = "Гісторыя";
+"nav.done" = "Гатова";
+"nav.close" = "Зачыніць";
+"nav.clear" = "Ачысціць";
+
+/* iOS History */
+"history.title" = "Гісторыя";
+"history.clearTitle" = "Ачысціць гісторыю";
+"history.clearMessage" = "Вы ўпэўнены, што хочаце ачысціць усю гісторыю?";

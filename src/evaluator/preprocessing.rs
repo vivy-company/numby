@@ -17,6 +17,10 @@ lazy_static! {
         r"(?i)\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b"
     )
     .expect("Invalid word-number regex");
+    static ref CURRENCY_WORD_RE: Regex = Regex::new(
+        r"(?i)\b(dollars?|euros?|pounds?|yen|yuan|rmb|rupees?|rubles?|won|francs?|pesos?|krona|krone|lira|bitcoin|btc|ethereum|eth)\b"
+    )
+    .expect("Invalid currency word regex");
 }
 
 fn get_variable_regex(var: &str) -> Regex {
@@ -61,6 +65,9 @@ pub fn preprocess_input(
 
     // Replace simple word numbers (one..ninety) with digits so "ten plus five" works
     expr_str = replace_word_numbers(&expr_str);
+
+    // Replace currency words (dollar -> USD, euro -> EUR, etc.) for voice dictation
+    expr_str = replace_currency_words(&expr_str);
 
     // Convert standalone currency symbols to their codes
     // This handles cases like "100 $" -> "100 USD" and "$100" -> "100 USD"
@@ -310,7 +317,42 @@ fn replace_word_numbers(input: &str) -> String {
         .replace_all(input, |caps: &regex::Captures| {
             let w = caps.get(0).unwrap().as_str();
             let lower = w.to_lowercase();
-            word_to_number(&lower).map(|s| s.to_string()).unwrap_or_else(|| w.to_string())
+            word_to_number(&lower)
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| w.to_string())
+        })
+        .to_string()
+}
+
+fn word_to_currency(word: &str) -> Option<&'static str> {
+    match word {
+        "dollar" | "dollars" => Some("USD"),
+        "euro" | "euros" => Some("EUR"),
+        "pound" | "pounds" => Some("GBP"),
+        "yen" => Some("JPY"),
+        "yuan" | "rmb" => Some("CNY"),
+        "rupee" | "rupees" => Some("INR"),
+        "ruble" | "rubles" => Some("RUB"),
+        "won" => Some("KRW"),
+        "franc" | "francs" => Some("CHF"),
+        "peso" | "pesos" => Some("MXN"),
+        "krona" => Some("SEK"),
+        "krone" => Some("NOK"),
+        "lira" => Some("TRY"),
+        "bitcoin" | "btc" => Some("BTC"),
+        "ethereum" | "eth" => Some("ETH"),
+        _ => None,
+    }
+}
+
+fn replace_currency_words(input: &str) -> String {
+    CURRENCY_WORD_RE
+        .replace_all(input, |caps: &regex::Captures| {
+            let w = caps.get(0).unwrap().as_str();
+            let lower = w.to_lowercase();
+            word_to_currency(&lower)
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| w.to_string())
         })
         .to_string()
 }

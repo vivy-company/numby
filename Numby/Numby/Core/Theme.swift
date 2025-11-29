@@ -12,7 +12,7 @@ import SwiftUI
 #if os(macOS)
 import AppKit
 typealias PlatformApplication = NSApplication
-#elseif os(iOS)
+#elseif os(iOS) || os(visionOS)
 import UIKit
 typealias PlatformApplication = UIApplication
 #endif
@@ -88,7 +88,7 @@ struct Theme: Codable, Hashable {
     var backgroundColor: PlatformColor {
         #if os(macOS)
         return PlatformColor(hex: syntax.background) ?? .windowBackgroundColor
-        #elseif os(iOS)
+        #elseif os(iOS) || os(visionOS)
         return PlatformColor(hex: syntax.background) ?? .systemBackground
         #endif
     }
@@ -97,7 +97,7 @@ struct Theme: Codable, Hashable {
     var textColor: PlatformColor {
         #if os(macOS)
         return PlatformColor(hex: syntax.text) ?? .textColor
-        #elseif os(iOS)
+        #elseif os(iOS) || os(visionOS)
         return PlatformColor(hex: syntax.text) ?? .label
         #endif
     }
@@ -125,7 +125,7 @@ struct Theme: Codable, Hashable {
 
         #if os(macOS)
         return PlatformColor(hex: hex) ?? .textColor
-        #elseif os(iOS)
+        #elseif os(iOS) || os(visionOS)
         return PlatformColor(hex: hex) ?? .label
         #endif
     }

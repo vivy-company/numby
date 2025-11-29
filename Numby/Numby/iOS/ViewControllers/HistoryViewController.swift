@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) || os(visionOS)
 import UIKit
 
 class HistoryViewController: UIViewController {
@@ -20,10 +20,18 @@ class HistoryViewController: UIViewController {
 
     private lazy var clearButton: UIBarButtonItem = {
         return UIBarButtonItem(
-            title: "Clear",
+            title: NSLocalizedString("nav.clear", comment: ""),
             style: .plain,
             target: self,
             action: #selector(clearHistory)
+        )
+    }()
+
+    private lazy var closeButton: UIBarButtonItem = {
+        return UIBarButtonItem(
+            barButtonSystemItem: .close,
+            target: self,
+            action: #selector(dismissHistory)
         )
     }()
 
@@ -31,7 +39,7 @@ class HistoryViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "History"
+        title = NSLocalizedString("history.title", comment: "")
         setupUI()
         loadHistory()
         updateTheme()
@@ -72,6 +80,7 @@ class HistoryViewController: UIViewController {
 
     private func setupUI() {
         view.backgroundColor = .systemBackground
+        navigationItem.leftBarButtonItem = closeButton
         navigationItem.rightBarButtonItem = clearButton
 
         view.addSubview(tableView)
@@ -82,6 +91,10 @@ class HistoryViewController: UIViewController {
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+
+        // Support multi-line cells for full expression/result display
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 60.0
     }
 
     // MARK: - Data
@@ -91,15 +104,19 @@ class HistoryViewController: UIViewController {
         tableView.reloadData()
     }
 
+    @objc private func dismissHistory() {
+        dismiss(animated: true)
+    }
+
     @objc private func clearHistory() {
         let alert = UIAlertController(
-            title: "Clear History",
-            message: "Are you sure you want to clear all history?",
+            title: NSLocalizedString("history.clearTitle", comment: ""),
+            message: NSLocalizedString("history.clearMessage", comment: ""),
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: NSLocalizedString("alert.cancel", comment: ""), style: .cancel))
+        alert.addAction(UIAlertAction(title: NSLocalizedString("nav.clear", comment: ""), style: .destructive) { [weak self] _ in
             Persistence.shared.clearHistory()
             self?.loadHistory()
         })
@@ -140,7 +157,9 @@ extension HistoryViewController: UITableViewDelegate, UITableViewDataSource {
 
         var config = cell.defaultContentConfiguration()
         config.text = entry.expression
+        config.textProperties.numberOfLines = 0
         config.secondaryText = "= \(entry.result)"
+        config.secondaryTextProperties.numberOfLines = 0
         cell.contentConfiguration = config
 
         return cell
@@ -150,16 +169,15 @@ extension HistoryViewController: UITableViewDelegate, UITableViewDataSource {
         tableView.deselectRow(at: indexPath, animated: true)
         let entry = historyEntries[indexPath.row]
 
-        // Copy result to pasteboard
-        UIPasteboard.general.string = entry.result
-
-        let alert = UIAlertController(
-            title: "Copied",
-            message: "Result copied to clipboard: \(entry.result)",
-            preferredStyle: .alert
+        // Load the note back to calculator input
+        NotificationCenter.default.post(
+            name: NSNotification.Name("LoadHistoryEntry"),
+            object: nil,
+            userInfo: ["expression": entry.expression]
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
+
+        // Dismiss history to return to calculator
+        dismiss(animated: true)
     }
 
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {

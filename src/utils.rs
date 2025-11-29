@@ -33,13 +33,46 @@ pub fn highlight_word_owned(
         || config.speed_units.contains_key(&lower)
     {
         Span::styled(word.to_string(), Style::default().fg(Color::Yellow).bold())
-    } else if config.currencies.contains_key(&clean_word.to_uppercase()) {
+    } else if config.currencies.contains_key(&clean_word.to_uppercase())
+        || is_currency_word(&lower)
+    {
         Span::styled(word.to_string(), Style::default().fg(Color::Magenta).bold())
     } else if is_datetime_keyword(&lower) || is_timezone_keyword(&lower, config) {
         Span::styled(word.to_string(), Style::default().fg(Color::Cyan).bold())
     } else {
         Span::raw(word.to_string())
     }
+}
+
+fn is_currency_word(word: &str) -> bool {
+    matches!(
+        word,
+        "dollar"
+            | "dollars"
+            | "euro"
+            | "euros"
+            | "pound"
+            | "pounds"
+            | "yen"
+            | "yuan"
+            | "rmb"
+            | "rupee"
+            | "rupees"
+            | "ruble"
+            | "rubles"
+            | "won"
+            | "franc"
+            | "francs"
+            | "peso"
+            | "pesos"
+            | "krona"
+            | "krone"
+            | "lira"
+            | "bitcoin"
+            | "btc"
+            | "ethereum"
+            | "eth"
+    )
 }
 
 fn is_datetime_keyword(word: &str) -> bool {

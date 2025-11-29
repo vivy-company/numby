@@ -21,53 +21,78 @@ struct CalculatorSurfaceView: View {
     @State private var updateTrigger: Int = 0
     @FocusState private var isViewFocused: Bool
 
+    @State private var showCopiedFeedback = false
+
     var body: some View {
         GeometryReader { geometry in
-            ScrollView {
-                HStack(spacing: 0) {
-                    // Left panel - Input (80%)
+            ZStack(alignment: .bottomTrailing) {
+                ScrollView {
+                    HStack(spacing: 0) {
+                        // Left panel - Input (80%)
+                        ZStack {
+                            Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
+                                .ignoresSafeArea()
+
+                            InputTextView(
+                                text: $instance.inputText,
+                                backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
+                                textColor: Theme.current.syntaxColor(for: .text),
+                                fontSize: configManager.config.fontSize,
+                                fontName: configManager.config.fontName ?? "SFMono-Regular",
+                                syntaxHighlighting: configManager.config.syntaxHighlighting,
+                                updateTrigger: updateTrigger
+                            )
+                        }
+                        .frame(width: geometry.size.width * 0.8)
+
+                        // Right panel - Results (20%)
+                        ZStack(alignment: .topTrailing) {
+                            Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
+                                .ignoresSafeArea()
+
+                            ResultsTextView(
+                                results: instance.results,
+                                textColor: Theme.current.syntaxColor(for: .results),
+                                backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
+                                fontSize: configManager.config.fontSize,
+                                fontName: configManager.config.fontName ?? "SFMono-Regular"
+                            )
+                            .padding(.top, 16)
+                            .padding(.trailing, 16)
+                        }
+                        .frame(width: geometry.size.width * 0.20)
+                    }
+                    .frame(minHeight: geometry.size.height)
+                }
+                .focusable()
+                .focused($isViewFocused)
+                .focusedValue(\.calculatorLeafId, leafId)
+                .onAppear {
+                    if isFocused {
+                        isViewFocused = true
+                    }
+                }
+
+                // Share button overlay
+                Button(action: shareAsImage) {
                     ZStack {
-                        Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
-                            .ignoresSafeArea()
-
-                        InputTextView(
-                            text: $instance.inputText,
-                            backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
-                            textColor: Theme.current.syntaxColor(for: .text),
-                            fontSize: configManager.config.fontSize,
-                            fontName: configManager.config.fontName ?? "SFMono-Regular",
-                            syntaxHighlighting: configManager.config.syntaxHighlighting,
-                            updateTrigger: updateTrigger
-                        )
+                        if showCopiedFeedback {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .medium))
+                        } else {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 12, weight: .medium))
+                        }
                     }
-                    .frame(width: geometry.size.width * 0.8)
-
-                    // Right panel - Results (20%)
-                    ZStack(alignment: .topTrailing) {
-                        Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
-                            .ignoresSafeArea()
-
-                        ResultsTextView(
-                            results: instance.results,
-                            textColor: Theme.current.syntaxColor(for: .results),
-                            backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
-                            fontSize: configManager.config.fontSize,
-                            fontName: configManager.config.fontName ?? "SFMono-Regular"
-                        )
-                        .padding(.top, 16)
-                        .padding(.trailing, 16)
-                    }
-                    .frame(width: geometry.size.width * 0.20)
+                    .foregroundColor(Color(nsColor: Theme.current.textColor).opacity(0.6))
+                    .frame(width: 28, height: 28)
+                    .background(Color(nsColor: Theme.current.backgroundColor).opacity(0.85))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: Theme.current.textColor).opacity(0.15), lineWidth: 0.5))
                 }
-                .frame(minHeight: geometry.size.height)
-            }
-            .focusable()
-            .focused($isViewFocused)
-            .focusedValue(\.calculatorLeafId, leafId)
-            .onAppear {
-                if isFocused {
-                    isViewFocused = true
-                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .help("Copy as image")
             }
         }
         .onChange(of: Theme.current) { _ in
@@ -75,6 +100,47 @@ struct CalculatorSurfaceView: View {
         }
         .onChange(of: configManager.config.backgroundColorHex) { _ in
             updateTrigger += 1
+        }
+    }
+
+    private func shareAsImage() {
+        // Build lines from current calculator content
+        let lines = instance.inputText.components(separatedBy: "\n")
+        var imageLines: [(expression: String, result: String)] = []
+
+        for (index, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && index < instance.results.count {
+                let result = instance.results[index] ?? ""
+                if !result.isEmpty {
+                    imageLines.append((expression: trimmed, result: result))
+                }
+            }
+        }
+
+        guard !imageLines.isEmpty else { return }
+
+        // Render image
+        guard let image = CalculatorImageRenderer.render(
+            lines: imageLines,
+            theme: Theme.current,
+            fontSize: configManager.config.fontSize,
+            fontName: configManager.config.fontName ?? "SFMono-Regular"
+        ) else { return }
+
+        // Copy to clipboard
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([image])
+
+        // Show feedback
+        withAnimation {
+            showCopiedFeedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                showCopiedFeedback = false
+            }
         }
     }
 }
@@ -368,7 +434,7 @@ struct InputTextView: NSViewRepresentable {
             }
         }
 
-        // Highlight operators
+        // Highlight operators (symbols)
         let operatorPattern = "[+\\-*/()^%]"
         if let regex = try? NSRegularExpression(pattern: operatorPattern) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
@@ -378,8 +444,18 @@ struct InputTextView: NSViewRepresentable {
             }
         }
 
-        // Highlight currency units
-        let currencyPattern = "\\b(USD|EUR|JPY|GBP|CNY|CHF|AUD|CAD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|HRK|RUB|TRY|BRL|MXN|ARS|CLP|COP|PEN|INR|IDR|MYR|PHP|THB|VND|KRW|TWD|HKD|SGD|ZAR|EGP|NGN|KES|GHS|XOF|XAF|MAD|TND|AED|SAR|QAR|KWD|BHD|OMR|ILS|JOD|LBP|IQD|IRR|AFN|PKR|BDT|NPR|LKR|MMK|KHR|LAK|MNT|KZT|UZS|TJS|KGS|TMT|GEL|AZN|AMD|BYN|MDL|UAH|RSD|MKD|ALL|BAM|ISK)\\b"
+        // Highlight word operators
+        let wordOperatorPattern = "\\b(plus|minus|times|multiplied by|divided by|divide by|subtract|and|with)\\b"
+        if let regex = try? NSRegularExpression(pattern: wordOperatorPattern, options: .caseInsensitive) {
+            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
+                if let range = match?.range {
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .operators), range: range)
+                }
+            }
+        }
+
+        // Highlight currency units (including crypto)
+        let currencyPattern = "\\b(USD|EUR|JPY|GBP|CNY|CHF|AUD|CAD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|HRK|RUB|TRY|BRL|MXN|ARS|CLP|COP|PEN|INR|IDR|MYR|PHP|THB|VND|KRW|TWD|HKD|SGD|ZAR|EGP|NGN|KES|GHS|XOF|XAF|MAD|TND|AED|SAR|QAR|KWD|BHD|OMR|ILS|JOD|LBP|IQD|IRR|AFN|PKR|BDT|NPR|LKR|MMK|KHR|LAK|MNT|KZT|UZS|TJS|KGS|TMT|GEL|AZN|AMD|BYN|MDL|UAH|RSD|MKD|ALL|BAM|ISK|BTC|ETH|BNB)\\b"
         if let regex = try? NSRegularExpression(pattern: currencyPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
@@ -388,9 +464,19 @@ struct InputTextView: NSViewRepresentable {
             }
         }
 
-        // Highlight measurement units
-        let unitPattern = "\\b(km|mi|m|cm|mm|ft|in|yd|kg|g|mg|lb|oz|ton|L|mL|gal|qt|pt|cup|tbsp|tsp|°C|°F|K|ms|s|min|h|day|week|month|year|Hz|kHz|MHz|GHz|b|B|KB|MB|GB|TB|W|kW|MW|V|A|mA|Ω|J|cal|kcal|Pa|bar|atm|psi|mph|kmh|kph)\\b"
+        // Highlight measurement units (extended)
+        let unitPattern = "\\b(km|mi|m|cm|mm|ft|in|yd|kg|g|mg|lb|oz|ton|L|mL|gal|qt|pt|cup|tbsp|tsp|°C|°F|K|ms|s|min|h|day|week|month|year|Hz|kHz|MHz|GHz|b|B|KB|MB|GB|TB|W|kW|MW|V|A|mA|Ω|J|cal|kcal|Pa|bar|atm|psi|mph|kmh|kph|meter|meters|centimeter|centimeters|millimeter|millimeters|kilometer|kilometers|foot|feet|inch|inches|yard|yards|mile|miles|sec|second|seconds|minute|minutes|hour|hours|days|weeks|months|years|kelvin|kelvins|celsius|fahrenheit|liter|liters|milliliter|milliliters|pint|pints|quart|quarts|gallon|gallons|teaspoon|teaspoons|tablespoon|tablespoons|gram|grams|kilogram|kilograms|tonne|tonnes|carat|carats|pound|pounds|stone|stones|ounce|ounces|bit|bits|byte|bytes|knot|knots|radian|radians|degree|degrees)\\b"
         if let regex = try? NSRegularExpression(pattern: unitPattern, options: .caseInsensitive) {
+            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
+                if let range = match?.range {
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .units), range: range)
+                }
+            }
+        }
+
+        // Highlight scales
+        let scalePattern = "\\b(k|kilo|thousand|M|mega|million|G|giga|billion|T|tera)\\b"
+        if let regex = try? NSRegularExpression(pattern: scalePattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
                     storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .units), range: range)
@@ -408,8 +494,18 @@ struct InputTextView: NSViewRepresentable {
             }
         }
 
+        // Highlight datetime keywords
+        let datetimePattern = "\\b(time|now|today|tomorrow|yesterday|ago|before|after|next|last|this|between)\\b"
+        if let regex = try? NSRegularExpression(pattern: datetimePattern, options: .caseInsensitive) {
+            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
+                if let range = match?.range {
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .keywords), range: range)
+                }
+            }
+        }
+
         // Highlight functions
-        let functionPattern = "\\b(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|sqrt|cbrt|ln|log|log10|log2|exp|abs|ceil|floor|round|min|max|pow|mod|gcd|lcm|factorial|rand|random)\\b"
+        let functionPattern = "\\b(sin|cos|tan|asin|acos|atan|arcsin|arccos|arctan|sinh|cosh|tanh|sqrt|cbrt|ln|log|log10|log2|exp|abs|ceil|floor|round|min|max|pow|mod|gcd|lcm|factorial|rand|random)\\b"
         if let regex = try? NSRegularExpression(pattern: functionPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {

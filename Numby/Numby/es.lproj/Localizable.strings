@@ -27,18 +27,18 @@
 
 /* Settings - CLI Section */
 "settings.cli.section" = "Herramienta de línea de comandos";
-"settings.cli.installViaHomebrew" = "Instalar vía Homebrew:";
+"settings.cli.installViaCargo" = "Instalar vía Cargo (Rust):";
 "settings.cli.copyTooltip" = "Copiar al portapapeles";
-"settings.cli.installHomebrew" = "Instalar Homebrew";
-"settings.cli.orDownload" = "O descargar desde las versiones de GitHub";
+"settings.cli.installRust" = "Instalar Rust";
+"settings.cli.orInstaller" = "O usar el script de instalación automática:";
+"settings.cli.orDownload" = "O descargar desde las versiones de GitHub:";
 "settings.cli.githubReleases" = "Versiones de GitHub";
 
 /* CLI Installer Window */
 "cliInstaller.title" = "Herramienta de línea de comandos";
 "cliInstaller.subtitle" = "Usa numby desde tu terminal";
-"cliInstaller.installViaHomebrew" = "Instalar vía Homebrew";
 "cliInstaller.runCommand" = "Ejecuta este comando en tu terminal:";
-"cliInstaller.noHomebrew" = "Si no tienes Homebrew instalado:";
+"cliInstaller.noRust" = "Si no tienes Rust instalado:";
 "cliInstaller.alternative" = "Alternativa: Instalación manual";
 "cliInstaller.downloadRelease" = "Descarga la última versión:";
 "cliInstaller.moveToPath" = "Luego muévelo a tu PATH:";
@@ -126,3 +126,20 @@
 "alert.saveAndClose" = "Guardar y cerrar";
 "alert.closeWithoutSavingButton" = "Cerrar sin guardar";
 "alert.cancel" = "Cancelar";
+"alert.updateFailed" = "Error de actualización";
+"alert.currencyUpdateError" = "No se pudieron actualizar las tasas de cambio. Verifique su conexión a Internet.";
+
+/* iOS Settings */
+"settings.title" = "Ajustes";
+"settings.language.openSettings" = "Abrir ajustes";
+"settings.about.section" = "Acerca de";
+"settings.about.version" = "Versión";
+"settings.about.github" = "GitHub";
+"settings.theme.select" = "Seleccionar tema";
+"settings.font.select" = "Seleccionar fuente";
+
+/* iOS Navigation */
+"nav.new" = "Nuevo";
+"nav.history" = "Historial";
+"nav.done" = "Listo";
+"nav.close" = "Cerrar";
