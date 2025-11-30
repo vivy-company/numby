@@ -177,8 +177,8 @@ export default function Share() {
             <div
               className="h-10 flex items-center px-4 gap-2"
               style={{
-                background: adjustColor(theme.background, 0.08),
-                borderBottom: `1px solid ${theme.text}20`,
+                background: theme.background,
+                borderBottom: `1px solid ${theme.text}15`,
               }}
             >
               {/* Traffic Lights */}
