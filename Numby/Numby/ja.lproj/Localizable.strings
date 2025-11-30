@@ -143,3 +143,21 @@
 "nav.history" = "履歴";
 "nav.done" = "完了";
 "nav.close" = "閉じる";
+"nav.clear" = "消去";
+
+/* iOS History */
+"history.title" = "履歴";
+"history.clearTitle" = "履歴を消去";
+"history.clearMessage" = "すべての履歴を消去してもよろしいですか？";
+
+/* File Operations */
+"file.export.title" = "計算機を書き出す";
+"file.export.message" = "計算機の保存先を選択してください";
+"file.export.saveAs" = "名前:";
+"file.export.failed" = "書き出しに失敗しました";
+"file.export.error" = "ファイルを保存できませんでした: %@";
+"file.import.title" = "計算機を開く";
+"file.import.message" = "開く計算機ファイルを選択してください";
+"file.import.failed" = "読み込みに失敗しました";
+"file.import.error" = "ファイルを読み込めませんでした: %@";
+"file.untitled" = "名称未設定";

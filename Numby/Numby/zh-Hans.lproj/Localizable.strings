@@ -143,3 +143,21 @@
 "nav.history" = "历史";
 "nav.done" = "完成";
 "nav.close" = "关闭";
+"nav.clear" = "清除";
+
+/* iOS History */
+"history.title" = "历史记录";
+"history.clearTitle" = "清除历史记录";
+"history.clearMessage" = "确定要清除所有历史记录吗？";
+
+/* File Operations */
+"file.export.title" = "导出计算器";
+"file.export.message" = "选择保存计算器的位置";
+"file.export.saveAs" = "存储为:";
+"file.export.failed" = "导出失败";
+"file.export.error" = "无法保存文件: %@";
+"file.import.title" = "打开计算器";
+"file.import.message" = "选择要打开的计算器文件";
+"file.import.failed" = "导入失败";
+"file.import.error" = "无法读取文件: %@";
+"file.untitled" = "未命名";

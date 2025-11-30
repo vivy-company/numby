@@ -143,3 +143,21 @@
 "nav.history" = "Historique";
 "nav.done" = "Terminé";
 "nav.close" = "Fermer";
+"nav.clear" = "Effacer";
+
+/* iOS History */
+"history.title" = "Historique";
+"history.clearTitle" = "Effacer l'historique";
+"history.clearMessage" = "Voulez-vous vraiment effacer tout l'historique ?";
+
+/* File Operations */
+"file.export.title" = "Exporter la calculatrice";
+"file.export.message" = "Choisissez un emplacement pour enregistrer votre calculatrice";
+"file.export.saveAs" = "Enregistrer sous :";
+"file.export.failed" = "Échec de l'exportation";
+"file.export.error" = "Impossible d'enregistrer le fichier : %@";
+"file.import.title" = "Ouvrir la calculatrice";
+"file.import.message" = "Choisissez un fichier calculatrice à ouvrir";
+"file.import.failed" = "Échec de l'importation";
+"file.import.error" = "Impossible de lire le fichier : %@";
+"file.untitled" = "Sans titre";

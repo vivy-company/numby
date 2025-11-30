@@ -149,3 +149,15 @@
 "history.title" = "History";
 "history.clearTitle" = "Clear History";
 "history.clearMessage" = "Are you sure you want to clear all history?";
+
+/* File Operations */
+"file.export.title" = "Export Calculator";
+"file.export.message" = "Choose a location to save your calculator";
+"file.export.saveAs" = "Save as:";
+"file.export.failed" = "Export Failed";
+"file.export.error" = "Could not save file: %@";
+"file.import.title" = "Open Calculator";
+"file.import.message" = "Choose a calculator file to open";
+"file.import.failed" = "Import Failed";
+"file.import.error" = "Could not read file: %@";
+"file.untitled" = "Untitled";

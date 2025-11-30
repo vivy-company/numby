@@ -149,3 +149,15 @@
 "history.title" = "Гісторыя";
 "history.clearTitle" = "Ачысціць гісторыю";
 "history.clearMessage" = "Вы ўпэўнены, што хочаце ачысціць усю гісторыю?";
+
+/* File Operations */
+"file.export.title" = "Экспартаваць калькулятар";
+"file.export.message" = "Выберыце месца для захавання калькулятара";
+"file.export.saveAs" = "Захаваць як:";
+"file.export.failed" = "Памылка экспарту";
+"file.export.error" = "Не атрымалася захаваць файл: %@";
+"file.import.title" = "Адкрыць калькулятар";
+"file.import.message" = "Выберыце файл калькулятара для адкрыцця";
+"file.import.failed" = "Памылка імпарту";
+"file.import.error" = "Не атрымалася прачытаць файл: %@";
+"file.untitled" = "Без назвы";

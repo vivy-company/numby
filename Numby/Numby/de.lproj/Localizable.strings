@@ -143,3 +143,21 @@
 "nav.history" = "Verlauf";
 "nav.done" = "Fertig";
 "nav.close" = "Schließen";
+"nav.clear" = "Löschen";
+
+/* iOS History */
+"history.title" = "Verlauf";
+"history.clearTitle" = "Verlauf löschen";
+"history.clearMessage" = "Sind Sie sicher, dass Sie den gesamten Verlauf löschen möchten?";
+
+/* File Operations */
+"file.export.title" = "Rechner exportieren";
+"file.export.message" = "Wählen Sie einen Speicherort für Ihren Rechner";
+"file.export.saveAs" = "Speichern als:";
+"file.export.failed" = "Export fehlgeschlagen";
+"file.export.error" = "Datei konnte nicht gespeichert werden: %@";
+"file.import.title" = "Rechner öffnen";
+"file.import.message" = "Wählen Sie eine Rechner-Datei zum Öffnen";
+"file.import.failed" = "Import fehlgeschlagen";
+"file.import.error" = "Datei konnte nicht gelesen werden: %@";
+"file.untitled" = "Unbenannt";

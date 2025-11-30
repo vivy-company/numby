@@ -149,3 +149,15 @@
 "history.title" = "История";
 "history.clearTitle" = "Очистить историю";
 "history.clearMessage" = "Вы уверены, что хотите очистить всю историю?";
+
+/* File Operations */
+"file.export.title" = "Экспортировать калькулятор";
+"file.export.message" = "Выберите место для сохранения калькулятора";
+"file.export.saveAs" = "Сохранить как:";
+"file.export.failed" = "Ошибка экспорта";
+"file.export.error" = "Не удалось сохранить файл: %@";
+"file.import.title" = "Открыть калькулятор";
+"file.import.message" = "Выберите файл калькулятора для открытия";
+"file.import.failed" = "Ошибка импорта";
+"file.import.error" = "Не удалось прочитать файл: %@";
+"file.untitled" = "Без названия";

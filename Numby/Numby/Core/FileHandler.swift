@@ -30,10 +30,10 @@ class FileHandler {
         }
 
         let savePanel = NSSavePanel()
-        savePanel.title = "Export Calculator"
-        savePanel.message = "Choose a location to save your calculator"
-        savePanel.nameFieldLabel = "Save as:"
-        savePanel.nameFieldStringValue = (defaultName ?? "Untitled") + ".numby"
+        savePanel.title = NSLocalizedString("file.export.title", comment: "")
+        savePanel.message = NSLocalizedString("file.export.message", comment: "")
+        savePanel.nameFieldLabel = NSLocalizedString("file.export.saveAs", comment: "")
+        savePanel.nameFieldStringValue = (defaultName ?? NSLocalizedString("file.untitled", comment: "")) + ".numby"
 
         // Use registered UTType
         if let numbyType = UTType("vivy.app.numby") {
@@ -60,7 +60,7 @@ class FileHandler {
             try content.write(to: fileURL, atomically: true, encoding: .utf8)
             return fileURL
         } catch {
-            showError(title: "Export Failed", message: "Could not save file: \(error.localizedDescription)", window: window)
+            showError(title: NSLocalizedString("file.export.failed", comment: ""), message: String(format: NSLocalizedString("file.export.error", comment: ""), error.localizedDescription), window: window)
             return nil
         }
     }
@@ -77,8 +77,8 @@ class FileHandler {
         }
 
         let openPanel = NSOpenPanel()
-        openPanel.title = "Open Calculator"
-        openPanel.message = "Choose a calculator file to open"
+        openPanel.title = NSLocalizedString("file.import.title", comment: "")
+        openPanel.message = NSLocalizedString("file.import.message", comment: "")
 
         // Use registered UTType
         if let numbyType = UTType("vivy.app.numby") {
@@ -106,7 +106,7 @@ class FileHandler {
             let content = try String(contentsOf: fileURL, encoding: .utf8)
             return content
         } catch {
-            showError(title: "Import Failed", message: "Could not read file: \(error.localizedDescription)", window: window)
+            showError(title: NSLocalizedString("file.import.failed", comment: ""), message: String(format: NSLocalizedString("file.import.error", comment: ""), error.localizedDescription), window: window)
             return nil
         }
     }
@@ -117,7 +117,7 @@ class FileHandler {
         alert.messageText = title
         alert.informativeText = message
         alert.alertStyle = .critical
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: NSLocalizedString("alert.ok", comment: ""))
 
         if let window = window {
             alert.beginSheetModal(for: window)
