@@ -3,6 +3,7 @@ import { decodeShareData, type SharePayload } from "../lib/share";
 import { highlightExpression } from "../lib/highlight";
 import type { SyntaxColors, ThemeMap } from "../lib/types";
 import themes from "../themes.json";
+import logoUrl from "../logo.png";
 
 const THEMES = themes as ThemeMap;
 const DEFAULT_THEME = "Catppuccin Mocha";
@@ -133,7 +134,7 @@ export default function Share() {
       {/* Header */}
       <header className="p-4 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="Numby" className="w-8 h-8 rounded" />
+          <img src={logoUrl} alt="Numby" className="w-8 h-8 rounded" />
           <span className="font-semibold" style={{ color: theme.text }}>
             Numby
           </span>
