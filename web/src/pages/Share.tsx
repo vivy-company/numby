@@ -167,7 +167,7 @@ export default function Share() {
           {/* Calculator Window */}
           <div
             ref={previewRef}
-            className="rounded-xl overflow-hidden shadow-2xl"
+            className="rounded-3xl overflow-hidden shadow-2xl"
             style={{
               background: theme.background,
               boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.4)`,
