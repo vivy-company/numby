@@ -86,25 +86,23 @@ struct CalculatorImageRenderer {
         return image
 
         #elseif os(iOS) || os(visionOS)
-        let size = CGSize(width: totalWidth * scale, height: totalHeight * scale)
-        UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
-        guard let context = UIGraphicsGetCurrentContext() else {
-            UIGraphicsEndImageContext()
-            return nil
+        let size = CGSize(width: totalWidth, height: totalHeight)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        format.opaque = false
+
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        let image = renderer.image { rendererContext in
+            let context = rendererContext.cgContext
+
+            drawFrameIOS(
+                context: context,
+                frameRect: CGRect(x: shadowPadding, y: shadowPadding, width: frameWidth, height: frameHeight),
+                theme: theme,
+                titleFont: titleFont,
+                attributedContent: attributedContent
+            )
         }
-
-        context.scaleBy(x: scale, y: scale)
-
-        drawFrameIOS(
-            context: context,
-            frameRect: CGRect(x: shadowPadding, y: shadowPadding, width: frameWidth, height: frameHeight),
-            theme: theme,
-            titleFont: titleFont,
-            attributedContent: attributedContent
-        )
-
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
         return image
         #endif
     }

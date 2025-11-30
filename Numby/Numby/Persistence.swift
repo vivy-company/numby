@@ -25,8 +25,7 @@ struct PersistenceController {
         do {
             try viewContext.save()
         } catch {
-            let nsError = error as NSError
-            print("Preview Core Data error: \(nsError), \(nsError.userInfo)")
+            // Preview context save failed - non-fatal
         }
         return result
     }()
@@ -42,10 +41,7 @@ struct PersistenceController {
             container.persistentStoreDescriptions.first?.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
         }
         container.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            if let error = error as NSError? {
-                // Log error but don't crash - CloudKit may not be available in simulator
-                print("Core Data error: \(error), \(error.userInfo)")
-            }
+            // CloudKit may not be available in simulator - non-fatal
         })
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
@@ -93,7 +89,6 @@ class Persistence {
                 return (expression: expr, result: res)
             }
         } catch {
-            print("Error fetching history: \(error)")
             return []
         }
     }
@@ -106,7 +101,7 @@ class Persistence {
             try context.execute(delete)
             try context.save()
         } catch {
-            print("Error clearing history: \(error)")
+            // Clear history failed - non-fatal
         }
     }
 

@@ -275,9 +275,6 @@ struct SettingsView: View {
                 isUpdatingRates = false
                 if success {
                     loadCurrencyRatesInfo()
-                    print(NSLocalizedString("settings.currency.success", comment: ""))
-                } else {
-                    print(NSLocalizedString("settings.currency.failed", comment: ""))
                 }
             }
         }

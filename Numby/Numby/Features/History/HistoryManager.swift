@@ -65,7 +65,6 @@ class HistoryManager: ObservableObject {
         do {
             sessions = try viewContext.fetch(request)
         } catch {
-            print("Failed to fetch sessions: \(error)")
             sessions = []
         }
     }
@@ -110,7 +109,7 @@ class HistoryManager: ObservableObject {
             try viewContext.save()
             fetchSessions()
         } catch {
-            print("Failed to save session: \(error)")
+            // Save failed - non-fatal
         }
     }
 
@@ -122,7 +121,7 @@ class HistoryManager: ObservableObject {
             try viewContext.save()
             fetchSessions()
         } catch {
-            print("Failed to update session name: \(error)")
+            // Update failed - non-fatal
         }
     }
 
@@ -134,7 +133,7 @@ class HistoryManager: ObservableObject {
             try viewContext.save()
             fetchSessions()
         } catch {
-            print("Failed to delete session: \(error)")
+            // Delete failed - non-fatal
         }
     }
 
@@ -146,7 +145,6 @@ class HistoryManager: ObservableObject {
             let decoder = JSONDecoder()
             return try decoder.decode(CalculatorSessionSnapshot.self, from: data)
         } catch {
-            print("Failed to restore session: \(error)")
             return nil
         }
     }
