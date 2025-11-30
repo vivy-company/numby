@@ -16,6 +16,7 @@ export default function Share() {
   const [payload, setPayload] = useState<SharePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,11 +72,20 @@ export default function Share() {
   };
 
   const share = async () => {
+    if (isSharing) return;
+
     if (navigator.share) {
-      await navigator.share({
-        title: "Numby Calculation",
-        url: window.location.href,
-      });
+      try {
+        setIsSharing(true);
+        await navigator.share({
+          title: "Numby Calculation",
+          url: window.location.href,
+        });
+      } catch (e) {
+        // User cancelled or share failed - ignore
+      } finally {
+        setIsSharing(false);
+      }
     } else {
       await copyLink();
     }
