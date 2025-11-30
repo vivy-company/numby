@@ -189,6 +189,11 @@ extension String {
     func localized(comment: String = "") -> String {
         return Configuration.shared.localizedString(self, comment: comment)
     }
+
+    /// Property-style access for localized strings (e.g., `"menu.file".localized`)
+    var localized: String {
+        return self.localized(comment: "")
+    }
 }
 
 // MARK: - PlatformColor Hex Extensions

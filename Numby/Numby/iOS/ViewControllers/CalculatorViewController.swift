@@ -235,7 +235,20 @@ class CalculatorViewController: UIViewController {
 
     private var evalWorkItem: DispatchWorkItem?
     private let evalQueue = DispatchQueue(label: "numby.eval", qos: .userInitiated)
-    private var currentEvalID: Int = 0
+    private let evalIDQueue = DispatchQueue(label: "numby.eval.id", qos: .userInitiated)
+    private var _currentEvalID: Int = 0
+
+    // Thread-safe eval ID access to avoid races between main and background queues
+    private var currentEvalID: Int {
+        evalIDQueue.sync { _currentEvalID }
+    }
+
+    private func nextEvalID() -> Int {
+        evalIDQueue.sync {
+            _currentEvalID += 1
+            return _currentEvalID
+        }
+    }
 
     private func scheduleEvaluation() {
         evalWorkItem?.cancel()
@@ -250,8 +263,7 @@ class CalculatorViewController: UIViewController {
     private func evaluate() {
         let text = textView.text ?? ""
         let lines = text.components(separatedBy: .newlines)
-        currentEvalID += 1
-        let evalID = currentEvalID
+        let evalID = nextEvalID()
 
         evalQueue.async { [weak self] in
             guard let self = self else { return }

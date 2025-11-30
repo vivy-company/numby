@@ -63,11 +63,11 @@ class Persistence {
     func addHistoryEntry(expression: String, result: String) {
         let context = container.viewContext
         let session = CalculationSession(context: context)
-        session.id = NSUUID()
-        session.timestamp = NSDate()
+        session.swiftId = UUID()
+        session.swiftTimestamp = Date()
         let txt = "\(expression)\n= \(result)"
         if let data = txt.data(using: .utf8) {
-            session.sessionData = NSData(data: data)
+            session.swiftSessionData = data
         }
         session.searchableText = txt
         try? context.save()
