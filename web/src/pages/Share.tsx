@@ -176,10 +176,7 @@ export default function Share() {
             {/* Title Bar */}
             <div
               className="h-10 flex items-center px-4 gap-2"
-              style={{
-                background: theme.background,
-                borderBottom: `1px solid ${theme.text}15`,
-              }}
+              style={{ background: theme.background }}
             >
               {/* Traffic Lights */}
               <div className="flex gap-2">
