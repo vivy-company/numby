@@ -31,12 +31,6 @@
       "size" : "1024x1024"
     },
     {
-      "filename" : "Icon-visionOS-1024x1024.png",
-      "idiom" : "reality",
-      "platform" : "vision",
-      "size" : "1024x1024"
-    },
-    {
       "filename" : "Icon-macOS-Dark-16x16@1x.png",
       "idiom" : "mac",
       "scale" : "1x",
