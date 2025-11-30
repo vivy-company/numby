@@ -66,6 +66,7 @@ struct Theme: Codable, Hashable {
         var updatedConfig = Configuration.shared.config
         updatedConfig.backgroundColor = bgColor
         Configuration.shared.config = updatedConfig
+        Configuration.shared.save()
 
         #if os(macOS)
         // Update all windows on macOS

@@ -89,6 +89,9 @@ struct SettingsView: View {
                 HStack {
                     Text(localizedFontSize)
                     Slider(value: $configManager.config.fontSize, in: 10...24, step: 1)
+                        .onChange(of: configManager.config.fontSize) { _ in
+                            configManager.save()
+                        }
                     Text("\(Int(configManager.config.fontSize)) pt")
                         .frame(width: 50)
                 }
