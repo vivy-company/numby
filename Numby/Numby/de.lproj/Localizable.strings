@@ -161,3 +161,11 @@
 "file.import.failed" = "Import fehlgeschlagen";
 "file.import.error" = "Datei konnte nicht gelesen werden: %@";
 "file.untitled" = "Unbenannt";
+
+
+/* Share */
+"share.title" = "Teilen";
+"share.copyText" = "Als Text kopieren";
+"share.copyImage" = "Als Bild kopieren";
+"share.copyLink" = "Als Link kopieren";
+"nav.cancel" = "Abbrechen";

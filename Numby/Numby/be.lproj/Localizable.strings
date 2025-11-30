@@ -161,3 +161,11 @@
 "file.import.failed" = "Памылка імпарту";
 "file.import.error" = "Не атрымалася прачытаць файл: %@";
 "file.untitled" = "Без назвы";
+
+
+/* Share */
+"share.title" = "Падзяліцца";
+"share.copyText" = "Капіяваць як тэкст";
+"share.copyImage" = "Капіяваць як выяву";
+"share.copyLink" = "Капіяваць як спасылку";
+"nav.cancel" = "Адмена";

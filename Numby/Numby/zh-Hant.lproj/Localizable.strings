@@ -161,3 +161,11 @@
 "file.import.failed" = "匯入失敗";
 "file.import.error" = "無法讀取檔案: %@";
 "file.untitled" = "未命名";
+
+
+/* Share */
+"share.title" = "分享";
+"share.copyText" = "複製為文字";
+"share.copyImage" = "複製為圖片";
+"share.copyLink" = "複製為連結";
+"nav.cancel" = "取消";

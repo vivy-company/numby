@@ -447,41 +447,61 @@ class CalculatorViewController: UIViewController {
         guard !text.isEmpty else { return }
 
         let lines = text.components(separatedBy: "\n")
-        var output: [String] = []
         var imageLines: [(expression: String, result: String)] = []
 
         for (index, line) in lines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if !trimmed.isEmpty && index < results.count && !results[index].isEmpty {
-                output.append("\(trimmed) → \(results[index])")
                 imageLines.append((expression: trimmed, result: results[index]))
             }
         }
 
-        guard !output.isEmpty else { return }
-        let shareText = output.joined(separator: "\n")
+        guard !imageLines.isEmpty else { return }
 
-        var items: [Any] = []
+        // Show custom share sheet
+        let alert = UIAlertController(title: NSLocalizedString("share.title", comment: "Share"), message: nil, preferredStyle: .actionSheet)
 
-        // Render styled image (put first so it's the primary share item)
-        let config = Configuration.shared.config
-        if let image = CalculatorImageRenderer.render(
-            lines: imageLines,
-            theme: Theme.current,
-            fontSize: config.fontSize,
-            fontName: config.fontName ?? "Menlo-Regular"
-        ) {
-            items.append(image)
-        }
+        // Copy as Text
+        alert.addAction(UIAlertAction(title: NSLocalizedString("share.copyText", comment: "Copy as Text"), style: .default) { [weak self] _ in
+            let shareText = ShareURLGenerator.generateText(lines: imageLines)
+            UIPasteboard.general.string = shareText
+            self?.showCopiedFeedback()
+        })
 
-        // Also include text as fallback
-        items.append(shareText)
+        // Copy as Image
+        alert.addAction(UIAlertAction(title: NSLocalizedString("share.copyImage", comment: "Copy as Image"), style: .default) { [weak self] _ in
+            let config = Configuration.shared.config
+            if let image = CalculatorImageRenderer.render(
+                lines: imageLines,
+                theme: Theme.current,
+                fontSize: config.fontSize,
+                fontName: config.fontName ?? "Menlo-Regular"
+            ) {
+                UIPasteboard.general.image = image
+                self?.showCopiedFeedback()
+            }
+        })
 
-        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        if let popover = activityVC.popoverPresentationController {
+        // Copy as Link
+        alert.addAction(UIAlertAction(title: NSLocalizedString("share.copyLink", comment: "Copy as Link"), style: .default) { [weak self] _ in
+            let url = ShareURLGenerator.generate(lines: imageLines, theme: Theme.current.name)
+            UIPasteboard.general.string = url.absoluteString
+            self?.showCopiedFeedback()
+        })
+
+        alert.addAction(UIAlertAction(title: NSLocalizedString("nav.cancel", comment: "Cancel"), style: .cancel))
+
+        // iPad popover
+        if let popover = alert.popoverPresentationController {
             popover.barButtonItem = navigationItem.rightBarButtonItems?.last
         }
-        present(activityVC, animated: true)
+
+        present(alert, animated: true)
+    }
+
+    private func showCopiedFeedback() {
+        let feedback = UINotificationFeedbackGenerator()
+        feedback.notificationOccurred(.success)
     }
 
     @objc private func loadHistoryEntry(_ notification: Notification) {

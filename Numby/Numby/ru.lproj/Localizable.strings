@@ -161,3 +161,11 @@
 "file.import.failed" = "Ошибка импорта";
 "file.import.error" = "Не удалось прочитать файл: %@";
 "file.untitled" = "Без названия";
+
+
+/* Share */
+"share.title" = "Поделиться";
+"share.copyText" = "Копировать как текст";
+"share.copyImage" = "Копировать как изображение";
+"share.copyLink" = "Копировать как ссылку";
+"nav.cancel" = "Отмена";

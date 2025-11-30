@@ -161,3 +161,10 @@
 "file.import.failed" = "Import Failed";
 "file.import.error" = "Could not read file: %@";
 "file.untitled" = "Untitled";
+
+/* Share */
+"share.title" = "Share";
+"share.copyText" = "Copy as Text";
+"share.copyImage" = "Copy as Image";
+"share.copyLink" = "Copy as Link";
+"nav.cancel" = "Cancel";

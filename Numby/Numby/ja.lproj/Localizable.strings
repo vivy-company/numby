@@ -161,3 +161,11 @@
 "file.import.failed" = "読み込みに失敗しました";
 "file.import.error" = "ファイルを読み込めませんでした: %@";
 "file.untitled" = "名称未設定";
+
+
+/* Share */
+"share.title" = "共有";
+"share.copyText" = "テキストとしてコピー";
+"share.copyImage" = "画像としてコピー";
+"share.copyLink" = "リンクとしてコピー";
+"nav.cancel" = "キャンセル";

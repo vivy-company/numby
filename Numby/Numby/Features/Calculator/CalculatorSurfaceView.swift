@@ -73,8 +73,18 @@ struct CalculatorSurfaceView: View {
                     }
                 }
 
-                // Share button overlay
-                Button(action: shareAsImage) {
+                // Share button overlay with menu
+                Menu {
+                    Button(action: copyAsText) {
+                        Label("Copy as Text", systemImage: "doc.on.doc")
+                    }
+                    Button(action: copyAsImage) {
+                        Label("Copy as Image", systemImage: "photo")
+                    }
+                    Button(action: copyAsLink) {
+                        Label("Copy as Link", systemImage: "link")
+                    }
+                } label: {
                     ZStack {
                         if showCopiedFeedback {
                             Image(systemName: "checkmark")
@@ -90,9 +100,10 @@ struct CalculatorSurfaceView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: Theme.current.textColor).opacity(0.15), lineWidth: 0.5))
                 }
-                .buttonStyle(.plain)
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
                 .padding(12)
-                .help("Copy as image")
+                .help("Share calculation")
             }
         }
         .onChange(of: Theme.current) { _ in
@@ -103,8 +114,7 @@ struct CalculatorSurfaceView: View {
         }
     }
 
-    private func shareAsImage() {
-        // Build lines from current calculator content
+    private func getShareableLines() -> [(expression: String, result: String)] {
         let lines = instance.inputText.components(separatedBy: "\n")
         var imageLines: [(expression: String, result: String)] = []
 
@@ -118,9 +128,25 @@ struct CalculatorSurfaceView: View {
             }
         }
 
+        return imageLines
+    }
+
+    private func copyAsText() {
+        let imageLines = getShareableLines()
         guard !imageLines.isEmpty else { return }
 
-        // Render image
+        let text = ShareURLGenerator.generateText(lines: imageLines)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        showFeedback()
+    }
+
+    private func copyAsImage() {
+        let imageLines = getShareableLines()
+        guard !imageLines.isEmpty else { return }
+
         guard let image = CalculatorImageRenderer.render(
             lines: imageLines,
             theme: Theme.current,
@@ -128,12 +154,26 @@ struct CalculatorSurfaceView: View {
             fontName: configManager.config.fontName ?? "SFMono-Regular"
         ) else { return }
 
-        // Copy to clipboard
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.writeObjects([image])
 
-        // Show feedback
+        showFeedback()
+    }
+
+    private func copyAsLink() {
+        let imageLines = getShareableLines()
+        guard !imageLines.isEmpty else { return }
+
+        let url = ShareURLGenerator.generate(lines: imageLines, theme: Theme.current.name)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(url.absoluteString, forType: .string)
+
+        showFeedback()
+    }
+
+    private func showFeedback() {
         withAnimation {
             showCopiedFeedback = true
         }
