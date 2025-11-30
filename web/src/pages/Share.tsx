@@ -186,16 +186,17 @@ export default function Share() {
           {/* Calculator Window */}
           <div
             ref={previewRef}
-            className="rounded-3xl overflow-hidden shadow-2xl"
+            className="overflow-hidden shadow-2xl"
             style={{
               background: theme.background,
               boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.4)`,
               border: `1px solid ${theme.text}20`,
+              borderRadius: "18px",
             }}
           >
-            {/* Title Bar */}
+            {/* Title Bar with Traffic Lights */}
             <div
-              className="h-10 flex items-center px-4 gap-2"
+              className="h-12 flex items-center px-5 relative"
               style={{ background: theme.background }}
             >
               {/* Traffic Lights */}
@@ -204,17 +205,17 @@ export default function Share() {
                 <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
                 <div className="w-3 h-3 rounded-full bg-[#28C840]" />
               </div>
+              {/* Title centered in the entire bar */}
               <span
-                className="flex-1 text-center text-sm font-medium"
+                className="absolute left-0 right-0 text-center text-sm font-medium pointer-events-none"
                 style={{ color: theme.text }}
               >
                 Numby
               </span>
-              <div className="w-14" /> {/* Spacer for balance */}
             </div>
 
             {/* Content */}
-            <div className="p-5 font-mono text-sm leading-relaxed">
+            <div className="px-5 pb-5 font-mono text-sm leading-relaxed">
               {payload.l.map(([expr, result], i) => (
                 <div key={i} className="flex justify-between gap-8 py-0.5">
                   <span>
