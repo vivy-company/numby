@@ -110,22 +110,22 @@ class SearchablePickerViewController: UIViewController {
     }
 
     private func updateTheme() {
-        let darkBg = UIColor(red: 28/255, green: 28/255, blue: 30/255, alpha: 1) // iOS dark mode background
-        let darkSecondary = UIColor(red: 44/255, green: 44/255, blue: 46/255, alpha: 1)
+        let theme = Theme.current
+        let secondaryBg = theme.textColor.withAlphaComponent(0.1)
 
-        view.backgroundColor = darkBg
-        tableView.backgroundColor = darkBg
-        searchBar.barTintColor = darkBg
+        view.backgroundColor = theme.backgroundColor
+        tableView.backgroundColor = theme.backgroundColor
+        searchBar.barTintColor = theme.backgroundColor
         searchBar.searchBarStyle = .minimal
         searchBar.tintColor = .systemBlue
-        searchBar.searchTextField.backgroundColor = darkSecondary
-        searchBar.searchTextField.textColor = .white
+        searchBar.searchTextField.backgroundColor = secondaryBg
+        searchBar.searchTextField.textColor = theme.textColor
         searchBar.searchTextField.tintColor = .systemBlue
 
-        // Force navigation bar dark
-        navigationController?.navigationBar.barTintColor = darkBg
-        navigationController?.navigationBar.backgroundColor = darkBg
-        navigationController?.navigationBar.titleTextAttributes = [.foregroundColor: UIColor.white]
+        // Force navigation bar to match theme
+        navigationController?.navigationBar.barTintColor = theme.backgroundColor
+        navigationController?.navigationBar.backgroundColor = theme.backgroundColor
+        navigationController?.navigationBar.titleTextAttributes = [.foregroundColor: theme.textColor]
 
         tableView.reloadData()
     }
@@ -147,13 +147,11 @@ extension SearchablePickerViewController: UITableViewDelegate, UITableViewDataSo
         cell.accessoryType = (item == selectedItem) ? .checkmark : .none
         cell.tintColor = .systemBlue
 
-        // Hardcoded dark colors
-        let darkBg = UIColor(red: 28/255, green: 28/255, blue: 30/255, alpha: 1)
-        let darkSelected = UIColor(red: 58/255, green: 58/255, blue: 60/255, alpha: 1)
-        cell.backgroundColor = darkBg
+        let theme = Theme.current
+        cell.backgroundColor = theme.backgroundColor
         cell.selectedBackgroundView = UIView()
-        cell.selectedBackgroundView?.backgroundColor = darkSelected
-        cell.textLabel?.textColor = .white
+        cell.selectedBackgroundView?.backgroundColor = theme.textColor.withAlphaComponent(0.15)
+        cell.textLabel?.textColor = theme.textColor
 
         return cell
     }

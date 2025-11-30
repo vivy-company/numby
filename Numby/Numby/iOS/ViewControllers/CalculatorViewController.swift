@@ -472,14 +472,10 @@ class CalculatorViewController: UIViewController {
             fontName: config.fontName ?? "Menlo-Regular"
         ) {
             items.append(image)
-            print("[Numby] Image rendered: \(image.size)")
-        } else {
-            print("[Numby] Image render FAILED")
         }
 
         // Also include text as fallback
         items.append(shareText)
-        print("[Numby] Sharing \(items.count) items")
 
         let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
         if let popover = activityVC.popoverPresentationController {
@@ -517,7 +513,6 @@ class ResultsOverlayView: UIView {
         let textStorage = textView.textStorage
         let insets = textView.textContainerInset
         let rightPadding: CGFloat = 16
-        let minGap: CGFloat = 20
 
         while labels.count < results.count {
             let label = UILabel()

@@ -538,8 +538,6 @@ class SliderCell: UITableViewCell {
     }
 }
 
-// MARK: - Custom Cells
-
 class SwitchCell: UITableViewCell {
     private let iconView = UIImageView()
     private let titleLabel = UILabel()
