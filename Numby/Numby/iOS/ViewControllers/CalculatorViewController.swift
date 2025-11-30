@@ -512,8 +512,10 @@ class CalculatorViewController: UIViewController {
     }
 
     private func showCopiedFeedback() {
+        #if !os(visionOS)
         let feedback = UINotificationFeedbackGenerator()
         feedback.notificationOccurred(.success)
+        #endif
     }
 
     @objc private func loadHistoryEntry(_ notification: Notification) {
