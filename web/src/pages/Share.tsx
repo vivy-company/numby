@@ -191,7 +191,7 @@ export default function Share() {
               background: theme.background,
               boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.4)`,
               border: `1px solid ${theme.text}20`,
-              borderRadius: "22px",
+              borderRadius: "24px",
             }}
           >
             {/* Title Bar with Traffic Lights */}
