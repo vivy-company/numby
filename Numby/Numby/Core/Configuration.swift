@@ -135,10 +135,59 @@ class Configuration: ObservableObject {
 }
 
 // MARK: - Localization Helper (for backward compatibility with macOS AppDelegate)
+private extension Configuration {
+    /// Convert supported locale identifiers into `.lproj` bundle names that exist in the app.
+    var bundleLocaleIdentifier: String {
+        switch currentLocale {
+        case "zh-CN":
+            return "zh-Hans"
+        case "zh-TW":
+            return "zh-Hant"
+        case "en-US":
+            return "en"
+        default:
+            return currentLocale
+        }
+    }
+
+    var localeCandidates: [String] {
+        var candidates: [String] = [bundleLocaleIdentifier]
+        let baseLocale = currentLocale.split(whereSeparator: { $0 == "-" || $0 == "_" }).first
+        if let base = baseLocale, !base.isEmpty, !candidates.contains(String(base)) {
+            candidates.append(String(base))
+        }
+        return candidates
+    }
+
+    func bundle(for localeIdentifier: String) -> Bundle? {
+        guard let path = Bundle.main.path(forResource: localeIdentifier, ofType: "lproj") else {
+            return nil
+        }
+        return Bundle(path: path)
+    }
+
+    func localizedString(_ key: String, comment: String = "") -> String {
+        for identifier in localeCandidates {
+            if let localeBundle = bundle(for: identifier) {
+                let localized = localeBundle.localizedString(forKey: key, value: nil, table: nil)
+                if localized != key {
+                    return localized
+                }
+            }
+        }
+
+        if let enBundle = bundle(for: "en") {
+            return enBundle.localizedString(forKey: key, value: key, table: nil)
+        }
+
+        return key
+    }
+}
+
 extension String {
-    /// Returns the string itself (localization removed for now)
-    var localized: String {
-        return self
+    /// Get localized string using current app locale
+    func localized(comment: String = "") -> String {
+        return Configuration.shared.localizedString(self, comment: comment)
     }
 }
 
