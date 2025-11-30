@@ -55,10 +55,29 @@ export default function Share() {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const copyImage = async () => {
+    if (!previewRef.current) return;
+
+    const html2canvas = (await import("html2canvas")).default;
+    const canvas = await html2canvas(previewRef.current, {
+      backgroundColor: null,
+      scale: 2,
+    });
+
+    canvas.toBlob(async (blob) => {
+      if (blob) {
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+        setCopied("image");
+        setTimeout(() => setCopied(null), 2000);
+      }
+    }, "image/png");
+  };
+
   const downloadImage = async () => {
     if (!previewRef.current) return;
 
-    // Dynamic import html2canvas
     const html2canvas = (await import("html2canvas")).default;
     const canvas = await html2canvas(previewRef.current, {
       backgroundColor: null,
@@ -222,6 +241,16 @@ export default function Share() {
               }}
             >
               {copied === "text" ? "✓ Copied!" : "Copy Text"}
+            </button>
+            <button
+              onClick={copyImage}
+              className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
+              style={{
+                background: theme.text + "15",
+                color: theme.text,
+              }}
+            >
+              {copied === "image" ? "✓ Copied!" : "Copy Image"}
             </button>
             <button
               onClick={downloadImage}
