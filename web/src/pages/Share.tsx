@@ -191,7 +191,7 @@ export default function Share() {
               background: theme.background,
               boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.4)`,
               border: `1px solid ${theme.text}20`,
-              borderRadius: "18px",
+              borderRadius: "22px",
             }}
           >
             {/* Title Bar with Traffic Lights */}
@@ -201,9 +201,9 @@ export default function Share() {
             >
               {/* Traffic Lights */}
               <div className="flex gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-                <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-                <div className="w-3 h-3 rounded-full bg-[#28C840]" />
+                <div className="w-3.5 h-3.5 rounded-full bg-[#FF5F57]" />
+                <div className="w-3.5 h-3.5 rounded-full bg-[#FEBC2E]" />
+                <div className="w-3.5 h-3.5 rounded-full bg-[#28C840]" />
               </div>
               {/* Title centered in the entire bar */}
               <span
