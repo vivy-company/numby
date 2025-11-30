@@ -191,12 +191,12 @@ export default function Share() {
               background: theme.background,
               boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.4)`,
               border: `1px solid ${theme.text}20`,
-              borderRadius: "24px",
+              borderRadius: "32px",
             }}
           >
             {/* Title Bar with Traffic Lights */}
             <div
-              className="h-12 flex items-center px-5 relative"
+              className="h-14 flex items-center px-6 relative"
               style={{ background: theme.background }}
             >
               {/* Traffic Lights */}
@@ -215,7 +215,7 @@ export default function Share() {
             </div>
 
             {/* Content */}
-            <div className="px-5 pb-5 font-mono text-sm leading-relaxed">
+            <div className="px-6 pb-6 font-mono text-sm leading-relaxed">
               {payload.l.map(([expr, result], i) => (
                 <div key={i} className="flex justify-between gap-8 py-0.5">
                   <span>
