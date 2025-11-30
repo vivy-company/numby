@@ -68,7 +68,8 @@ export function Eula() {
                 <li>You are responsible for the content you share</li>
                 <li>Do not share calculations containing sensitive, confidential, or personal information</li>
                 <li>Shared content may be cached by browsers, CDNs, or social media platforms</li>
-                <li>We reserve the right to block or remove share links that violate these terms</li>
+                <li>Share links are stateless - the data is encoded directly in the URL, not stored on our servers</li>
+                <li>Once shared, links cannot be revoked or deleted - only stop sharing the URL</li>
               </ul>
             </div>
 
