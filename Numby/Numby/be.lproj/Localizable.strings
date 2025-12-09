@@ -170,3 +170,7 @@
 "share.copyLink" = "Капіяваць як спасылку";
 "share.copied" = "Скапіявана!";
 "nav.cancel" = "Адмена";
+
+/* iPad Split View */
+"split.horizontal" = "Падзяліць гарызантальна";
+"split.vertical" = "Падзяліць вертыкальна";

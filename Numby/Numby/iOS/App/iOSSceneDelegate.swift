@@ -58,6 +58,10 @@ class iOSSceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
+        // Save current iPad tab state to history if needed
+        if let tabContainer = window?.rootViewController as? iPadTabContainerViewController {
+            tabContainer.saveCurrentTabToHistory()
+        }
         Persistence.shared.save()
     }
 }

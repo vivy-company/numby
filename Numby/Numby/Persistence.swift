@@ -51,6 +51,18 @@ struct PersistenceController {
 // Shared Persistence via CoreData + CloudKit for iCloud sync between macOS/iOS
 import CoreData
 
+/// Snapshot of a calculator session for history - shared format between iOS and macOS
+struct CalculatorSessionSnapshot: Codable {
+    let splitTree: SplitTree
+    let calculatorStates: [String: CalculatorStateSnapshot]
+
+    struct CalculatorStateSnapshot: Codable {
+        let inputText: String
+        let results: [String?]
+        let cursorPosition: Int
+    }
+}
+
 class Persistence {
     static let shared = Persistence()
 
@@ -60,37 +72,88 @@ class Persistence {
         container = PersistenceController.shared.container
     }
 
+    /// Add a simple history entry (for iPhone single-calculator mode)
     func addHistoryEntry(expression: String, result: String) {
         let context = container.viewContext
         let session = CalculationSession(context: context)
         session.swiftId = UUID()
         session.swiftTimestamp = Date()
-        let txt = "\(expression)\n= \(result)"
-        if let data = txt.data(using: .utf8) {
-            session.swiftSessionData = data
+
+        // Create full CalculatorSessionSnapshot for cross-platform compatibility
+        let leafId = SplitLeafID()
+        let splitTree = SplitTree(leafId: leafId)
+        let state = CalculatorSessionSnapshot.CalculatorStateSnapshot(
+            inputText: expression,
+            results: result.components(separatedBy: "\n").map { $0.isEmpty ? nil : $0 },
+            cursorPosition: expression.count
+        )
+        let snapshot = CalculatorSessionSnapshot(
+            splitTree: splitTree,
+            calculatorStates: [leafId.uuid.uuidString: state]
+        )
+
+        do {
+            let encoder = JSONEncoder()
+            session.swiftSessionData = try encoder.encode(snapshot)
+            session.searchableText = expression
+            try context.save()
+        } catch {
+            // Save failed - non-fatal
         }
-        session.searchableText = txt
-        try? context.save()
     }
 
+    /// Save a full calculator session snapshot (for iPad split view mode)
+    func saveSession(snapshot: CalculatorSessionSnapshot, searchableText: String) {
+        let context = container.viewContext
+        let session = CalculationSession(context: context)
+        session.swiftId = UUID()
+        session.swiftTimestamp = Date()
+
+        do {
+            let encoder = JSONEncoder()
+            session.swiftSessionData = try encoder.encode(snapshot)
+            session.searchableText = searchableText
+            try context.save()
+        } catch {
+            // Save failed - non-fatal
+        }
+    }
+
+    /// Get history as simple expression/result pairs (for iPhone display)
     func getHistory() -> [(expression: String, result: String)] {
         let context = container.viewContext
         let request: NSFetchRequest<CalculationSession> = CalculationSession.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \CalculationSession.timestamp, ascending: false)]
         do {
             let sessions = try context.fetch(request)
-            return sessions.compactMap { session in
-                guard let nsData = session.sessionData as? NSData,
-                      let data = nsData as Data?,
-                      let txt = String(data: data, encoding: .utf8),
-                      let range = txt.range(of: "\n= ") else { return nil }
-                let expr = String(txt[..<range.lowerBound])
-                let res = String(txt[range.upperBound...]).trimmingCharacters(in: .whitespaces)
-                return (expression: expr, result: res)
+            return sessions.compactMap { session -> (expression: String, result: String)? in
+                let data = session.swiftSessionData
+
+                guard let snapshot = try? JSONDecoder().decode(CalculatorSessionSnapshot.self, from: data),
+                      let firstState = snapshot.calculatorStates.values.first else {
+                    return nil
+                }
+
+                let resultStr = firstState.results.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n")
+                return (expression: firstState.inputText, result: resultStr)
             }
         } catch {
             return []
         }
+    }
+
+    /// Restore a full session snapshot (for iPad)
+    func restoreSession(_ session: CalculationSession) -> CalculatorSessionSnapshot? {
+        let data = session.swiftSessionData
+        return try? JSONDecoder().decode(CalculatorSessionSnapshot.self, from: data)
+    }
+
+    /// Get all sessions for history view
+    func getSessions() -> [CalculationSession] {
+        let context = container.viewContext
+        let request: NSFetchRequest<CalculationSession> = CalculationSession.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \CalculationSession.timestamp, ascending: false)]
+        return (try? context.fetch(request)) ?? []
     }
 
     func clearHistory() {

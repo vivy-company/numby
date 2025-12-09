@@ -9,17 +9,7 @@ import Foundation
 import CoreData
 import Combine
 
-/// Snapshot of a calculator session for history
-struct CalculatorSessionSnapshot: Codable {
-    let splitTree: SplitTree
-    let calculatorStates: [String: CalculatorStateSnapshot]
-
-    struct CalculatorStateSnapshot: Codable {
-        let inputText: String
-        let results: [String?]
-        let cursorPosition: Int
-    }
-}
+// CalculatorSessionSnapshot is defined in Persistence.swift for cross-platform compatibility
 
 /// Manager for calculator history operations
 class HistoryManager: ObservableObject {
@@ -140,13 +130,7 @@ class HistoryManager: ObservableObject {
     /// Restore a session snapshot
     func restoreSession(_ session: CalculationSession) -> CalculatorSessionSnapshot? {
         let data = session.swiftSessionData
-
-        do {
-            let decoder = JSONDecoder()
-            return try decoder.decode(CalculatorSessionSnapshot.self, from: data)
-        } catch {
-            return nil
-        }
+        return try? JSONDecoder().decode(CalculatorSessionSnapshot.self, from: data)
     }
 
     // MARK: - Search

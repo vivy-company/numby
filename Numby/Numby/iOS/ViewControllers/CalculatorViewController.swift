@@ -3,6 +3,7 @@ import UIKit
 
 class CalculatorViewController: UIViewController {
 
+    #if !os(visionOS)
     // MARK: - Accessory Bar View
 
     private class AccessoryBarView: UIView {
@@ -10,15 +11,22 @@ class CalculatorViewController: UIViewController {
             CGSize(width: UIView.noIntrinsicMetric, height: 120)
         }
     }
+    #endif
 
     // MARK: - Properties
 
     private var numbyWrapper = NumbyWrapper()
     private var results: [String] = []
+    #if !os(visionOS)
     private var accessoryButtons: [UIButton] = []
+    #endif
 
     // Reference to tab container (iPad only)
     weak var tabContainer: iPadTabContainerViewController?
+
+    // Split view support (iPad)
+    var leafId: SplitLeafID?
+    weak var splitContainerDelegate: iPadCalculatorPaneDelegate?
 
     // MARK: - Tab State
 
@@ -33,6 +41,29 @@ class CalculatorViewController: UIViewController {
         results = tab.results
         applySyntaxHighlighting()
         updateResultsOverlay()
+    }
+
+    // MARK: - Split View State
+
+    func saveToInstance(_ instance: iPadCalculatorInstance) {
+        instance.inputText = textView.text ?? ""
+        instance.results = results
+        instance.cursorPosition = textView.selectedRange.location
+    }
+
+    func restoreFromInstance(_ instance: iPadCalculatorInstance) {
+        numbyWrapper = instance.numbyWrapper
+        textView.text = instance.inputText
+        results = instance.results
+        applySyntaxHighlighting()
+        updateResultsOverlay()
+        if instance.cursorPosition <= (textView.text?.count ?? 0) {
+            textView.selectedRange = NSRange(location: instance.cursorPosition, length: 0)
+        }
+    }
+
+    func focus() {
+        textView.becomeFirstResponder()
     }
 
     // MARK: - UI Components
@@ -69,6 +100,7 @@ class CalculatorViewController: UIViewController {
         return overlay
     }()
 
+    #if !os(visionOS)
     private lazy var inputAccessoryBar: UIView = {
         let barHeight: CGFloat = 120
         let rowHeight: CGFloat = 32
@@ -141,6 +173,7 @@ class CalculatorViewController: UIViewController {
         guard let text = sender.accessibilityIdentifier else { return }
         textView.insertText(text)
     }
+    #endif
 
     // MARK: - Lifecycle
 
@@ -185,9 +218,13 @@ class CalculatorViewController: UIViewController {
         super.viewDidAppear(animated)
         if !hasAppearedOnce {
             hasAppearedOnce = true
-            // Defer keyboard focus to avoid snapshotting warning
-            DispatchQueue.main.async { [weak self] in
-                self?.textView.becomeFirstResponder()
+            // Only auto-focus if not in split view mode (leafId is set for split view panes)
+            // Split view manages focus explicitly via focusCalculator()
+            if leafId == nil {
+                // Defer keyboard focus to avoid snapshotting warning
+                DispatchQueue.main.async { [weak self] in
+                    self?.textView.becomeFirstResponder()
+                }
             }
         }
     }
@@ -215,8 +252,23 @@ class CalculatorViewController: UIViewController {
         ])
 
         #if !os(visionOS)
-        textView.inputAccessoryView = inputAccessoryBar
+        // Only set accessory bar on iPhone - iPad users typically use physical keyboards
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            textView.inputAccessoryView = inputAccessoryBar
+        }
         #endif
+
+        // Add tap gesture to track focus in split view
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(textViewTapped))
+        tapGesture.delegate = self
+        textView.addGestureRecognizer(tapGesture)
+    }
+
+    @objc private func textViewTapped() {
+        // Notify split container that this pane is now focused
+        if let leafId = leafId {
+            splitContainerDelegate?.paneTapped(leafId: leafId)
+        }
     }
 
     // MARK: - Keyboard
@@ -224,6 +276,21 @@ class CalculatorViewController: UIViewController {
     @objc private func keyboardWillShow(_ notification: Notification) {
         guard let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue else { return }
         let keyboardFrame = frame.cgRectValue
+
+        #if !os(visionOS)
+        // On iPad, show accessory bar only when software keyboard is visible (height > 300)
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            let hasSoftwareKeyboard = keyboardFrame.height > 300
+            if hasSoftwareKeyboard && textView.inputAccessoryView == nil {
+                textView.inputAccessoryView = inputAccessoryBar
+                textView.reloadInputViews()
+            } else if !hasSoftwareKeyboard && textView.inputAccessoryView != nil {
+                textView.inputAccessoryView = nil
+                textView.reloadInputViews()
+            }
+        }
+        #endif
+
         let height = keyboardFrame.height - view.safeAreaInsets.bottom
 
         textView.contentInset.bottom = max(0, height)
@@ -427,6 +494,7 @@ class CalculatorViewController: UIViewController {
         textView.font = font
         textView.keyboardAppearance = .dark
 
+        #if !os(visionOS)
         // Update accessory bar
         inputAccessoryBar.backgroundColor = theme.backgroundColor
         let buttonBg = theme.textColor.withAlphaComponent(0.08)
@@ -434,6 +502,7 @@ class CalculatorViewController: UIViewController {
             $0.setTitleColor(theme.textColor.withAlphaComponent(0.9), for: .normal)
             $0.backgroundColor = buttonBg
         }
+        #endif
 
         if let nav = navigationController {
             let appearance = UINavigationBarAppearance()
@@ -586,11 +655,34 @@ class CalculatorViewController: UIViewController {
 // MARK: - UITextViewDelegate
 
 extension CalculatorViewController: UITextViewDelegate {
+    func textViewDidBeginEditing(_ textView: UITextView) {
+        // Notify split container that this pane is now focused
+        if let leafId = leafId {
+            splitContainerDelegate?.paneTapped(leafId: leafId)
+        }
+    }
+
+    func textViewDidChangeSelection(_ textView: UITextView) {
+        // Notify split container when cursor moves - reliable focus indicator
+        if let leafId = leafId {
+            splitContainerDelegate?.paneTapped(leafId: leafId)
+        }
+    }
+
     func textViewDidChange(_ textView: UITextView) {
         // Apply syntax highlighting immediately for responsive feel
         applySyntaxHighlighting()
         // Debounce evaluation (expensive)
         scheduleEvaluation()
+    }
+}
+
+// MARK: - UIGestureRecognizerDelegate
+
+extension CalculatorViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // Allow tap gesture to work alongside text view's default gestures
+        return true
     }
 }
 

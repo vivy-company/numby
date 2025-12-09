@@ -170,3 +170,7 @@
 "share.copyLink" = "复制为链接";
 "share.copied" = "已复制！";
 "nav.cancel" = "取消";
+
+/* iPad Split View */
+"split.horizontal" = "水平分割";
+"split.vertical" = "垂直分割";

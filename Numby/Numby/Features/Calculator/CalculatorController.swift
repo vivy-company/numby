@@ -94,6 +94,22 @@ class CalculatorController: ObservableObject {
             return
         }
 
+        // Save pane content to history before closing
+        if let instance = calculators[leafId], !instance.inputText.isEmpty {
+            let lines = instance.inputText.components(separatedBy: "\n")
+            var historyText = ""
+            for (index, line) in lines.enumerated() {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty && index < instance.results.count,
+                   let result = instance.results[index], !result.isEmpty {
+                    historyText += "\(trimmed) = \(result)\n"
+                }
+            }
+            if !historyText.isEmpty {
+                Persistence.shared.addHistoryEntry(expression: instance.inputText, result: historyText)
+            }
+        }
+
         // Remove calculator instance
         calculators.removeValue(forKey: leafId)
 

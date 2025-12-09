@@ -170,3 +170,7 @@
 "share.copyLink" = "Als Link kopieren";
 "share.copied" = "Kopiert!";
 "nav.cancel" = "Abbrechen";
+
+/* iPad Split View */
+"split.horizontal" = "Horizontal teilen";
+"split.vertical" = "Vertikal teilen";

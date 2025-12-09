@@ -41,11 +41,17 @@ class iPadTabBar: UIView {
         addSubview(stackView)
         stackView.isUserInteractionEnabled = true
 
+        // Use lower priority for vertical constraints to avoid conflicts when height is 0
+        let topConstraint = stackView.topAnchor.constraint(equalTo: topAnchor, constant: 4)
+        let bottomConstraint = stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4)
+        topConstraint.priority = .defaultHigh
+        bottomConstraint.priority = .defaultHigh
+
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            topConstraint,
             stackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
             stackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4)
+            bottomConstraint
         ])
     }
 

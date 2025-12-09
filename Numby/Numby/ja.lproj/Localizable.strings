@@ -170,3 +170,7 @@
 "share.copyLink" = "リンクとしてコピー";
 "share.copied" = "コピーしました！";
 "nav.cancel" = "キャンセル";
+
+/* iPad Split View */
+"split.horizontal" = "水平に分割";
+"split.vertical" = "垂直に分割";
