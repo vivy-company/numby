@@ -27,18 +27,18 @@
 
 /* Settings - CLI Section */
 "settings.cli.section" = "Инструмент командной строки";
-"settings.cli.installViaHomebrew" = "Установить через Homebrew:";
+"settings.cli.installViaCargo" = "Установить через Cargo (Rust):";
 "settings.cli.copyTooltip" = "Копировать в буфер обмена";
-"settings.cli.installHomebrew" = "Установить Homebrew";
-"settings.cli.orDownload" = "Или скачать с GitHub releases";
+"settings.cli.installRust" = "Установить Rust";
+"settings.cli.orInstaller" = "Или использовать автоматический установщик:";
+"settings.cli.orDownload" = "Или скачать с GitHub releases:";
 "settings.cli.githubReleases" = "Релизы GitHub";
 
 /* CLI Installer Window */
 "cliInstaller.title" = "Инструмент командной строки";
 "cliInstaller.subtitle" = "Используйте numby из терминала";
-"cliInstaller.installViaHomebrew" = "Установить через Homebrew";
 "cliInstaller.runCommand" = "Выполните эту команду в терминале:";
-"cliInstaller.noHomebrew" = "Если у вас не установлен Homebrew:";
+"cliInstaller.noRust" = "Если у вас не установлен Rust:";
 "cliInstaller.alternative" = "Альтернатива: Ручная установка";
 "cliInstaller.downloadRelease" = "Скачайте последнюю версию:";
 "cliInstaller.moveToPath" = "Затем переместите в ваш PATH:";
@@ -126,3 +126,51 @@
 "alert.saveAndClose" = "Сохранить и закрыть";
 "alert.closeWithoutSavingButton" = "Закрыть без сохранения";
 "alert.cancel" = "Отмена";
+"alert.updateFailed" = "Ошибка обновления";
+"alert.currencyUpdateError" = "Не удалось обновить курсы валют. Проверьте подключение к интернету.";
+
+/* iOS Settings */
+"settings.title" = "Настройки";
+"settings.language.openSettings" = "Открыть настройки";
+"settings.about.section" = "О приложении";
+"settings.about.version" = "Версия";
+"settings.about.github" = "GitHub";
+"settings.theme.select" = "Выбрать тему";
+"settings.font.select" = "Выбрать шрифт";
+
+/* iOS Navigation */
+"nav.new" = "Новый";
+"nav.history" = "История";
+"nav.done" = "Готово";
+"nav.close" = "Закрыть";
+"nav.clear" = "Очистить";
+
+/* iOS History */
+"history.title" = "История";
+"history.clearTitle" = "Очистить историю";
+"history.clearMessage" = "Вы уверены, что хотите очистить всю историю?";
+
+/* File Operations */
+"file.export.title" = "Экспортировать калькулятор";
+"file.export.message" = "Выберите место для сохранения калькулятора";
+"file.export.saveAs" = "Сохранить как:";
+"file.export.failed" = "Ошибка экспорта";
+"file.export.error" = "Не удалось сохранить файл: %@";
+"file.import.title" = "Открыть калькулятор";
+"file.import.message" = "Выберите файл калькулятора для открытия";
+"file.import.failed" = "Ошибка импорта";
+"file.import.error" = "Не удалось прочитать файл: %@";
+"file.untitled" = "Без названия";
+
+
+/* Share */
+"share.title" = "Поделиться";
+"share.copyText" = "Копировать как текст";
+"share.copyImage" = "Копировать как изображение";
+"share.copyLink" = "Копировать как ссылку";
+"share.copied" = "Скопировано!";
+"nav.cancel" = "Отмена";
+
+/* iPad Split View */
+"split.horizontal" = "Разделить по горизонтали";
+"split.vertical" = "Разделить по вертикали";

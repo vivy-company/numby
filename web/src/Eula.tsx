@@ -6,7 +6,7 @@ export function Eula() {
       <main className="py-20 px-6">
         <div className="max-w-[720px] mx-auto">
           <h1 className="text-[56px] font-semibold mb-8 tracking-tight">End User License Agreement</h1>
-          <p className="text-[#86868b] text-[17px] mb-12">Last updated: November 15, 2025</p>
+          <p className="text-[#86868b] text-[17px] mb-12">Last updated: November 30, 2025</p>
 
           <div className="space-y-8 text-[#86868b] text-[17px] leading-[1.47059]">
             <div>
@@ -56,6 +56,20 @@ export function Eula() {
                 <li>Professional or commercial use</li>
                 <li>Educational purposes</li>
                 <li>Integration into other software (open source version)</li>
+              </ul>
+            </div>
+
+            <div>
+              <h2 className="text-[32px] font-semibold text-[#f5f5f7] mb-4 tracking-tight">Share Feature</h2>
+              <p className="mb-4">
+                When using the share feature to generate public links:
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>You are responsible for the content you share</li>
+                <li>Do not share calculations containing sensitive, confidential, or personal information</li>
+                <li>Shared content may be cached by browsers, CDNs, or social media platforms</li>
+                <li>Share links are stateless - the data is encoded directly in the URL, not stored on our servers</li>
+                <li>Once shared, links cannot be revoked or deleted - only stop sharing the URL</li>
               </ul>
             </div>
 

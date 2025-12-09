@@ -27,18 +27,18 @@
 
 /* Settings - CLI Section */
 "settings.cli.section" = "Outil en ligne de commande";
-"settings.cli.installViaHomebrew" = "Installer via Homebrew :";
+"settings.cli.installViaCargo" = "Installer via Cargo (Rust) :";
 "settings.cli.copyTooltip" = "Copier dans le presse-papiers";
-"settings.cli.installHomebrew" = "Installer Homebrew";
-"settings.cli.orDownload" = "Ou télécharger depuis les versions GitHub";
+"settings.cli.installRust" = "Installer Rust";
+"settings.cli.orInstaller" = "Ou utiliser le script d'installation automatique :";
+"settings.cli.orDownload" = "Ou télécharger depuis les versions GitHub :";
 "settings.cli.githubReleases" = "Versions GitHub";
 
 /* CLI Installer Window */
 "cliInstaller.title" = "Outil en ligne de commande";
 "cliInstaller.subtitle" = "Utilisez numby depuis votre terminal";
-"cliInstaller.installViaHomebrew" = "Installer via Homebrew";
 "cliInstaller.runCommand" = "Exécutez cette commande dans votre terminal :";
-"cliInstaller.noHomebrew" = "Si vous n'avez pas Homebrew installé :";
+"cliInstaller.noRust" = "Si vous n'avez pas Rust installé :";
 "cliInstaller.alternative" = "Alternative : Installation manuelle";
 "cliInstaller.downloadRelease" = "Téléchargez la dernière version :";
 "cliInstaller.moveToPath" = "Puis déplacez vers votre PATH :";
@@ -126,3 +126,51 @@
 "alert.saveAndClose" = "Enregistrer et fermer";
 "alert.closeWithoutSavingButton" = "Fermer sans enregistrer";
 "alert.cancel" = "Annuler";
+"alert.updateFailed" = "Échec de la mise à jour";
+"alert.currencyUpdateError" = "Impossible de mettre à jour les taux de change. Vérifiez votre connexion Internet.";
+
+/* iOS Settings */
+"settings.title" = "Réglages";
+"settings.language.openSettings" = "Ouvrir les réglages";
+"settings.about.section" = "À propos";
+"settings.about.version" = "Version";
+"settings.about.github" = "GitHub";
+"settings.theme.select" = "Sélectionner un thème";
+"settings.font.select" = "Sélectionner une police";
+
+/* iOS Navigation */
+"nav.new" = "Nouveau";
+"nav.history" = "Historique";
+"nav.done" = "Terminé";
+"nav.close" = "Fermer";
+"nav.clear" = "Effacer";
+
+/* iOS History */
+"history.title" = "Historique";
+"history.clearTitle" = "Effacer l'historique";
+"history.clearMessage" = "Voulez-vous vraiment effacer tout l'historique ?";
+
+/* File Operations */
+"file.export.title" = "Exporter la calculatrice";
+"file.export.message" = "Choisissez un emplacement pour enregistrer votre calculatrice";
+"file.export.saveAs" = "Enregistrer sous :";
+"file.export.failed" = "Échec de l'exportation";
+"file.export.error" = "Impossible d'enregistrer le fichier : %@";
+"file.import.title" = "Ouvrir la calculatrice";
+"file.import.message" = "Choisissez un fichier calculatrice à ouvrir";
+"file.import.failed" = "Échec de l'importation";
+"file.import.error" = "Impossible de lire le fichier : %@";
+"file.untitled" = "Sans titre";
+
+
+/* Share */
+"share.title" = "Partager";
+"share.copyText" = "Copier comme texte";
+"share.copyImage" = "Copier comme image";
+"share.copyLink" = "Copier comme lien";
+"share.copied" = "Copié !";
+"nav.cancel" = "Annuler";
+
+/* iPad Split View */
+"split.horizontal" = "Diviser horizontalement";
+"split.vertical" = "Diviser verticalement";

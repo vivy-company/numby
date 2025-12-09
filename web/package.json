@@ -9,16 +9,22 @@
     "build": "bun run build.ts"
   },
   "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@resvg/resvg-js": "^2.6.2",
     "bun-plugin-tailwind": "^0.1.2",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.553.0",
+    "pako": "^2.1.0",
     "react": "^19",
     "react-dom": "^19",
     "react-router-dom": "^7.9.6",
+    "satori": "^0.18.3",
     "tailwindcss": "^4.1.11"
   },
   "devDependencies": {
+    "@types/bun": "latest",
+    "@types/pako": "^2.0.4",
     "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/bun": "latest"
+    "@types/react-dom": "^19"
   }
 }

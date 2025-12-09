@@ -5,6 +5,7 @@
 //  Individual calculator surface - renders one calculator instance with input/results panels
 //
 
+#if os(macOS)
 import SwiftUI
 import Combine
 
@@ -14,66 +15,254 @@ struct CalculatorSurfaceView: View {
     let leafId: SplitLeafID
     let isFocused: Bool
 
-    @EnvironmentObject var themeManager: ThemeManager
-    @EnvironmentObject var configManager: ConfigurationManager
+    // Theme is now accessed via Theme.current static property
+    @EnvironmentObject var configManager: Configuration
 
     @State private var updateTrigger: Int = 0
     @FocusState private var isViewFocused: Bool
 
+    @State private var showCopiedFeedback = false
+
     var body: some View {
         GeometryReader { geometry in
-            ScrollView {
-                HStack(spacing: 0) {
-                    // Left panel - Input (80%)
-                    ZStack {
-                        Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
-                            .ignoresSafeArea()
+            ZStack {
+                ZStack(alignment: .bottomTrailing) {
+                ScrollView {
+                    HStack(spacing: 0) {
+                        // Left panel - Input (80%)
+                        ZStack {
+                            Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
+                                .ignoresSafeArea()
 
-                        InputTextView(
-                            text: $instance.inputText,
-                            backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
-                            textColor: themeManager.syntaxColor(for: .text),
-                            fontSize: configManager.config.fontSize,
-                            fontName: configManager.config.fontName ?? "SFMono-Regular",
-                            syntaxHighlighting: configManager.config.syntaxHighlighting,
-                            updateTrigger: updateTrigger
-                        )
+                            InputTextView(
+                                text: $instance.inputText,
+                                backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
+                                textColor: Theme.current.syntaxColor(for: .text),
+                                fontSize: configManager.config.fontSize,
+                                fontName: configManager.config.fontName ?? "SFMono-Regular",
+                                syntaxHighlighting: configManager.config.syntaxHighlighting,
+                                updateTrigger: updateTrigger
+                            )
+                        }
+                        .frame(width: geometry.size.width * 0.8)
+
+                        // Right panel - Results (20%)
+                        ZStack(alignment: .topTrailing) {
+                            Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
+                                .ignoresSafeArea()
+
+                            ResultsTextView(
+                                results: instance.results,
+                                textColor: Theme.current.syntaxColor(for: .results),
+                                backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
+                                fontSize: configManager.config.fontSize,
+                                fontName: configManager.config.fontName ?? "SFMono-Regular"
+                            )
+                            .padding(.top, 16)
+                            .padding(.trailing, 16)
+                        }
+                        .frame(width: geometry.size.width * 0.20)
                     }
-                    .frame(width: geometry.size.width * 0.8)
-
-                    // Right panel - Results (20%)
-                    ZStack(alignment: .topTrailing) {
-                        Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
-                            .ignoresSafeArea()
-
-                        ResultsTextView(
-                            results: instance.results,
-                            textColor: themeManager.syntaxColor(for: .results),
-                            backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
-                            fontSize: configManager.config.fontSize,
-                            fontName: configManager.config.fontName ?? "SFMono-Regular"
-                        )
-                        .padding(.top, 16)
-                        .padding(.trailing, 16)
-                    }
-                    .frame(width: geometry.size.width * 0.20)
+                    .frame(minHeight: geometry.size.height)
                 }
-                .frame(minHeight: geometry.size.height)
+                .focusable()
+                .focused($isViewFocused)
+                .focusedValue(\.calculatorLeafId, leafId)
+                .onAppear {
+                    if isFocused {
+                        isViewFocused = true
+                    }
+                }
+
+                // Share button overlay with menu
+                ShareMenuButton(
+                    showCopiedFeedback: showCopiedFeedback,
+                    onCopyAsText: copyAsText,
+                    onCopyAsImage: copyAsImage,
+                    onCopyAsLink: copyAsLink
+                )
+                .frame(width: 32, height: 32)
+                .padding(12)
             }
-            .focusable()
-            .focused($isViewFocused)
-            .focusedValue(\.calculatorLeafId, leafId)
-            .onAppear {
-                if isFocused {
-                    isViewFocused = true
+
+                // Copied toast notification
+                if showCopiedFeedback {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16, weight: .medium))
+                        Text("Copied!")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.75))
+                    .clipShape(Capsule())
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
         }
-        .onChange(of: themeManager.currentTheme) { _ in
+        .onChange(of: Theme.current) { _ in
             updateTrigger += 1
         }
         .onChange(of: configManager.config.backgroundColorHex) { _ in
             updateTrigger += 1
+        }
+    }
+
+    private func getShareableLines() -> [(expression: String, result: String)] {
+        let lines = instance.inputText.components(separatedBy: "\n")
+        var imageLines: [(expression: String, result: String)] = []
+
+        for (index, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && index < instance.results.count {
+                let result = instance.results[index] ?? ""
+                if !result.isEmpty {
+                    imageLines.append((expression: trimmed, result: result))
+                }
+            }
+        }
+
+        return imageLines
+    }
+
+    private func copyAsText() {
+        let imageLines = getShareableLines()
+        guard !imageLines.isEmpty else { return }
+
+        let text = ShareURLGenerator.generateText(lines: imageLines)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        showFeedback()
+    }
+
+    private func copyAsImage() {
+        let imageLines = getShareableLines()
+        guard !imageLines.isEmpty else { return }
+
+        guard let image = CalculatorImageRenderer.render(
+            lines: imageLines,
+            theme: Theme.current,
+            fontSize: configManager.config.fontSize,
+            fontName: configManager.config.fontName ?? "SFMono-Regular"
+        ) else { return }
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([image])
+
+        showFeedback()
+    }
+
+    private func copyAsLink() {
+        let imageLines = getShareableLines()
+        guard !imageLines.isEmpty else { return }
+
+        let url = ShareURLGenerator.generate(lines: imageLines, theme: Theme.current.name)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(url.absoluteString, forType: .string)
+
+        showFeedback()
+    }
+
+    private func showFeedback() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showCopiedFeedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeOut(duration: 0.2)) {
+                showCopiedFeedback = false
+            }
+        }
+    }
+}
+
+// MARK: - Share Menu Button (NSViewRepresentable for full size control)
+
+struct ShareMenuButton: NSViewRepresentable {
+    let showCopiedFeedback: Bool
+    let onCopyAsText: () -> Void
+    let onCopyAsImage: () -> Void
+    let onCopyAsLink: () -> Void
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton()
+        button.bezelStyle = .regularSquare
+        button.isBordered = false
+        button.wantsLayer = true
+        button.layer?.cornerRadius = 6
+        button.layer?.backgroundColor = Theme.current.backgroundColor.withAlphaComponent(0.95).cgColor
+
+        updateButtonImage(button, showCheckmark: showCopiedFeedback)
+
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.showMenu(_:))
+
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) {
+        button.layer?.backgroundColor = Theme.current.backgroundColor.withAlphaComponent(0.95).cgColor
+        updateButtonImage(button, showCheckmark: showCopiedFeedback)
+        context.coordinator.parent = self
+    }
+
+    private func updateButtonImage(_ button: NSButton, showCheckmark: Bool) {
+        let symbolName = showCheckmark ? "checkmark" : "square.and.arrow.up"
+        let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+        if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Share")?
+            .withSymbolConfiguration(config) {
+            button.image = image
+            button.contentTintColor = NSColor.secondaryLabelColor
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject {
+        var parent: ShareMenuButton
+
+        init(_ parent: ShareMenuButton) {
+            self.parent = parent
+        }
+
+        @objc func showMenu(_ sender: NSButton) {
+            let menu = NSMenu()
+
+            let textItem = NSMenuItem(title: "Copy as Text", action: #selector(copyAsText), keyEquivalent: "")
+            textItem.target = self
+            textItem.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
+            menu.addItem(textItem)
+
+            let imageItem = NSMenuItem(title: "Copy as Image", action: #selector(copyAsImage), keyEquivalent: "")
+            imageItem.target = self
+            imageItem.image = NSImage(systemSymbolName: "photo", accessibilityDescription: nil)
+            menu.addItem(imageItem)
+
+            let linkItem = NSMenuItem(title: "Copy as Link", action: #selector(copyAsLink), keyEquivalent: "")
+            linkItem.target = self
+            linkItem.image = NSImage(systemSymbolName: "link", accessibilityDescription: nil)
+            menu.addItem(linkItem)
+
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
+        }
+
+        @objc func copyAsText() {
+            parent.onCopyAsText()
+        }
+
+        @objc func copyAsImage() {
+            parent.onCopyAsImage()
+        }
+
+        @objc func copyAsLink() {
+            parent.onCopyAsLink()
         }
     }
 }
@@ -355,44 +544,64 @@ struct InputTextView: NSViewRepresentable {
         storage.addAttribute(.font, value: font, range: fullRange)
 
         let text = storage.string
-        let themeManager = ThemeManager.shared
+        let theme = Theme.current
 
         // Highlight numbers
         let numberPattern = "\\b\\d+(\\.\\d+)?\\b"
         if let regex = try? NSRegularExpression(pattern: numberPattern) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .numbers), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .numbers), range: range)
                 }
             }
         }
 
-        // Highlight operators
+        // Highlight operators (symbols)
         let operatorPattern = "[+\\-*/()^%]"
         if let regex = try? NSRegularExpression(pattern: operatorPattern) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .operators), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .operators), range: range)
                 }
             }
         }
 
-        // Highlight currency units
-        let currencyPattern = "\\b(USD|EUR|JPY|GBP|CNY|CHF|AUD|CAD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|HRK|RUB|TRY|BRL|MXN|ARS|CLP|COP|PEN|INR|IDR|MYR|PHP|THB|VND|KRW|TWD|HKD|SGD|ZAR|EGP|NGN|KES|GHS|XOF|XAF|MAD|TND|AED|SAR|QAR|KWD|BHD|OMR|ILS|JOD|LBP|IQD|IRR|AFN|PKR|BDT|NPR|LKR|MMK|KHR|LAK|MNT|KZT|UZS|TJS|KGS|TMT|GEL|AZN|AMD|BYN|MDL|UAH|RSD|MKD|ALL|BAM|ISK)\\b"
+        // Highlight word operators
+        let wordOperatorPattern = "\\b(plus|minus|times|multiplied by|divided by|divide by|subtract|and|with)\\b"
+        if let regex = try? NSRegularExpression(pattern: wordOperatorPattern, options: .caseInsensitive) {
+            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
+                if let range = match?.range {
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .operators), range: range)
+                }
+            }
+        }
+
+        // Highlight currency units (including crypto)
+        let currencyPattern = "\\b(USD|EUR|JPY|GBP|CNY|CHF|AUD|CAD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|HRK|RUB|TRY|BRL|MXN|ARS|CLP|COP|PEN|INR|IDR|MYR|PHP|THB|VND|KRW|TWD|HKD|SGD|ZAR|EGP|NGN|KES|GHS|XOF|XAF|MAD|TND|AED|SAR|QAR|KWD|BHD|OMR|ILS|JOD|LBP|IQD|IRR|AFN|PKR|BDT|NPR|LKR|MMK|KHR|LAK|MNT|KZT|UZS|TJS|KGS|TMT|GEL|AZN|AMD|BYN|MDL|UAH|RSD|MKD|ALL|BAM|ISK|BTC|ETH|BNB)\\b"
         if let regex = try? NSRegularExpression(pattern: currencyPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .currency), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .currency), range: range)
                 }
             }
         }
 
-        // Highlight measurement units
-        let unitPattern = "\\b(km|mi|m|cm|mm|ft|in|yd|kg|g|mg|lb|oz|ton|L|mL|gal|qt|pt|cup|tbsp|tsp|°C|°F|K|ms|s|min|h|day|week|month|year|Hz|kHz|MHz|GHz|b|B|KB|MB|GB|TB|W|kW|MW|V|A|mA|Ω|J|cal|kcal|Pa|bar|atm|psi|mph|kmh|kph)\\b"
+        // Highlight measurement units (extended)
+        let unitPattern = "\\b(km|mi|m|cm|mm|ft|in|yd|kg|g|mg|lb|oz|ton|L|mL|gal|qt|pt|cup|tbsp|tsp|°C|°F|K|ms|s|min|h|day|week|month|year|Hz|kHz|MHz|GHz|b|B|KB|MB|GB|TB|W|kW|MW|V|A|mA|Ω|J|cal|kcal|Pa|bar|atm|psi|mph|kmh|kph|meter|meters|centimeter|centimeters|millimeter|millimeters|kilometer|kilometers|foot|feet|inch|inches|yard|yards|mile|miles|sec|second|seconds|minute|minutes|hour|hours|days|weeks|months|years|kelvin|kelvins|celsius|fahrenheit|liter|liters|milliliter|milliliters|pint|pints|quart|quarts|gallon|gallons|teaspoon|teaspoons|tablespoon|tablespoons|gram|grams|kilogram|kilograms|tonne|tonnes|carat|carats|pound|pounds|stone|stones|ounce|ounces|bit|bits|byte|bytes|knot|knots|radian|radians|degree|degrees)\\b"
         if let regex = try? NSRegularExpression(pattern: unitPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .units), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .units), range: range)
+                }
+            }
+        }
+
+        // Highlight scales
+        let scalePattern = "\\b(k|kilo|thousand|M|mega|million|G|giga|billion|T|tera)\\b"
+        if let regex = try? NSRegularExpression(pattern: scalePattern, options: .caseInsensitive) {
+            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
+                if let range = match?.range {
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .units), range: range)
                 }
             }
         }
@@ -402,17 +611,27 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: keywordPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .keywords), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .keywords), range: range)
+                }
+            }
+        }
+
+        // Highlight datetime keywords
+        let datetimePattern = "\\b(time|now|today|tomorrow|yesterday|ago|before|after|next|last|this|between)\\b"
+        if let regex = try? NSRegularExpression(pattern: datetimePattern, options: .caseInsensitive) {
+            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
+                if let range = match?.range {
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .keywords), range: range)
                 }
             }
         }
 
         // Highlight functions
-        let functionPattern = "\\b(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|sqrt|cbrt|ln|log|log10|log2|exp|abs|ceil|floor|round|min|max|pow|mod|gcd|lcm|factorial|rand|random)\\b"
+        let functionPattern = "\\b(sin|cos|tan|asin|acos|atan|arcsin|arccos|arctan|sinh|cosh|tanh|sqrt|cbrt|ln|log|log10|log2|exp|abs|ceil|floor|round|min|max|pow|mod|gcd|lcm|factorial|rand|random)\\b"
         if let regex = try? NSRegularExpression(pattern: functionPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .functions), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .functions), range: range)
                 }
             }
         }
@@ -422,7 +641,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: constantPattern, options: .caseInsensitive) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .constants), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .constants), range: range)
                 }
             }
         }
@@ -432,7 +651,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: variablePattern) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range(at: 1) {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .variables), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variables), range: range)
                 }
             }
         }
@@ -444,8 +663,8 @@ struct InputTextView: NSViewRepresentable {
                 if let range = match?.range {
                     // Only color if it's not already colored by other patterns
                     let currentColor = storage.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? NSColor
-                    if currentColor == themeManager.syntaxColor(for: .text) {
-                        storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .variableUsage), range: range)
+                    if currentColor == theme.syntaxColor(for: .text) {
+                        storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variableUsage), range: range)
                     }
                 }
             }
@@ -456,7 +675,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: assignmentPattern) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range(at: 1) {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .assignment), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .assignment), range: range)
                 }
             }
         }
@@ -466,7 +685,7 @@ struct InputTextView: NSViewRepresentable {
         if let regex = try? NSRegularExpression(pattern: commentPattern, options: .anchorsMatchLines) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: themeManager.syntaxColor(for: .comments), range: range)
+                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .comments), range: range)
                 }
             }
         }
@@ -506,3 +725,4 @@ extension FocusedValues {
         typealias Value = SplitLeafID
     }
 }
+#endif

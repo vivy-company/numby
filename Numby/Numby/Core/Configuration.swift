@@ -6,9 +6,21 @@
 //
 
 import Foundation
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import SwiftUI
 import Combine
+
+// MARK: - Platform Abstractions
+
+#if os(macOS)
+typealias PlatformColor = NSColor
+#else
+typealias PlatformColor = UIColor
+#endif
 
 /// Global app configuration
 struct AppConfiguration: Codable {
@@ -24,11 +36,11 @@ struct AppConfiguration: Codable {
     /// Background color (hex string)
     var backgroundColorHex: String? = nil
 
-    /// Background color as NSColor
-    var backgroundColor: NSColor? {
+    /// Background color as PlatformColor
+    var backgroundColor: PlatformColor? {
         get {
             guard let hex = backgroundColorHex else { return nil }
-            return NSColor(hex: hex)
+            return PlatformColor(hex: hex)
         }
         set {
             backgroundColorHex = newValue?.hexString
@@ -84,134 +96,109 @@ struct AppConfiguration: Codable {
 }
 
 /// Global configuration manager
-class ConfigurationManager: ObservableObject {
-    static let shared = ConfigurationManager()
+class Configuration: ObservableObject {
+    static let shared = Configuration()
 
     @Published var config: AppConfiguration
     @Published var currentLocale: String = "en-US"
+    var locale: String? { config.locale }
+    var fontSize: String { "Medium" }
 
     private init() {
         self.config = AppConfiguration.load()
         self.currentLocale = config.locale ?? "en-US"
     }
 
+    func load() {
+        config = AppConfiguration.load()
+        currentLocale = config.locale ?? "en-US"
+    }
+
     func save() {
         config.save()
-        notifyWindows()
+        NotificationCenter.default.post(name: NSNotification.Name("ConfigurationDidChange"), object: nil)
     }
 
     func reset() {
         config = AppConfiguration()
         AppConfiguration.reset()
-        notifyWindows()
-    }
-
-    private func notifyWindows() {
-        for window in NSApplication.shared.windows.compactMap({ $0 as? NumbyWindow }) {
-            DispatchQueue.main.async { [weak window] in
-                guard let window = window else { return }
-
-                window.controller?.objectWillChange.send()
-                for (_, calculator) in window.controller?.calculators ?? [:] {
-                    calculator.objectWillChange.send()
-                }
-            }
-        }
-    }
-
-    /// Apply configuration to the app
-    func apply() {
-        // Apply window-level settings
-        applyWindowSettings()
-    }
-
-    private func applyWindowSettings() {
-        // Configure tab bar appearance if needed
-        switch config.tabBarStyle {
-        case .automatic:
-            break // Use system default
-        case .unified, .expanded, .native:
-            // These would be applied per-window
-            break
-        }
+        NotificationCenter.default.post(name: NSNotification.Name("ConfigurationDidChange"), object: nil)
     }
 
     /// Update locale and trigger UI refresh
     func updateLocale(_ newLocale: String) {
-        // Map Rust locale to Swift locale
-        let swiftLocale: String
-        switch newLocale {
-        case "zh-CN":
-            swiftLocale = "zh-Hans"
-        case "zh-TW":
-            swiftLocale = "zh-Hant"
-        case "en-US":
-            swiftLocale = "en"
-        default:
-            swiftLocale = newLocale
-        }
-
-        // Update UserDefaults
-        UserDefaults.standard.set([swiftLocale], forKey: "AppleLanguages")
-        UserDefaults.standard.synchronize()
-
-        // Update published property to trigger UI refresh
+        config.locale = newLocale
         self.currentLocale = newLocale
         self.objectWillChange.send()
-    }
-
-    /// Get localized string that reacts to locale changes
-    func localizedString(_ key: String, comment: String = "") -> String {
-        // Map Rust locale to Swift locale
-        let swiftLocale: String
-        switch currentLocale {
-        case "zh-CN":
-            swiftLocale = "zh-Hans"
-        case "zh-TW":
-            swiftLocale = "zh-Hant"
-        case "en-US":
-            swiftLocale = "en"
-        default:
-            swiftLocale = currentLocale
-        }
-
-        // Get the appropriate bundle path for the locale
-        guard let bundlePath = Bundle.main.path(forResource: swiftLocale, ofType: "lproj"),
-              let bundle = Bundle(path: bundlePath) else {
-            // Fallback to English
-            if let enPath = Bundle.main.path(forResource: "en", ofType: "lproj"),
-               let enBundle = Bundle(path: enPath) {
-                return enBundle.localizedString(forKey: key, value: key, table: nil)
-            }
-            return key
-        }
-
-        // Get localized string from the locale-specific bundle
-        let localized = bundle.localizedString(forKey: key, value: nil, table: nil)
-        // If the key wasn't found in this locale, the bundle returns the key itself
-        // In that case, fall back to English
-        if localized == key {
-            if let enPath = Bundle.main.path(forResource: "en", ofType: "lproj"),
-               let enBundle = Bundle(path: enPath) {
-                return enBundle.localizedString(forKey: key, value: key, table: nil)
-            }
-        }
-        return localized
+        save()
     }
 }
 
-// MARK: - Localization Helper
+// MARK: - Localization Helper (for backward compatibility with macOS AppDelegate)
+private extension Configuration {
+    /// Convert supported locale identifiers into `.lproj` bundle names that exist in the app.
+    var bundleLocaleIdentifier: String {
+        switch currentLocale {
+        case "zh-CN":
+            return "zh-Hans"
+        case "zh-TW":
+            return "zh-Hant"
+        case "en-US":
+            return "en"
+        default:
+            return currentLocale
+        }
+    }
+
+    var localeCandidates: [String] {
+        var candidates: [String] = [bundleLocaleIdentifier]
+        let baseLocale = currentLocale.split(whereSeparator: { $0 == "-" || $0 == "_" }).first
+        if let base = baseLocale, !base.isEmpty, !candidates.contains(String(base)) {
+            candidates.append(String(base))
+        }
+        return candidates
+    }
+
+    func bundle(for localeIdentifier: String) -> Bundle? {
+        guard let path = Bundle.main.path(forResource: localeIdentifier, ofType: "lproj") else {
+            return nil
+        }
+        return Bundle(path: path)
+    }
+
+    func localizedString(_ key: String, comment: String = "") -> String {
+        for identifier in localeCandidates {
+            if let localeBundle = bundle(for: identifier) {
+                let localized = localeBundle.localizedString(forKey: key, value: nil, table: nil)
+                if localized != key {
+                    return localized
+                }
+            }
+        }
+
+        if let enBundle = bundle(for: "en") {
+            return enBundle.localizedString(forKey: key, value: key, table: nil)
+        }
+
+        return key
+    }
+}
 
 extension String {
     /// Get localized string using current app locale
     func localized(comment: String = "") -> String {
-        return ConfigurationManager.shared.localizedString(self, comment: comment)
+        return Configuration.shared.localizedString(self, comment: comment)
+    }
+
+    /// Property-style access for localized strings (e.g., `"menu.file".localized`)
+    var localized: String {
+        return self.localized(comment: "")
     }
 }
 
-// MARK: - NSColor Hex Extensions
+// MARK: - PlatformColor Hex Extensions
 
-extension NSColor {
+extension PlatformColor {
     convenience init?(hex: String) {
         var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
@@ -227,10 +214,19 @@ extension NSColor {
     }
 
     var hexString: String {
+        #if os(macOS)
         guard let rgb = self.usingColorSpace(.deviceRGB) else { return "#000000" }
         let r = Int(rgb.redComponent * 255.0)
         let g = Int(rgb.greenComponent * 255.0)
         let b = Int(rgb.blueComponent * 255.0)
         return String(format: "#%02X%02X%02X", r, g, b)
+        #else
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+        self.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return String(format: "#%02X%02X%02X", Int(r * 255.0), Int(g * 255.0), Int(b * 255.0))
+        #endif
     }
 }

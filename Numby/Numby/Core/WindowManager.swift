@@ -5,6 +5,7 @@
 //  Manages window state and coordination across multiple windows
 //
 
+#if os(macOS)
 import Foundation
 import AppKit
 import SwiftUI
@@ -66,10 +67,10 @@ class WindowManager: ObservableObject {
         // Use weak reference to avoid accessing deallocated memory
         guard let window = notification.object as? NumbyWindow,
               !window.isReleasedWhenClosed || window.isVisible else { return }
-        
+
         // Additional safety check
         guard window.windowNumber != -1 else { return }
-        
+
         register(window: window)
     }
 
@@ -127,3 +128,4 @@ struct WindowState: Codable {
     let splitTree: SplitTree
     let windowLevel: Int
 }
+#endif

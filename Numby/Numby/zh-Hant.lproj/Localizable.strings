@@ -27,18 +27,18 @@
 
 /* Settings - CLI Section */
 "settings.cli.section" = "命令列工具";
-"settings.cli.installViaHomebrew" = "透過Homebrew安裝:";
+"settings.cli.installViaCargo" = "透過Cargo (Rust)安裝:";
 "settings.cli.copyTooltip" = "複製到剪貼簿";
-"settings.cli.installHomebrew" = "安裝Homebrew";
-"settings.cli.orDownload" = "或從GitHub發布頁面下載";
+"settings.cli.installRust" = "安裝Rust";
+"settings.cli.orInstaller" = "或使用自動安裝腳本:";
+"settings.cli.orDownload" = "或從GitHub發布頁面下載:";
 "settings.cli.githubReleases" = "GitHub發布";
 
 /* CLI Installer Window */
 "cliInstaller.title" = "命令列工具";
 "cliInstaller.subtitle" = "在終端中使用numby";
-"cliInstaller.installViaHomebrew" = "透過Homebrew安裝";
 "cliInstaller.runCommand" = "在終端中執行此命令:";
-"cliInstaller.noHomebrew" = "如果您沒有安裝Homebrew:";
+"cliInstaller.noRust" = "如果您沒有安裝Rust:";
 "cliInstaller.alternative" = "替代方案: 手動安裝";
 "cliInstaller.downloadRelease" = "下載最新版本:";
 "cliInstaller.moveToPath" = "然後移動到您的PATH:";
@@ -126,3 +126,51 @@
 "alert.saveAndClose" = "儲存並關閉";
 "alert.closeWithoutSavingButton" = "不儲存並關閉";
 "alert.cancel" = "取消";
+"alert.updateFailed" = "更新失敗";
+"alert.currencyUpdateError" = "無法更新匯率。請檢查您的網路連線。";
+
+/* iOS Settings */
+"settings.title" = "設定";
+"settings.language.openSettings" = "開啟設定";
+"settings.about.section" = "關於";
+"settings.about.version" = "版本";
+"settings.about.github" = "GitHub";
+"settings.theme.select" = "選擇主題";
+"settings.font.select" = "選擇字體";
+
+/* iOS Navigation */
+"nav.new" = "新增";
+"nav.history" = "歷史紀錄";
+"nav.done" = "完成";
+"nav.close" = "關閉";
+"nav.clear" = "清除";
+
+/* iOS History */
+"history.title" = "歷史紀錄";
+"history.clearTitle" = "清除歷史紀錄";
+"history.clearMessage" = "確定要清除所有歷史紀錄嗎？";
+
+/* File Operations */
+"file.export.title" = "匯出計算機";
+"file.export.message" = "選擇儲存計算機的位置";
+"file.export.saveAs" = "儲存為:";
+"file.export.failed" = "匯出失敗";
+"file.export.error" = "無法儲存檔案: %@";
+"file.import.title" = "開啟計算機";
+"file.import.message" = "選擇要開啟的計算機檔案";
+"file.import.failed" = "匯入失敗";
+"file.import.error" = "無法讀取檔案: %@";
+"file.untitled" = "未命名";
+
+
+/* Share */
+"share.title" = "分享";
+"share.copyText" = "複製為文字";
+"share.copyImage" = "複製為圖片";
+"share.copyLink" = "複製為連結";
+"share.copied" = "已複製！";
+"nav.cancel" = "取消";
+
+/* iPad Split View */
+"split.horizontal" = "水平分割";
+"split.vertical" = "垂直分割";

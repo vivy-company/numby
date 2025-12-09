@@ -1314,3 +1314,104 @@ fn test_fuel_efficiency() {
     let (stdout, _) = run_command(&["run", "--", "235.214 / 30"]);
     assert!(stdout.contains("7.8") || stdout.contains("7.9"));
 }
+
+// Currency word mapping tests for voice dictation
+#[test]
+fn test_currency_word_dollars_to_euros() {
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "100 dollars to euros",
+    ]);
+    let stdout_lower = stdout.to_lowercase();
+    assert!(stdout_lower.contains("eur"));
+    let re = Regex::new(r"(?i)85\.00 eur").unwrap();
+    assert!(re.is_match(stdout.trim()), "got {}", stdout);
+}
+
+#[test]
+fn test_currency_word_yen_to_pounds() {
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "JPY:150",
+        "--rate",
+        "GBP:0.79",
+        "1000 yen to pounds",
+    ]);
+    let stdout_lower = stdout.to_lowercase();
+    assert!(stdout_lower.contains("gbp"));
+}
+
+#[test]
+fn test_currency_word_yuan_rmb() {
+    // Test yuan mapping
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "CNY:7.2",
+        "100 yuan to usd",
+    ]);
+    let stdout_lower = stdout.to_lowercase();
+    assert!(stdout_lower.contains("usd"));
+
+    // Test rmb mapping (alternative for CNY)
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "CNY:7.2",
+        "100 rmb to usd",
+    ]);
+    let stdout_lower = stdout.to_lowercase();
+    assert!(stdout_lower.contains("usd"));
+}
+
+#[test]
+fn test_currency_word_mixed_case() {
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "50 DOLLARS into EUROS",
+    ]);
+    let stdout_lower = stdout.to_lowercase();
+    assert!(stdout_lower.contains("eur"));
+}
+
+#[test]
+fn test_currency_word_singular_plural() {
+    // Test singular "dollar"
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "1 dollar to euro",
+    ]);
+    let stdout_lower = stdout.to_lowercase();
+    assert!(stdout_lower.contains("eur"));
+
+    // Test plural "dollars"
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--no-update",
+        "--rate",
+        "EUR:0.85",
+        "10 dollars to euros",
+    ]);
+    let stdout_lower = stdout.to_lowercase();
+    assert!(stdout_lower.contains("eur"));
+}

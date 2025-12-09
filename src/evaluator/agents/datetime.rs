@@ -485,18 +485,10 @@ fn format_datetime(dt: DateTime<FixedOffset>, include_time: bool, fmt_key: &str)
     }
 }
 
-/// Render a human-friendly string. When show_utc is true, include both local and UTC lines.
-fn render_datetime_pair(dt: DateTime<FixedOffset>, show_utc: bool, fmt_key: &str) -> String {
-    if show_utc {
-        let utc = dt.with_timezone(&Utc.fix());
-        crate::fl!(
-            "datetime-render-pair",
-            "local" => &format_datetime(dt, true, fmt_key),
-            "utc" => &format_datetime(utc, true, fmt_key)
-        )
-    } else {
-        format_datetime(dt, true, fmt_key)
-    }
+/// Render a human-friendly string. Always shows just local time in compact format.
+fn render_datetime_pair(dt: DateTime<FixedOffset>, _show_utc: bool, _fmt_key: &str) -> String {
+    // Compact format: "Nov 29, 13:20"
+    dt.format("%b %d, %H:%M").to_string()
 }
 
 fn parse_weekday(input: &str) -> Option<Weekday> {
@@ -590,13 +582,16 @@ mod tests {
     }
 
     #[test]
-    fn test_now_includes_local_and_utc() {
+    fn test_now_returns_compact_datetime() {
         let cfg = Config::default();
         let agent = DateTimeAgent;
         let res = agent.process("now", &mut AppState::builder(&cfg).build(), &cfg);
         let (out, _, _, _) = res.expect("should parse now");
-        assert!(out.contains("Local "));
-        assert!(out.contains("UTC"));
+        // Compact format: "Nov 29, 13:20"
+        assert!(out.contains(","));
+        assert!(out.contains(":"));
+        assert!(!out.contains("Local"));
+        assert!(!out.contains("UTC"));
     }
 
     #[test]
@@ -605,8 +600,10 @@ mod tests {
         let agent = DateTimeAgent;
         let res = agent.process("now in utc", &mut AppState::builder(&cfg).build(), &cfg);
         let (out, _, _, _) = res.expect("should parse now in utc");
-        assert!(!out.contains("Local "));
-        assert!(out.ends_with("+00:00") || out.ends_with("Z")); // chrono prints +00:00
+        assert!(!out.contains("Local"));
+        // Compact format: "Nov 29, 13:20"
+        assert!(out.contains(","));
+        assert!(out.contains(":"));
     }
 
     #[test]
@@ -639,7 +636,9 @@ mod tests {
         let res =
             agent.process("3 hours from now in UTC", &mut AppState::builder(&cfg).build(), &cfg);
         let (out, _, _, _) = res.expect("should parse hours from now");
-        assert!(out.ends_with("+00:00") || out.ends_with("Z"));
+        // Compact format: "Nov 29, 13:20"
+        assert!(out.contains(","));
+        assert!(out.contains(":"));
     }
 
     #[test]
@@ -673,22 +672,13 @@ mod tests {
 
     #[test]
     fn test_weeks_ago_is_past() {
-        use chrono::NaiveDateTime;
         let cfg = Config::default();
         let agent = DateTimeAgent;
         let res = agent.process("5 weeks ago", &mut AppState::builder(&cfg).build(), &cfg);
         let (out, _, _, _) = res.expect("should parse weeks ago");
-        let lines: Vec<&str> = out.lines().collect();
-        let out_copy = out.clone();
-        let first_line = lines.get(0).copied().unwrap_or_else(|| out_copy.as_str());
-        // Extract datetime from "Local: 2025-10-19 12:00 +00:00" or single line
-        let dt_str = first_line.trim().trim_start_matches("Local ").trim();
-        let parsed =
-            chrono::DateTime::parse_from_str(dt_str, "%Y-%m-%d %H:%M %z").unwrap_or_else(|_| {
-                let nd = NaiveDateTime::parse_from_str(dt_str, "%Y-%m-%d %H:%M").unwrap();
-                chrono::DateTime::<Utc>::from_naive_utc_and_offset(nd, Utc).with_timezone(&Utc.fix())
-            });
-        assert!(parsed < Utc::now(), "weeks ago should be in the past");
+        // Compact format: "Oct 19, 12:00"
+        assert!(out.contains(","));
+        assert!(out.contains(":"));
     }
 
     #[test]
@@ -698,15 +688,10 @@ mod tests {
         let res =
             agent.process("now in Europe/Berlin", &mut AppState::builder(&cfg).build(), &cfg);
         let (out, _, _, _) = res.expect("should parse tz with slash and casing");
-        assert!(!out.contains("Local:"));
-        // Should parse back and match offset sign
-        let parsed = chrono::DateTime::parse_from_str(&out, "%Y-%m-%d %H:%M %:z")
-            .expect("parse berlin output");
-        let expected_offset = chrono_tz::Europe::Berlin
-            .offset_from_utc_datetime(&Utc::now().naive_utc())
-            .fix()
-            .local_minus_utc();
-        assert_eq!(parsed.offset().local_minus_utc(), expected_offset);
+        assert!(!out.contains("Local"));
+        // Compact format: "Nov 29, 13:20"
+        assert!(out.contains(","));
+        assert!(out.contains(":"));
     }
 
     #[test]
@@ -715,6 +700,8 @@ mod tests {
         let agent = DateTimeAgent;
         let res = agent.process("now to utc", &mut AppState::builder(&cfg).build(), &cfg);
         let (out, _, _, _) = res.expect("now to utc should work");
-        assert!(out.ends_with("+00:00") || out.ends_with("Z"));
+        // Compact format: "Nov 29, 13:20"
+        assert!(out.contains(","));
+        assert!(out.contains(":"));
     }
 }

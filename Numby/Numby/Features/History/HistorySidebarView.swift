@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  HistorySidebarView.swift
 //  Numby
@@ -22,8 +23,6 @@ struct HistorySidebarView: View {
             SearchBar(text: $historyManager.searchQuery)
                 .padding(8)
 
-            Divider()
-
             // Session list
             if historyManager.filteredSessions.isEmpty {
                 EmptyStateView(hasSearchQuery: !historyManager.searchQuery.isEmpty)
@@ -38,7 +37,7 @@ struct HistorySidebarView: View {
                 )
             }
         }
-        .frame(minWidth: 200, idealWidth: 250, maxWidth: 400)
+        .frame(minWidth: 280, idealWidth: 300, maxWidth: 400)
     }
 }
 
@@ -50,16 +49,17 @@ struct SearchBar: View {
 
     private var localizedPlaceholder: String {
         _ = localeVersion
-        return "history.searchPlaceholder".localized()
+        return "history.searchPlaceholder".localized
     }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
+                .font(.system(size: 14))
 
-            TextField(localizedPlaceholder, text: $text)
-                .textFieldStyle(PlainTextFieldStyle())
+            FocuslessTextField(text: $text, placeholder: localizedPlaceholder)
+                .frame(height: 20)
 
             if !text.isEmpty {
                 Button(action: { text = "" }) {
@@ -69,11 +69,65 @@ struct SearchBar: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .padding(6)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.clear)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.secondary.opacity(0.4), lineWidth: 1)
+        )
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LocaleChanged"))) { _ in
             localeVersion += 1
+        }
+    }
+}
+
+// MARK: - Focusless TextField (no focus ring)
+
+class NoFocusRingTextField: NSTextField {
+    override var focusRingType: NSFocusRingType {
+        get { .none }
+        set { }
+    }
+}
+
+struct FocuslessTextField: NSViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+
+    func makeNSView(context: Context) -> NoFocusRingTextField {
+        let textField = NoFocusRingTextField()
+        textField.isBordered = false
+        textField.drawsBackground = false
+        textField.font = .systemFont(ofSize: 14)
+        textField.placeholderString = placeholder
+        textField.delegate = context.coordinator
+        textField.cell?.lineBreakMode = .byTruncatingTail
+        textField.cell?.focusRingType = .none
+        return textField
+    }
+
+    func updateNSView(_ textField: NoFocusRingTextField, context: Context) {
+        if textField.stringValue != text {
+            textField.stringValue = text
+        }
+        textField.placeholderString = placeholder
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: FocuslessTextField
+
+        init(_ parent: FocuslessTextField) {
+            self.parent = parent
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let textField = obj.object as? NSTextField else { return }
+            parent.text = textField.stringValue
         }
     }
 }
@@ -86,12 +140,12 @@ struct EmptyStateView: View {
 
     private var localizedTitle: String {
         _ = localeVersion
-        return hasSearchQuery ? "history.noResults".localized() : "history.empty".localized()
+        return hasSearchQuery ? "history.noResults".localized : "history.empty".localized
     }
 
     private var localizedDescription: String {
         _ = localeVersion
-        return "history.emptyDescription".localized()
+        return "history.emptyDescription".localized
     }
 
     var body: some View {
@@ -183,8 +237,11 @@ struct SessionList: View {
     }
 
     private func selectSession(_ session: CalculationSession) {
-        selectedSession = session
         onSessionSelected?(session)
+        // Clear selection after opening in new tab to avoid stale highlight
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            selectedSession = nil
+        }
     }
 }
 
@@ -203,27 +260,27 @@ struct SessionRow: View {
 
     private var localizedName: String {
         _ = localeVersion
-        return "history.name".localized()
+        return "history.name".localized
     }
 
     private var localizedDone: String {
         _ = localeVersion
-        return "history.done".localized()
+        return "history.done".localized
     }
 
     private var localizedOpenInNewTab: String {
         _ = localeVersion
-        return "history.openInNewTab".localized()
+        return "history.openInNewTab".localized
     }
 
     private var localizedRename: String {
         _ = localeVersion
-        return "history.rename".localized()
+        return "history.rename".localized
     }
 
     private var localizedDelete: String {
         _ = localeVersion
-        return "history.delete".localized()
+        return "history.delete".localized
     }
 
     var body: some View {
@@ -300,3 +357,4 @@ struct HistorySidebarView_Previews: PreviewProvider {
         .frame(width: 250, height: 600)
     }
 }
+#endif

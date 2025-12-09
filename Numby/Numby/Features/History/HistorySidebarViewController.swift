@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  HistorySidebarViewController.swift
 //  Numby
@@ -27,3 +28,4 @@ class HistorySidebarViewController: NSViewController {
         self.view = hostingView
     }
 }
+#endif

@@ -7,8 +7,15 @@
 
 import Foundation
 import Combine
-import AppKit
 import SwiftUI
+
+#if os(macOS)
+import AppKit
+typealias PlatformApplication = NSApplication
+#elseif os(iOS) || os(visionOS)
+import UIKit
+typealias PlatformApplication = UIApplication
+#endif
 
 /// Color scheme for syntax highlighting
 struct SyntaxColors: Codable, Hashable {
@@ -32,6 +39,97 @@ struct SyntaxColors: Codable, Hashable {
 struct Theme: Codable, Hashable {
     let name: String
     let syntax: SyntaxColors
+
+    /// Current active theme
+    static var current: Theme {
+        get {
+            let savedThemeName = UserDefaults.standard.string(forKey: "selectedTheme")
+            if let themeName = savedThemeName,
+               let theme = Theme.allThemes.first(where: { $0.name == themeName }) {
+                return theme
+            }
+            return CatppuccinTheme.mocha.theme
+        }
+        set {
+            UserDefaults.standard.set(newValue.name, forKey: "selectedTheme")
+            applyTheme(newValue)
+        }
+    }
+
+    /// Apply theme to the application
+    private static func applyTheme(_ theme: Theme) {
+        guard let bgColor = PlatformColor(hex: theme.syntax.background) else {
+            return
+        }
+
+        // Update configuration
+        var updatedConfig = Configuration.shared.config
+        updatedConfig.backgroundColor = bgColor
+        Configuration.shared.config = updatedConfig
+        Configuration.shared.save()
+
+        #if os(macOS)
+        // Update all windows on macOS
+        for window in PlatformApplication.shared.windows.compactMap({ $0 as? NumbyWindow }) {
+            DispatchQueue.main.async { [weak window] in
+                guard let window = window else { return }
+
+                window.updateBackgroundColor(bgColor)
+
+                window.controller?.objectWillChange.send()
+                for (_, calculator) in window.controller?.calculators ?? [:] {
+                    calculator.objectWillChange.send()
+                }
+            }
+        }
+        #endif
+    }
+
+    /// Get background color
+    var backgroundColor: PlatformColor {
+        #if os(macOS)
+        return PlatformColor(hex: syntax.background) ?? .windowBackgroundColor
+        #elseif os(iOS) || os(visionOS)
+        return PlatformColor(hex: syntax.background) ?? .systemBackground
+        #endif
+    }
+
+    /// Get text color
+    var textColor: PlatformColor {
+        #if os(macOS)
+        return PlatformColor(hex: syntax.text) ?? .textColor
+        #elseif os(iOS) || os(visionOS)
+        return PlatformColor(hex: syntax.text) ?? .label
+        #endif
+    }
+
+    /// Get syntax color for a specific type
+    func syntaxColor(for type: SyntaxColorType) -> PlatformColor {
+        let hex: String
+
+        switch type {
+        case .text: hex = syntax.text
+        case .background: hex = syntax.background
+        case .numbers: hex = syntax.numbers
+        case .operators: hex = syntax.operators
+        case .keywords: hex = syntax.keywords
+        case .functions: hex = syntax.functions
+        case .constants: hex = syntax.constants
+        case .variables: hex = syntax.variables
+        case .variableUsage: hex = syntax.variableUsage
+        case .assignment: hex = syntax.assignment
+        case .currency: hex = syntax.currency
+        case .units: hex = syntax.units
+        case .results: hex = syntax.results
+        case .comments: hex = syntax.comments
+        }
+
+        #if os(macOS)
+        return PlatformColor(hex: hex) ?? .textColor
+        #elseif os(iOS) || os(visionOS)
+        return PlatformColor(hex: hex) ?? .label
+        #endif
+    }
 }
 
 /// Catppuccin theme variants
@@ -127,86 +225,6 @@ enum CatppuccinTheme: String, CaseIterable, Codable {
                 )
             )
         }
-    }
-}
-
-/// Theme manager
-class ThemeManager: ObservableObject {
-    static let shared = ThemeManager()
-
-    @Published var currentTheme: Theme {
-        didSet {
-            saveTheme()
-            applyTheme()
-        }
-    }
-
-    private init() {
-        // Load saved theme by name
-        let savedThemeName = UserDefaults.standard.string(forKey: "selectedTheme")
-
-        // Try to find the theme by name
-        if let themeName = savedThemeName,
-           let theme = Theme.allThemes.first(where: { $0.name == themeName }) {
-            self.currentTheme = theme
-        } else {
-            // Default to Catppuccin Mocha
-            self.currentTheme = CatppuccinTheme.mocha.theme
-        }
-    }
-
-    private func saveTheme() {
-        UserDefaults.standard.set(currentTheme.name, forKey: "selectedTheme")
-    }
-
-    func applyTheme() {
-        let theme = currentTheme
-        guard let bgColor = NSColor(hex: theme.syntax.background) else {
-            return
-        }
-
-        // Update configuration (reassign to trigger @Published)
-        var updatedConfig = ConfigurationManager.shared.config
-        updatedConfig.backgroundColor = bgColor
-        ConfigurationManager.shared.config = updatedConfig
-
-        // Update all windows
-        for window in NSApplication.shared.windows.compactMap({ $0 as? NumbyWindow }) {
-            DispatchQueue.main.async { [weak window] in
-                guard let window = window else { return }
-
-                window.updateBackgroundColor(bgColor)
-
-                window.controller?.objectWillChange.send()
-                for (_, calculator) in window.controller?.calculators ?? [:] {
-                    calculator.objectWillChange.send()
-                }
-            }
-        }
-    }
-
-    func syntaxColor(for type: SyntaxColorType) -> NSColor {
-        let theme = currentTheme
-        let hex: String
-
-        switch type {
-        case .text: hex = theme.syntax.text
-        case .background: hex = theme.syntax.background
-        case .numbers: hex = theme.syntax.numbers
-        case .operators: hex = theme.syntax.operators
-        case .keywords: hex = theme.syntax.keywords
-        case .functions: hex = theme.syntax.functions
-        case .constants: hex = theme.syntax.constants
-        case .variables: hex = theme.syntax.variables
-        case .variableUsage: hex = theme.syntax.variableUsage
-        case .assignment: hex = theme.syntax.assignment
-        case .currency: hex = theme.syntax.currency
-        case .units: hex = theme.syntax.units
-        case .results: hex = theme.syntax.results
-        case .comments: hex = theme.syntax.comments
-        }
-
-        return NSColor(hex: hex) ?? .textColor
     }
 }
 

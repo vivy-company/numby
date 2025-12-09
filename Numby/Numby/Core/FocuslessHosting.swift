@@ -5,6 +5,7 @@
 //  Hosts SwiftUI views without allowing AppKit to draw focus rings
 //
 
+#if os(macOS)
 import SwiftUI
 import AppKit
 
@@ -52,3 +53,4 @@ final class FocuslessSplitItemWrapper: NSView {
         .zero
     }
 }
+#endif

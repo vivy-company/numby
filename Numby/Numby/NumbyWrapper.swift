@@ -28,8 +28,7 @@ class NumbyWrapper: ObservableObject {
             }
         }
         // Set locale (prioritize saved config, then system locale)
-        let configManager = ConfigurationManager.shared
-        let locale = configManager.config.locale ?? Locale.current.language.languageCode?.identifier ?? "en-US"
+        let locale = Configuration.shared.config.locale ?? Locale.current.language.languageCode?.identifier ?? "en-US"
         locale.withCString { cLocale in
             _ = libnumby_set_locale(context, cLocale)
         }
@@ -64,19 +63,16 @@ class NumbyWrapper: ObservableObject {
         do {
             try fm.createDirectory(at: directory, withIntermediateDirectories: true)
         } catch {
-            print("Failed to create config directory: \(error.localizedDescription)")
             return false
         }
 
         if !fm.fileExists(atPath: configURL.path) {
             guard let bundledURL = Bundle.main.url(forResource: "config", withExtension: "json") else {
-                print("Bundled config.json missing")
                 return false
             }
             do {
                 try fm.copyItem(at: bundledURL, to: configURL)
             } catch {
-                print("Failed to copy bundled config: \(error.localizedDescription)")
                 return false
             }
         }
@@ -91,16 +87,7 @@ class NumbyWrapper: ObservableObject {
 
             let stale = libnumby_are_rates_stale()
             if stale == 1 {
-                print("Currency rates are stale, updating...")
-                let result = libnumby_update_currency_rates(ctx)
-                if result == 0 {
-                    print("Currency rates updated successfully")
-                    if let date = self.getCurrencyRatesUpdateDate() {
-                        print("Rates updated on: \(date)")
-                    }
-                } else {
-                    print("Failed to update currency rates, using cached values")
-                }
+                _ = libnumby_update_currency_rates(ctx)
             }
         }
     }
@@ -206,34 +193,22 @@ class NumbyWrapper: ObservableObject {
         name.withCString { cName in
             if let unitStr = unit {
                 unitStr.withCString { cUnit in
-                    let success = libnumby_set_variable(ctx, cName, value, cUnit)
-                    if success != 0 {
-                        print("Failed to set variable \(name)")
-                    }
+                    _ = libnumby_set_variable(ctx, cName, value, cUnit)
                 }
             } else {
-                let success = libnumby_set_variable(ctx, cName, value, nil)
-                if success != 0 {
-                    print("Failed to set variable \(name)")
-                }
+                _ = libnumby_set_variable(ctx, cName, value, nil)
             }
         }
     }
 
     func clearHistory() {
         guard let ctx = context else { return }
-        let result = libnumby_clear_history(ctx)
-        if result != 0 {
-            print("Failed to clear history")
-        }
+        _ = libnumby_clear_history(ctx)
     }
 
     func clearVariables() {
         guard let ctx = context else { return }
-        let result = libnumby_clear_variables(ctx)
-        if result != 0 {
-            print("Failed to clear variables")
-        }
+        _ = libnumby_clear_variables(ctx)
     }
 
     func getHistoryCount() -> Int {

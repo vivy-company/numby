@@ -1,4 +1,5 @@
 use super::events::{EventSubscriber, StateEvent};
+#[cfg(not(feature = "visionos"))]
 use ratatui::text::Span;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -7,8 +8,10 @@ const MAX_CACHE_SIZE: usize = 1000;
 
 pub struct CacheManager {
     display: RwLock<HashMap<String, Option<String>>>,
+    #[cfg(not(feature = "visionos"))]
     highlight: RwLock<HashMap<String, Vec<Span<'static>>>>,
     display_access: RwLock<HashMap<String, u64>>,
+    #[cfg(not(feature = "visionos"))]
     highlight_access: RwLock<HashMap<String, u64>>,
     counter: RwLock<u64>,
     generation: RwLock<u64>,
@@ -18,8 +21,10 @@ impl CacheManager {
     pub fn new() -> Self {
         Self {
             display: RwLock::new(HashMap::new()),
+            #[cfg(not(feature = "visionos"))]
             highlight: RwLock::new(HashMap::new()),
             display_access: RwLock::new(HashMap::new()),
+            #[cfg(not(feature = "visionos"))]
             highlight_access: RwLock::new(HashMap::new()),
             counter: RwLock::new(0),
             generation: RwLock::new(0),
@@ -48,6 +53,7 @@ impl CacheManager {
         }
     }
 
+    #[cfg(not(feature = "visionos"))]
     fn evict_lru_highlight(&self) {
         if let (Ok(mut cache), Ok(mut access)) =
             (self.highlight.write(), self.highlight_access.write())
@@ -91,6 +97,7 @@ impl CacheManager {
         }
     }
 
+    #[cfg(not(feature = "visionos"))]
     pub fn get_highlight(&self, key: &str) -> Option<Vec<Span<'static>>> {
         let result = self.highlight.read().ok()?.get(key).cloned();
         if result.is_some() {
@@ -105,6 +112,7 @@ impl CacheManager {
         result
     }
 
+    #[cfg(not(feature = "visionos"))]
     pub fn set_highlight(&self, key: String, value: Vec<Span<'static>>) {
         self.evict_lru_highlight();
 
@@ -123,12 +131,14 @@ impl CacheManager {
         if let Ok(mut cache) = self.display.write() {
             cache.clear();
         }
+        #[cfg(not(feature = "visionos"))]
         if let Ok(mut cache) = self.highlight.write() {
             cache.clear();
         }
         if let Ok(mut access) = self.display_access.write() {
             access.clear();
         }
+        #[cfg(not(feature = "visionos"))]
         if let Ok(mut access) = self.highlight_access.write() {
             access.clear();
         }
@@ -139,16 +149,18 @@ impl CacheManager {
 
     fn invalidate_prefix(&self, prefix: &str) {
         if let Ok(mut cache) = self.display.write() {
-            cache.retain(|k, _| !k.starts_with(prefix));
+            cache.retain(|k: &String, _| !k.starts_with(prefix));
         }
+        #[cfg(not(feature = "visionos"))]
         if let Ok(mut cache) = self.highlight.write() {
-            cache.retain(|k, _| !k.starts_with(prefix));
+            cache.retain(|k: &String, _| !k.starts_with(prefix));
         }
         if let Ok(mut access) = self.display_access.write() {
-            access.retain(|k, _| !k.starts_with(prefix));
+            access.retain(|k: &String, _| !k.starts_with(prefix));
         }
+        #[cfg(not(feature = "visionos"))]
         if let Ok(mut access) = self.highlight_access.write() {
-            access.retain(|k, _| !k.starts_with(prefix));
+            access.retain(|k: &String, _| !k.starts_with(prefix));
         }
     }
 }

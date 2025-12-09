@@ -9,17 +9,7 @@ import Foundation
 import CoreData
 import Combine
 
-/// Snapshot of a calculator session for history
-struct CalculatorSessionSnapshot: Codable {
-    let splitTree: SplitTree
-    let calculatorStates: [String: CalculatorStateSnapshot]
-
-    struct CalculatorStateSnapshot: Codable {
-        let inputText: String
-        let results: [String?]
-        let cursorPosition: Int
-    }
-}
+// CalculatorSessionSnapshot is defined in Persistence.swift for cross-platform compatibility
 
 /// Manager for calculator history operations
 class HistoryManager: ObservableObject {
@@ -65,7 +55,6 @@ class HistoryManager: ObservableObject {
         do {
             sessions = try viewContext.fetch(request)
         } catch {
-            print("Failed to fetch sessions: \(error)")
             sessions = []
         }
     }
@@ -110,7 +99,7 @@ class HistoryManager: ObservableObject {
             try viewContext.save()
             fetchSessions()
         } catch {
-            print("Failed to save session: \(error)")
+            // Save failed - non-fatal
         }
     }
 
@@ -122,7 +111,7 @@ class HistoryManager: ObservableObject {
             try viewContext.save()
             fetchSessions()
         } catch {
-            print("Failed to update session name: \(error)")
+            // Update failed - non-fatal
         }
     }
 
@@ -134,21 +123,14 @@ class HistoryManager: ObservableObject {
             try viewContext.save()
             fetchSessions()
         } catch {
-            print("Failed to delete session: \(error)")
+            // Delete failed - non-fatal
         }
     }
 
     /// Restore a session snapshot
     func restoreSession(_ session: CalculationSession) -> CalculatorSessionSnapshot? {
         let data = session.swiftSessionData
-
-        do {
-            let decoder = JSONDecoder()
-            return try decoder.decode(CalculatorSessionSnapshot.self, from: data)
-        } catch {
-            print("Failed to restore session: \(error)")
-            return nil
-        }
+        return try? JSONDecoder().decode(CalculatorSessionSnapshot.self, from: data)
     }
 
     // MARK: - Search

@@ -6,7 +6,7 @@ export function Privacy() {
       <main className="py-20 px-6">
         <div className="max-w-[720px] mx-auto">
           <h1 className="text-[56px] font-semibold mb-8 tracking-tight">Privacy Policy</h1>
-          <p className="text-[#86868b] text-[17px] mb-12">Last updated: November 15, 2025</p>
+          <p className="text-[#86868b] text-[17px] mb-12">Last updated: November 30, 2025</p>
 
           <div className="space-y-8 text-[#86868b] text-[17px] leading-[1.47059]">
             <div>
@@ -42,6 +42,30 @@ export function Privacy() {
               <p>
                 When updating currency exchange rates, Numby makes anonymous requests to a free public API.
                 No identifying information is sent. The rates are cached locally and work offline.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-[32px] font-semibold text-[#f5f5f7] mb-4 tracking-tight">Share Feature</h2>
+              <p className="mb-4">
+                When you use the "Copy as Link" share feature, the following information is encoded in the URL:
+              </p>
+              <ul className="list-disc pl-6 space-y-2 mb-4">
+                <li>Your calculation expressions and results</li>
+                <li>The selected theme name</li>
+              </ul>
+              <p className="mb-4">
+                When someone opens a share link:
+              </p>
+              <ul className="list-disc pl-6 space-y-2 mb-4">
+                <li>The calculation data is decoded and displayed on our web server</li>
+                <li>An image preview is generated server-side for social media (Open Graph)</li>
+                <li>No data is permanently stored on our servers</li>
+                <li>No analytics or tracking is performed on share pages</li>
+              </ul>
+              <p>
+                <span className="text-[#f5f5f7] font-medium">Important:</span> Share links are public. Anyone with the link can view
+                the calculation content. Do not share links containing sensitive or personal information.
               </p>
             </div>
 

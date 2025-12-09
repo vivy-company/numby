@@ -27,18 +27,18 @@
 
 /* Settings - CLI Section */
 "settings.cli.section" = "Kommandozeilentool";
-"settings.cli.installViaHomebrew" = "Installation über Homebrew:";
+"settings.cli.installViaCargo" = "Installation über Cargo (Rust):";
 "settings.cli.copyTooltip" = "In Zwischenablage kopieren";
-"settings.cli.installHomebrew" = "Homebrew installieren";
-"settings.cli.orDownload" = "Oder von GitHub-Releases herunterladen";
+"settings.cli.installRust" = "Rust installieren";
+"settings.cli.orInstaller" = "Oder automatisches Installationsskript verwenden:";
+"settings.cli.orDownload" = "Oder von GitHub-Releases herunterladen:";
 "settings.cli.githubReleases" = "GitHub-Releases";
 
 /* CLI Installer Window */
 "cliInstaller.title" = "Kommandozeilentool";
 "cliInstaller.subtitle" = "Verwenden Sie numby in Ihrem Terminal";
-"cliInstaller.installViaHomebrew" = "Installation über Homebrew";
 "cliInstaller.runCommand" = "Führen Sie diesen Befehl in Ihrem Terminal aus:";
-"cliInstaller.noHomebrew" = "Wenn Sie Homebrew nicht installiert haben:";
+"cliInstaller.noRust" = "Wenn Sie Rust nicht installiert haben:";
 "cliInstaller.alternative" = "Alternative: Manuelle Installation";
 "cliInstaller.downloadRelease" = "Laden Sie die neueste Version herunter:";
 "cliInstaller.moveToPath" = "Dann in Ihren PATH verschieben:";
@@ -126,3 +126,51 @@
 "alert.saveAndClose" = "Speichern und schließen";
 "alert.closeWithoutSavingButton" = "Ohne Speichern schließen";
 "alert.cancel" = "Abbrechen";
+"alert.updateFailed" = "Aktualisierung fehlgeschlagen";
+"alert.currencyUpdateError" = "Wechselkurse konnten nicht aktualisiert werden. Überprüfen Sie Ihre Internetverbindung.";
+
+/* iOS Settings */
+"settings.title" = "Einstellungen";
+"settings.language.openSettings" = "Einstellungen öffnen";
+"settings.about.section" = "Über";
+"settings.about.version" = "Version";
+"settings.about.github" = "GitHub";
+"settings.theme.select" = "Thema auswählen";
+"settings.font.select" = "Schriftart auswählen";
+
+/* iOS Navigation */
+"nav.new" = "Neu";
+"nav.history" = "Verlauf";
+"nav.done" = "Fertig";
+"nav.close" = "Schließen";
+"nav.clear" = "Löschen";
+
+/* iOS History */
+"history.title" = "Verlauf";
+"history.clearTitle" = "Verlauf löschen";
+"history.clearMessage" = "Sind Sie sicher, dass Sie den gesamten Verlauf löschen möchten?";
+
+/* File Operations */
+"file.export.title" = "Rechner exportieren";
+"file.export.message" = "Wählen Sie einen Speicherort für Ihren Rechner";
+"file.export.saveAs" = "Speichern als:";
+"file.export.failed" = "Export fehlgeschlagen";
+"file.export.error" = "Datei konnte nicht gespeichert werden: %@";
+"file.import.title" = "Rechner öffnen";
+"file.import.message" = "Wählen Sie eine Rechner-Datei zum Öffnen";
+"file.import.failed" = "Import fehlgeschlagen";
+"file.import.error" = "Datei konnte nicht gelesen werden: %@";
+"file.untitled" = "Unbenannt";
+
+
+/* Share */
+"share.title" = "Teilen";
+"share.copyText" = "Als Text kopieren";
+"share.copyImage" = "Als Bild kopieren";
+"share.copyLink" = "Als Link kopieren";
+"share.copied" = "Kopiert!";
+"nav.cancel" = "Abbrechen";
+
+/* iPad Split View */
+"split.horizontal" = "Horizontal teilen";
+"split.vertical" = "Vertikal teilen";
