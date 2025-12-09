@@ -50,17 +50,25 @@ struct CalculatorImageRenderer {
         #endif
 
         // Build content
-        let attributedContent = buildAttributedContent(lines: lines, theme: theme, font: font)
+        let expressionLines = buildExpressionLines(lines: lines, theme: theme, font: font)
+        let resultLines = buildResultLines(lines: lines, theme: theme, font: font)
 
         // Calculate sizes
-        let textSize = attributedContent.boundingRect(
-            with: CGSize(width: maxWidth - contentPadding * 2, height: 10000),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            context: nil
-        ).size
+        var maxExprWidth: CGFloat = 0
+        var maxResultWidth: CGFloat = 0
+        for (expr, res) in zip(expressionLines, resultLines) {
+            let exprSize = expr.boundingRect(with: CGSize(width: 10000, height: 1000), options: [.usesLineFragmentOrigin], context: nil).size
+            let resSize = res.boundingRect(with: CGSize(width: 10000, height: 1000), options: [.usesLineFragmentOrigin], context: nil).size
+            maxExprWidth = max(maxExprWidth, exprSize.width)
+            maxResultWidth = max(maxResultWidth, resSize.width)
+        }
 
-        let frameWidth = max(minWidth, min(textSize.width + contentPadding * 2 + 40, maxWidth))
-        let frameHeight = titleBarHeight + textSize.height + contentPadding * 2 + 10
+        let lineHeight = calculateLineHeight(font: font)
+        let totalTextHeight = lineHeight * CGFloat(lines.count)
+        let gapBetween: CGFloat = 40
+
+        let frameWidth = max(minWidth, min(maxExprWidth + gapBetween + maxResultWidth + contentPadding * 2, maxWidth))
+        let frameHeight = titleBarHeight + totalTextHeight + contentPadding * 2
         let shadowPadding: CGFloat = 24
 
         let totalWidth = frameWidth + shadowPadding * 2
@@ -79,7 +87,9 @@ struct CalculatorImageRenderer {
             frameRect: CGRect(x: shadowPadding, y: shadowPadding, width: frameWidth, height: frameHeight),
             theme: theme,
             titleFont: titleFont,
-            attributedContent: attributedContent
+            expressionLines: expressionLines,
+            resultLines: resultLines,
+            lineHeight: lineHeight
         )
 
         image.unlockFocus()
@@ -100,7 +110,9 @@ struct CalculatorImageRenderer {
                 frameRect: CGRect(x: shadowPadding, y: shadowPadding, width: frameWidth, height: frameHeight),
                 theme: theme,
                 titleFont: titleFont,
-                attributedContent: attributedContent
+                expressionLines: expressionLines,
+                resultLines: resultLines,
+                lineHeight: lineHeight
             )
         }
         return image
@@ -109,52 +121,57 @@ struct CalculatorImageRenderer {
 
     // MARK: - Text Building
 
-    private static func buildAttributedContent(
+    private static func buildExpressionLines(
         lines: [(expression: String, result: String)],
         theme: Theme,
         font: RendererFont
-    ) -> NSAttributedString {
-        let result = NSMutableAttributedString()
+    ) -> [NSAttributedString] {
+        var result: [NSAttributedString] = []
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = lineSpacing
 
-        let spacer = "        " // 8 spaces between expression and result
-
-        for (index, line) in lines.enumerated() {
-            let lineText: String
-            if line.result.isEmpty {
-                lineText = line.expression
-            } else {
-                lineText = "\(line.expression)\(spacer)\(line.result)"
-            }
-
-            let lineAttr = NSMutableAttributedString(string: lineText)
+        for line in lines {
+            let lineAttr = NSMutableAttributedString(string: line.expression)
             let fullRange = NSRange(location: 0, length: lineAttr.length)
 
             lineAttr.addAttribute(.font, value: font, range: fullRange)
             lineAttr.addAttribute(.foregroundColor, value: theme.textColor, range: fullRange)
             lineAttr.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
 
-            // Highlight expression
-            let exprRange = NSRange(location: 0, length: line.expression.utf16.count)
-            applySyntaxHighlighting(to: lineAttr, in: exprRange, theme: theme)
-
-            // Highlight result
-            if !line.result.isEmpty {
-                let resultStart = line.expression.utf16.count + spacer.count
-                if resultStart < lineAttr.length {
-                    let resultRange = NSRange(location: resultStart, length: lineAttr.length - resultStart)
-                    lineAttr.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .results), range: resultRange)
-                }
-            }
-
+            applySyntaxHighlighting(to: lineAttr, in: fullRange, theme: theme)
             result.append(lineAttr)
-            if index < lines.count - 1 {
-                result.append(NSAttributedString(string: "\n"))
-            }
         }
 
         return result
+    }
+
+    private static func buildResultLines(
+        lines: [(expression: String, result: String)],
+        theme: Theme,
+        font: RendererFont
+    ) -> [NSAttributedString] {
+        var result: [NSAttributedString] = []
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = lineSpacing
+        paragraph.alignment = .right
+
+        for line in lines {
+            let lineAttr = NSMutableAttributedString(string: line.result)
+            let fullRange = NSRange(location: 0, length: lineAttr.length)
+
+            lineAttr.addAttribute(.font, value: font, range: fullRange)
+            lineAttr.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .results), range: fullRange)
+            lineAttr.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
+
+            result.append(lineAttr)
+        }
+
+        return result
+    }
+
+    private static func calculateLineHeight(font: RendererFont) -> CGFloat {
+        let testStr = NSAttributedString(string: "Xy", attributes: [.font: font])
+        return testStr.boundingRect(with: CGSize(width: 1000, height: 1000), options: [.usesLineFragmentOrigin], context: nil).height + lineSpacing
     }
 
     // MARK: - macOS Drawing
@@ -164,7 +181,9 @@ struct CalculatorImageRenderer {
         frameRect: CGRect,
         theme: Theme,
         titleFont: NSFont,
-        attributedContent: NSAttributedString
+        expressionLines: [NSAttributedString],
+        resultLines: [NSAttributedString],
+        lineHeight: CGFloat
     ) {
         // Shadow
         let shadow = NSShadow()
@@ -211,14 +230,21 @@ struct CalculatorImageRenderer {
         let titleSize = title.size(withAttributes: attrs)
         title.draw(at: CGPoint(x: frameRect.midX - titleSize.width / 2, y: titleBarRect.midY - titleSize.height / 2), withAttributes: attrs)
 
-        // Content
-        let contentRect = CGRect(
-            x: frameRect.minX + contentPadding,
-            y: frameRect.minY + contentPadding,
-            width: frameRect.width - contentPadding * 2,
-            height: frameRect.height - titleBarHeight - contentPadding * 2
-        )
-        attributedContent.draw(in: contentRect)
+        // Content - draw expressions on left, results on right
+        let contentTop = titleBarRect.minY - contentPadding
+        let contentLeft = frameRect.minX + contentPadding
+        let contentRight = frameRect.maxX - contentPadding
+
+        for (index, (expr, result)) in zip(expressionLines, resultLines).enumerated() {
+            let y = contentTop - lineHeight * CGFloat(index + 1)
+
+            // Draw expression (left aligned)
+            expr.draw(at: CGPoint(x: contentLeft, y: y))
+
+            // Draw result (right aligned)
+            let resultSize = result.boundingRect(with: CGSize(width: 10000, height: 1000), options: [.usesLineFragmentOrigin], context: nil).size
+            result.draw(at: CGPoint(x: contentRight - resultSize.width, y: y))
+        }
     }
 
     private static func drawTrafficLights(in titleBarRect: CGRect, startX: CGFloat) {
@@ -245,7 +271,9 @@ struct CalculatorImageRenderer {
         frameRect: CGRect,
         theme: Theme,
         titleFont: UIFont,
-        attributedContent: NSAttributedString
+        expressionLines: [NSAttributedString],
+        resultLines: [NSAttributedString],
+        lineHeight: CGFloat
     ) {
         // Shadow
         context.saveGState()
@@ -302,14 +330,21 @@ struct CalculatorImageRenderer {
         let titlePoint = CGPoint(x: frameRect.midX - titleSize.width / 2, y: titleBarRect.midY - titleSize.height / 2)
         title.draw(at: titlePoint, withAttributes: attrs)
 
-        // Content
-        let contentRect = CGRect(
-            x: frameRect.minX + contentPadding,
-            y: titleBarRect.maxY + contentPadding,
-            width: frameRect.width - contentPadding * 2,
-            height: frameRect.height - titleBarHeight - contentPadding * 2
-        )
-        attributedContent.draw(in: contentRect)
+        // Content - draw expressions on left, results on right
+        let contentTop = titleBarRect.maxY + contentPadding
+        let contentLeft = frameRect.minX + contentPadding
+        let contentRight = frameRect.maxX - contentPadding
+
+        for (index, (expr, result)) in zip(expressionLines, resultLines).enumerated() {
+            let y = contentTop + lineHeight * CGFloat(index)
+
+            // Draw expression (left aligned)
+            expr.draw(at: CGPoint(x: contentLeft, y: y))
+
+            // Draw result (right aligned)
+            let resultSize = result.boundingRect(with: CGSize(width: 10000, height: 1000), options: [.usesLineFragmentOrigin], context: nil).size
+            result.draw(at: CGPoint(x: contentRight - resultSize.width, y: y))
+        }
     }
 
     private static func adjustedColorIOS(_ color: UIColor, by amount: CGFloat) -> UIColor {

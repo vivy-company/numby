@@ -25,7 +25,8 @@ struct CalculatorSurfaceView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: .bottomTrailing) {
+            ZStack {
+                ZStack(alignment: .bottomTrailing) {
                 ScrollView {
                     HStack(spacing: 0) {
                         // Left panel - Input (80%)
@@ -74,36 +75,31 @@ struct CalculatorSurfaceView: View {
                 }
 
                 // Share button overlay with menu
-                Menu {
-                    Button(action: copyAsText) {
-                        Label("Copy as Text", systemImage: "doc.on.doc")
-                    }
-                    Button(action: copyAsImage) {
-                        Label("Copy as Image", systemImage: "photo")
-                    }
-                    Button(action: copyAsLink) {
-                        Label("Copy as Link", systemImage: "link")
-                    }
-                } label: {
-                    ZStack {
-                        if showCopiedFeedback {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .medium))
-                        } else {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                    }
-                    .foregroundColor(Color(nsColor: Theme.current.textColor).opacity(0.6))
-                    .frame(width: 28, height: 28)
-                    .background(Color(nsColor: Theme.current.backgroundColor).opacity(0.85))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: Theme.current.textColor).opacity(0.15), lineWidth: 0.5))
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
+                ShareMenuButton(
+                    showCopiedFeedback: showCopiedFeedback,
+                    onCopyAsText: copyAsText,
+                    onCopyAsImage: copyAsImage,
+                    onCopyAsLink: copyAsLink
+                )
+                .frame(width: 32, height: 32)
                 .padding(12)
-                .help("Share calculation")
+            }
+
+                // Copied toast notification
+                if showCopiedFeedback {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16, weight: .medium))
+                        Text("Copied!")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.75))
+                    .clipShape(Capsule())
+                    .transition(.scale.combined(with: .opacity))
+                }
             }
         }
         .onChange(of: Theme.current) { _ in
@@ -174,13 +170,99 @@ struct CalculatorSurfaceView: View {
     }
 
     private func showFeedback() {
-        withAnimation {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             showCopiedFeedback = true
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation {
+            withAnimation(.easeOut(duration: 0.2)) {
                 showCopiedFeedback = false
             }
+        }
+    }
+}
+
+// MARK: - Share Menu Button (NSViewRepresentable for full size control)
+
+struct ShareMenuButton: NSViewRepresentable {
+    let showCopiedFeedback: Bool
+    let onCopyAsText: () -> Void
+    let onCopyAsImage: () -> Void
+    let onCopyAsLink: () -> Void
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton()
+        button.bezelStyle = .regularSquare
+        button.isBordered = false
+        button.wantsLayer = true
+        button.layer?.cornerRadius = 6
+        button.layer?.backgroundColor = Theme.current.backgroundColor.withAlphaComponent(0.95).cgColor
+
+        updateButtonImage(button, showCheckmark: showCopiedFeedback)
+
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.showMenu(_:))
+
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) {
+        button.layer?.backgroundColor = Theme.current.backgroundColor.withAlphaComponent(0.95).cgColor
+        updateButtonImage(button, showCheckmark: showCopiedFeedback)
+        context.coordinator.parent = self
+    }
+
+    private func updateButtonImage(_ button: NSButton, showCheckmark: Bool) {
+        let symbolName = showCheckmark ? "checkmark" : "square.and.arrow.up"
+        let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+        if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Share")?
+            .withSymbolConfiguration(config) {
+            button.image = image
+            button.contentTintColor = NSColor.secondaryLabelColor
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject {
+        var parent: ShareMenuButton
+
+        init(_ parent: ShareMenuButton) {
+            self.parent = parent
+        }
+
+        @objc func showMenu(_ sender: NSButton) {
+            let menu = NSMenu()
+
+            let textItem = NSMenuItem(title: "Copy as Text", action: #selector(copyAsText), keyEquivalent: "")
+            textItem.target = self
+            textItem.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
+            menu.addItem(textItem)
+
+            let imageItem = NSMenuItem(title: "Copy as Image", action: #selector(copyAsImage), keyEquivalent: "")
+            imageItem.target = self
+            imageItem.image = NSImage(systemSymbolName: "photo", accessibilityDescription: nil)
+            menu.addItem(imageItem)
+
+            let linkItem = NSMenuItem(title: "Copy as Link", action: #selector(copyAsLink), keyEquivalent: "")
+            linkItem.target = self
+            linkItem.image = NSImage(systemSymbolName: "link", accessibilityDescription: nil)
+            menu.addItem(linkItem)
+
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
+        }
+
+        @objc func copyAsText() {
+            parent.onCopyAsText()
+        }
+
+        @objc func copyAsImage() {
+            parent.onCopyAsImage()
+        }
+
+        @objc func copyAsLink() {
+            parent.onCopyAsLink()
         }
     }
 }
