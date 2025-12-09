@@ -39,6 +39,9 @@ class CalculatorViewController: UIViewController {
 
     private lazy var textView: UITextView = {
         let tv = UITextView()
+        // Force TextKit 1 compatibility mode - TextKit 2 (iOS 16+ default) has severe performance issues
+        // This trades a console warning for significantly better typing performance
+        let _ = tv.layoutManager
         tv.isEditable = true
         tv.isScrollEnabled = true
         tv.alwaysBounceVertical = true
@@ -47,7 +50,12 @@ class CalculatorViewController: UIViewController {
         tv.smartQuotesType = .no
         tv.smartDashesType = .no
         tv.spellCheckingType = .no
-        tv.keyboardType = .default
+        // Use asciiCapable to disable predictive text bar (iOS keyboard candidate generation causes lag)
+        tv.keyboardType = .asciiCapable
+        // Explicitly disable inline predictions (iOS 17+)
+        if #available(iOS 17.0, *) {
+            tv.inlinePredictionType = .no
+        }
         tv.delegate = self
         tv.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
         tv.translatesAutoresizingMaskIntoConstraints = false
@@ -68,20 +76,14 @@ class CalculatorViewController: UIViewController {
         let rowSpacing: CGFloat = 4
         let padding: CGFloat = 8
 
-        let container = AccessoryBarView()
+        let container = AccessoryBarView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: barHeight))
+        container.autoresizingMask = [.flexibleWidth]
 
-        let scrollView = UIScrollView()
+        let scrollView = UIScrollView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: barHeight))
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.alwaysBounceHorizontal = true
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         container.addSubview(scrollView)
-
-        NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: container.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-        ])
 
         // Row 1: Units + Currencies (top)
         let row1: [(String, String)] = [
@@ -149,34 +151,44 @@ class CalculatorViewController: UIViewController {
 
         title = "Numby"
 
+        // Defer navigation items setup to avoid constraint warnings
+        DispatchQueue.main.async { [weak self] in
+            self?.setupNavigationItems()
+        }
+
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(_:)), name: UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(themeDidChange), name: NSNotification.Name("ThemeDidChange"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(loadHistoryEntry(_:)), name: NSNotification.Name("LoadHistoryEntry"), object: nil)
     }
 
+    private func setupNavigationItems() {
+        let settingsButton = UIBarButtonItem(image: UIImage(systemName: "gear"), style: .plain, target: self, action: #selector(openSettings))
+        let historyButton = UIBarButtonItem(image: UIImage(systemName: "clock"), style: .plain, target: self, action: #selector(openHistory))
+        let newButton = UIBarButtonItem(image: UIImage(systemName: "plus"), style: .plain, target: self, action: #selector(newCalculation))
+        let shareButton = UIBarButtonItem(image: UIImage(systemName: "square.and.arrow.up"), style: .plain, target: self, action: #selector(shareResult))
+
+        // Set explicit widths to avoid constraint conflicts
+        [settingsButton, historyButton, newButton, shareButton].forEach { $0.width = 44 }
+
+        navigationItem.leftBarButtonItems = [settingsButton, historyButton]
+        navigationItem.rightBarButtonItems = [newButton, shareButton]
+    }
+
     private var hasAppearedOnce = false
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        if !hasAppearedOnce {
-            // Set up navigation items after layout is ready
-            navigationItem.leftBarButtonItems = [
-                UIBarButtonItem(image: UIImage(systemName: "gear"), style: .plain, target: self, action: #selector(openSettings)),
-                UIBarButtonItem(image: UIImage(systemName: "clock"), style: .plain, target: self, action: #selector(openHistory))
-            ]
-            navigationItem.rightBarButtonItems = [
-                UIBarButtonItem(image: UIImage(systemName: "plus"), style: .plain, target: self, action: #selector(newCalculation)),
-                UIBarButtonItem(image: UIImage(systemName: "square.and.arrow.up"), style: .plain, target: self, action: #selector(shareResult))
-            ]
-        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         if !hasAppearedOnce {
             hasAppearedOnce = true
-            textView.becomeFirstResponder()
+            // Defer keyboard focus to avoid snapshotting warning
+            DispatchQueue.main.async { [weak self] in
+                self?.textView.becomeFirstResponder()
+            }
         }
     }
 
@@ -214,14 +226,6 @@ class CalculatorViewController: UIViewController {
         let keyboardFrame = frame.cgRectValue
         let height = keyboardFrame.height - view.safeAreaInsets.bottom
 
-        #if !os(visionOS)
-        // Hide accessory bar when hardware keyboard is connected (keyboard height is small)
-        // Hardware keyboard shows a small floating bar (~55pt), software keyboard is much taller
-        let isHardwareKeyboard = keyboardFrame.height < 100
-        textView.inputAccessoryView = isHardwareKeyboard ? nil : inputAccessoryBar
-        textView.reloadInputViews()
-        #endif
-
         textView.contentInset.bottom = max(0, height)
         textView.verticalScrollIndicatorInsets.bottom = max(0, height)
     }
@@ -231,8 +235,9 @@ class CalculatorViewController: UIViewController {
         textView.verticalScrollIndicatorInsets = .zero
     }
 
-    // MARK: - Evaluation
+    // MARK: - Debouncing
 
+    private var highlightWorkItem: DispatchWorkItem?
     private var evalWorkItem: DispatchWorkItem?
     private let evalQueue = DispatchQueue(label: "numby.eval", qos: .userInitiated)
     private let evalIDQueue = DispatchQueue(label: "numby.eval.id", qos: .userInitiated)
@@ -298,14 +303,21 @@ class CalculatorViewController: UIViewController {
 
     // MARK: - Syntax Highlighting
 
+    private var lastHighlightedText: String = ""
+
     private func applySyntaxHighlighting() {
         guard Configuration.shared.config.syntaxHighlighting else { return }
         guard let storage = textView.textStorage as? NSTextStorage else { return }
 
+        let text = storage.string
+
+        // Skip if text hasn't changed since last highlight
+        guard text != lastHighlightedText else { return }
+        lastHighlightedText = text
+
         // Save cursor position before modifying storage
         let savedSelectedRange = textView.selectedRange
 
-        let text = storage.string
         let fullRange = NSRange(location: 0, length: storage.length)
         let theme = Theme.current
         let font = textView.font ?? .monospacedSystemFont(ofSize: 16, weight: .regular)
@@ -339,7 +351,7 @@ class CalculatorViewController: UIViewController {
         // Constants
         applyPattern("\\b(pi|e|phi|tau|true|false)\\b", color: theme.syntaxColor(for: .constants), to: storage, text: text, options: .caseInsensitive)
         // Variables (assignment)
-        if let regex = try? NSRegularExpression(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*=", options: []) {
+        if let regex = getCachedRegex(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*=", options: []) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range(at: 1) {
                     storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variables), range: range)
@@ -347,7 +359,7 @@ class CalculatorViewController: UIViewController {
             }
         }
         // Variable usage
-        if let regex = try? NSRegularExpression(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b", options: []) {
+        if let regex = getCachedRegex(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b", options: []) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
                     let currentColor = storage.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? UIColor
@@ -368,8 +380,26 @@ class CalculatorViewController: UIViewController {
         textView.selectedRange = savedSelectedRange
     }
 
+    // MARK: - Regex Caching
+
+    private static var cachedRegexPatterns: [String: NSRegularExpression] = [:]
+
+    private func getCachedRegex(pattern: String, options: NSRegularExpression.Options = []) -> NSRegularExpression? {
+        let key = "\(pattern)_\(options.rawValue)"
+
+        if let cached = Self.cachedRegexPatterns[key] {
+            return cached
+        }
+
+        if let regex = try? NSRegularExpression(pattern: pattern, options: options) {
+            Self.cachedRegexPatterns[key] = regex
+            return regex
+        }
+        return nil
+    }
+
     private func applyPattern(_ pattern: String, color: UIColor, to storage: NSTextStorage, text: String, options: NSRegularExpression.Options = [], captureGroup: Int = 0) {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else { return }
+        guard let regex = getCachedRegex(pattern: pattern, options: options) else { return }
         let range = NSRange(location: 0, length: text.utf16.count)
         regex.enumerateMatches(in: text, range: range) { match, _, _ in
             if let r = match?.range(at: captureGroup), r.location != NSNotFound {
@@ -416,6 +446,8 @@ class CalculatorViewController: UIViewController {
             nav.navigationBar.tintColor = theme.textColor
         }
 
+        // Reset cache so highlighting re-applies with new theme/font
+        lastHighlightedText = ""
         applySyntaxHighlighting()
     }
 
@@ -555,7 +587,9 @@ class CalculatorViewController: UIViewController {
 
 extension CalculatorViewController: UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) {
+        // Apply syntax highlighting immediately for responsive feel
         applySyntaxHighlighting()
+        // Debounce evaluation (expensive)
         scheduleEvaluation()
     }
 }
@@ -566,9 +600,6 @@ class ResultsOverlayView: UIView {
     private var labels: [UILabel] = []
 
     func update(results: [String], font: UIFont, textColor: UIColor, textView: UITextView) {
-        let layoutManager = textView.layoutManager
-        let textContainer = textView.textContainer
-        let textStorage = textView.textStorage
         let insets = textView.textContainerInset
         let rightPadding: CGFloat = 16
 
@@ -581,7 +612,18 @@ class ResultsOverlayView: UIView {
 
         let text = textView.text ?? ""
         let lines = text.components(separatedBy: "\n")
-        var charIndex = 0
+
+        // Get paragraph style for line spacing
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 8
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .paragraphStyle: paragraphStyle
+        ]
+
+        let textContainerWidth = textView.bounds.width - insets.left - insets.right - textView.textContainer.lineFragmentPadding * 2
+
+        var currentY: CGFloat = insets.top
 
         for (i, label) in labels.enumerated() {
             guard i < results.count && i < lines.count else {
@@ -589,40 +631,44 @@ class ResultsOverlayView: UIView {
                 continue
             }
 
-            let lineLength = lines[i].utf16.count
+            let line = lines[i]
             let hasResult = !results[i].isEmpty
 
-            if hasResult && charIndex < textStorage.length {
+            if hasResult {
                 label.text = results[i]
                 label.font = font
                 label.textColor = textColor
                 label.isHidden = false
                 label.sizeToFit()
 
-                let lineRange = NSRange(location: charIndex, length: max(1, min(lineLength, textStorage.length - charIndex)))
-                let glyphRange = layoutManager.glyphRange(forCharacterRange: lineRange, actualCharacterRange: nil)
-                let lineRect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+                // Calculate line height including wrapping
+                let lineAttrString = NSAttributedString(string: line.isEmpty ? " " : line, attributes: attributes)
+                let boundingRect = lineAttrString.boundingRect(
+                    with: CGSize(width: textContainerWidth, height: .greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                    context: nil
+                )
 
                 let resultWidth = label.frame.width
                 let availableWidth = bounds.width - rightPadding
                 let resultX = availableWidth - resultWidth
 
-                // Check if line wraps (height > single line)
-                let singleLineHeight = font.lineHeight + 8
-                let lineY: CGFloat
-                if lineRect.height > singleLineHeight * 1.5 {
-                    // Line wraps - position result at the bottom-right of the wrapped block
-                    lineY = insets.top + lineRect.maxY - font.lineHeight
-                } else {
-                    lineY = insets.top + lineRect.minY
-                }
+                // Position result at the first line of this text line
+                label.frame.origin = CGPoint(x: resultX, y: currentY)
 
-                label.frame.origin = CGPoint(x: resultX, y: lineY)
+                currentY += ceil(boundingRect.height) + paragraphStyle.lineSpacing
             } else {
                 label.isHidden = true
-            }
 
-            charIndex += lineLength + 1
+                // Still need to advance Y position for empty results
+                let lineAttrString = NSAttributedString(string: line.isEmpty ? " " : line, attributes: attributes)
+                let boundingRect = lineAttrString.boundingRect(
+                    with: CGSize(width: textContainerWidth, height: .greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                    context: nil
+                )
+                currentY += ceil(boundingRect.height) + paragraphStyle.lineSpacing
+            }
         }
 
         for i in results.count..<labels.count {

@@ -93,7 +93,6 @@ class iPadTabContainerViewController: UIViewController, iPadTabBarDelegate {
         if animated {
             UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.85, initialSpringVelocity: 0) {
                 self.calculatorVC?.additionalSafeAreaInsets = UIEdgeInsets(top: topInset, left: 0, bottom: 0, right: 0)
-                self.view.layoutIfNeeded()
             }
         } else {
             calculatorVC?.additionalSafeAreaInsets = UIEdgeInsets(top: topInset, left: 0, bottom: 0, right: 0)
@@ -152,14 +151,12 @@ class iPadTabContainerViewController: UIViewController, iPadTabBarDelegate {
             UIView.animate(withDuration: 0.35, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0) {
                 self.tabBar.transform = .identity
                 self.tabBar.alpha = 1
-                self.view.layoutIfNeeded()
             }
 
             updateCalculatorInset(animated: true)
         } else {
             tabBar.transform = .identity
             tabBar.alpha = 1
-            view.layoutIfNeeded()
             updateCalculatorInset(animated: false)
         }
     }
@@ -171,14 +168,12 @@ class iPadTabContainerViewController: UIViewController, iPadTabBarDelegate {
                 self.tabBar.alpha = 0
             } completion: { _ in
                 self.tabBarHeightConstraint?.constant = 0
-                self.view.layoutIfNeeded()
             }
 
             updateCalculatorInset(animated: true)
         } else {
             tabBarHeightConstraint?.constant = 0
             tabBar.alpha = 0
-            view.layoutIfNeeded()
             updateCalculatorInset(animated: false)
         }
     }
