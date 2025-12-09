@@ -516,6 +516,30 @@ class CalculatorViewController: UIViewController {
         let feedback = UINotificationFeedbackGenerator()
         feedback.notificationOccurred(.success)
         #endif
+
+        // Show visual toast
+        let toast = CopiedToastView()
+        toast.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toast)
+
+        NSLayoutConstraint.activate([
+            toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            toast.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+
+        toast.alpha = 0
+        toast.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+
+        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.5) {
+            toast.alpha = 1
+            toast.transform = .identity
+        }
+
+        UIView.animate(withDuration: 0.2, delay: 1.5, options: .curveEaseOut) {
+            toast.alpha = 0
+        } completion: { _ in
+            toast.removeFromSuperview()
+        }
     }
 
     @objc private func loadHistoryEntry(_ notification: Notification) {
@@ -604,6 +628,59 @@ class ResultsOverlayView: UIView {
         for i in results.count..<labels.count {
             labels[i].isHidden = true
         }
+    }
+}
+
+// MARK: - Copied Toast View
+
+class CopiedToastView: UIView {
+    private let iconView: UIImageView = {
+        let iv = UIImageView()
+        iv.image = UIImage(systemName: "checkmark.circle.fill")
+        iv.tintColor = .white
+        iv.contentMode = .scaleAspectFit
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+
+    private let label: UILabel = {
+        let lbl = UILabel()
+        lbl.text = NSLocalizedString("share.copied", comment: "Copied!")
+        lbl.textColor = .white
+        lbl.font = .systemFont(ofSize: 14, weight: .medium)
+        lbl.translatesAutoresizingMaskIntoConstraints = false
+        return lbl
+    }()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupView()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupView()
+    }
+
+    private func setupView() {
+        backgroundColor = UIColor.black.withAlphaComponent(0.75)
+        layer.cornerRadius = 20
+
+        addSubview(iconView)
+        addSubview(label)
+
+        NSLayoutConstraint.activate([
+            iconView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            iconView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            iconView.widthAnchor.constraint(equalToConstant: 16),
+            iconView.heightAnchor.constraint(equalToConstant: 16),
+
+            label.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor),
+
+            heightAnchor.constraint(equalToConstant: 40)
+        ])
     }
 }
 #endif

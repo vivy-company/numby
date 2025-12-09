@@ -168,4 +168,5 @@
 "share.copyText" = "テキストとしてコピー";
 "share.copyImage" = "画像としてコピー";
 "share.copyLink" = "リンクとしてコピー";
+"share.copied" = "コピーしました！";
 "nav.cancel" = "キャンセル";

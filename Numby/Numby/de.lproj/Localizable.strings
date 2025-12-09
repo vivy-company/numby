@@ -168,4 +168,5 @@
 "share.copyText" = "Als Text kopieren";
 "share.copyImage" = "Als Bild kopieren";
 "share.copyLink" = "Als Link kopieren";
+"share.copied" = "Kopiert!";
 "nav.cancel" = "Abbrechen";

@@ -167,4 +167,5 @@
 "share.copyText" = "Copy as Text";
 "share.copyImage" = "Copy as Image";
 "share.copyLink" = "Copy as Link";
+"share.copied" = "Copied!";
 "nav.cancel" = "Cancel";

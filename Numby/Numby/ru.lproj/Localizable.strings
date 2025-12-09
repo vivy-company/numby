@@ -168,4 +168,5 @@
 "share.copyText" = "Копировать как текст";
 "share.copyImage" = "Копировать как изображение";
 "share.copyLink" = "Копировать как ссылку";
+"share.copied" = "Скопировано!";
 "nav.cancel" = "Отмена";

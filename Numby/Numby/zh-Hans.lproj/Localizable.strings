@@ -168,4 +168,5 @@
 "share.copyText" = "复制为文本";
 "share.copyImage" = "复制为图片";
 "share.copyLink" = "复制为链接";
+"share.copied" = "已复制！";
 "nav.cancel" = "取消";

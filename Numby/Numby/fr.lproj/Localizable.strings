@@ -168,4 +168,5 @@
 "share.copyText" = "Copier comme texte";
 "share.copyImage" = "Copier comme image";
 "share.copyLink" = "Copier comme lien";
+"share.copied" = "Copié !";
 "nav.cancel" = "Annuler";
