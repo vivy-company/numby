@@ -39,7 +39,8 @@ build_macos() {
     echo -e "${BLUE}📚 Building static library for macOS (ARM64 only)...${NC}"
     export MACOSX_DEPLOYMENT_TARGET=13.5
     export RUSTFLAGS="-C embed-bitcode=no"
-    cargo build --profile release-lib --lib --target aarch64-apple-darwin
+    # Build without TUI dependencies (ratatui, crossterm, arboard) - not needed for Swift app
+    cargo build --profile release-lib --lib --target aarch64-apple-darwin --no-default-features
     unset RUSTFLAGS
     unset MACOSX_DEPLOYMENT_TARGET
 
@@ -55,12 +56,13 @@ build_ios() {
     # iOS device (arm64)
     echo "  Building for iOS device (arm64)..."
     export IPHONEOS_DEPLOYMENT_TARGET=17.0
-    cargo build --profile release-lib --lib --target aarch64-apple-ios
+    # Build without TUI dependencies - not needed for Swift app
+    cargo build --profile release-lib --lib --target aarch64-apple-ios --no-default-features
     unset IPHONEOS_DEPLOYMENT_TARGET
 
     # iOS simulator (arm64 only)
     echo "  Building for iOS simulator (arm64)..."
-    cargo build --profile release-lib --lib --target aarch64-apple-ios-sim
+    cargo build --profile release-lib --lib --target aarch64-apple-ios-sim --no-default-features
 
     # Create iOS device library
     mkdir -p "$(dirname "$IOS_DEVICE_LIB")"

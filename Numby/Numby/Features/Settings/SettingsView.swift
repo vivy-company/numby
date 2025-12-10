@@ -271,9 +271,8 @@ struct SettingsView: View {
     private func updateCurrencyRates() {
         isUpdatingRates = true
 
-        DispatchQueue.global(qos: .userInitiated).async {
-            let success = numbyWrapper.updateCurrencyRates()
-
+        // Use native URLSession for all platforms (works on visionOS)
+        numbyWrapper.updateCurrencyRatesNative { success in
             DispatchQueue.main.async {
                 isUpdatingRates = false
                 if success {

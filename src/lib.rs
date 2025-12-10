@@ -597,6 +597,63 @@ pub extern "C" fn libnumby_get_default_config_path() -> *mut c_char {
     }
 }
 
+/// Sets currency rates from JSON data provided by the caller (e.g., from Swift URLSession)
+///
+/// Expected JSON format: {"date": "2025-01-01", "usd": {"eur": 0.92, "gbp": 0.79, ...}}
+///
+/// Returns 0 on success, -1 on failure
+///
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_set_currency_rates_json(
+    ctx: *mut NumbyContext,
+    json_data: *const c_char,
+) -> i32 {
+    if ctx.is_null() || json_data.is_null() {
+        return -1;
+    }
+
+    let json_str = match CStr::from_ptr(json_data).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+
+    // Parse JSON in the same format as the currency API
+    #[derive(serde::Deserialize)]
+    struct CurrencyApiResponse {
+        date: String,
+        usd: std::collections::HashMap<String, f64>,
+    }
+
+    let api_response: CurrencyApiResponse = match serde_json::from_str(json_str) {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    // Convert to uppercase keys
+    let mut rates: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+    rates.insert("USD".to_string(), 1.0);
+    for (currency_code, rate) in api_response.usd {
+        rates.insert(currency_code.to_uppercase(), rate);
+    }
+
+    let date = api_response.date;
+
+    // Update config file
+    let config_path = get_config_override_path().unwrap_or_else(crate::config::get_config_path);
+    if crate::config::update_currency_rates_at_path(&config_path, rates.clone(), date).is_err() {
+        return -1;
+    }
+
+    // Update context
+    let context = &mut *ctx;
+    context.rates = rates;
+
+    0
+}
+
 /// Checks if currency rates are stale (older than 24 hours)
 ///
 /// Returns 1 if stale, 0 if fresh, -1 on error

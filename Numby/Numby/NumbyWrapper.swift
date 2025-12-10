@@ -83,11 +83,11 @@ class NumbyWrapper: ObservableObject {
     /// Updates currency rates if they are stale (>24 hours old)
     func updateCurrencyRatesIfStale() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self = self, let ctx = self.context else { return }
+            guard let self = self else { return }
 
             let stale = libnumby_are_rates_stale()
             if stale == 1 {
-                _ = libnumby_update_currency_rates(ctx)
+                self.updateCurrencyRatesNative { _ in }
             }
         }
     }
@@ -96,8 +96,64 @@ class NumbyWrapper: ObservableObject {
     /// - Returns: True if update succeeded, false otherwise
     func updateCurrencyRates() -> Bool {
         guard let ctx = context else { return false }
+
+        // Try Rust's ureq first (works on macOS/iOS)
         let result = libnumby_update_currency_rates(ctx)
         return result == 0
+    }
+
+    /// Updates currency rates using Swift's URLSession (works on all Apple platforms including visionOS)
+    /// - Parameter completion: Called with true on success, false on failure
+    func updateCurrencyRatesNative(completion: @escaping (Bool) -> Void) {
+        guard let ctx = context else {
+            completion(false)
+            return
+        }
+
+        let primaryURL = URL(string: "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json")!
+        let fallbackURL = URL(string: "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json")!
+
+        fetchCurrencyData(from: primaryURL) { [weak self] data in
+            if let data = data {
+                self?.processCurrencyData(data, ctx: ctx, completion: completion)
+            } else {
+                // Try fallback URL
+                self?.fetchCurrencyData(from: fallbackURL) { [weak self] data in
+                    if let data = data {
+                        self?.processCurrencyData(data, ctx: ctx, completion: completion)
+                    } else {
+                        completion(false)
+                    }
+                }
+            }
+        }
+    }
+
+    private func fetchCurrencyData(from url: URL, completion: @escaping (Data?) -> Void) {
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            guard error == nil,
+                  let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let data = data else {
+                completion(nil)
+                return
+            }
+            completion(data)
+        }
+        task.resume()
+    }
+
+    private func processCurrencyData(_ data: Data, ctx: NumbyContext, completion: @escaping (Bool) -> Void) {
+        guard let jsonString = String(data: data, encoding: .utf8) else {
+            completion(false)
+            return
+        }
+
+        let result = jsonString.withCString { cJson in
+            libnumby_set_currency_rates_json(ctx, cJson)
+        }
+
+        completion(result == 0)
     }
 
     /// Checks if currency rates are stale

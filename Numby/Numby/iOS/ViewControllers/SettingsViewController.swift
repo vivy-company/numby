@@ -113,11 +113,10 @@ class SettingsViewController: UIViewController {
         isUpdatingCurrency = true
         tableView.reloadSections(IndexSet(integer: Section.currency.rawValue), with: .automatic)
 
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self = self else { return }
-            let success = self.numbyWrapper.updateCurrencyRates()
-
+        // Use native URLSession for all platforms (works on visionOS)
+        numbyWrapper.updateCurrencyRatesNative { [weak self] success in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 self.isUpdatingCurrency = false
 
                 if success {

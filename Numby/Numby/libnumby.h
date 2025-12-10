@@ -87,8 +87,21 @@ char *libnumby_get_default_config_path(void);
  *
  * Returns 0 on success, -1 on failure
  * On success, updates both the config file and the context's rates
+ *
+ * Note: This uses Rust's ureq for HTTP requests which may not work on all platforms
+ * (e.g., visionOS). Use libnumby_set_currency_rates_json for platform-native HTTP.
  */
 int32_t libnumby_update_currency_rates(NumbyContext *ctx);
+
+/**
+ * Sets currency rates from JSON data provided by the caller
+ *
+ * Expected JSON format: {"date": "2025-01-01", "usd": {"eur": 0.92, "gbp": 0.79, ...}}
+ * This allows using platform-native HTTP (e.g., Swift URLSession) to fetch rates.
+ *
+ * Returns 0 on success, -1 on failure
+ */
+int32_t libnumby_set_currency_rates_json(NumbyContext *ctx, const char *json_data);
 
 /**
  * Checks if currency rates are stale (older than 24 hours)
