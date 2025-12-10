@@ -2,7 +2,7 @@ import { serve } from "bun";
 import index from "./index.html";
 import privacyHtml from "./privacy.html";
 import eulaHtml from "./eula.html";
-import shareHtml from "./share.html";
+import shareHtml from "./s.html";
 import { generateOGImage } from "./api/og";
 
 const server = serve({
