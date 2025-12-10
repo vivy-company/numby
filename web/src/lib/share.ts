@@ -30,8 +30,8 @@ export function decodeShareData(encoded: string): SharePayload | null {
       bytes[i] = binaryStr.charCodeAt(i);
     }
 
-    // Decompress
-    const decompressed = pako.inflate(bytes, { to: "string" });
+    // Decompress (iOS uses raw deflate without zlib headers)
+    const decompressed = pako.inflateRaw(bytes, { to: "string" });
 
     // Parse JSON
     const payload = JSON.parse(decompressed) as SharePayload;
@@ -55,8 +55,8 @@ export function encodeShareData(payload: SharePayload): string {
   // JSON stringify
   const json = JSON.stringify(payload);
 
-  // Compress
-  const compressed = pako.deflate(json);
+  // Compress (use raw deflate to match iOS)
+  const compressed = pako.deflateRaw(json);
 
   // Convert to base64url
   let base64 = btoa(String.fromCharCode(...compressed));
