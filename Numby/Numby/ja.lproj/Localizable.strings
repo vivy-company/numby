@@ -20,7 +20,11 @@
 "settings.currency.stale" = "(古い)";
 "settings.currency.update" = "為替レートを更新";
 "settings.currency.updating" = "更新中...";
-"settings.currency.description" = "無料APIから300以上の通貨の最新為替レートを取得";
+"settings.currency.updated" = "更新完了！";
+"settings.currency.unknown" = "不明";
+"settings.currency.apiDate" = "APIレート日付:";
+"settings.currency.apiInfo" = "APIはレートを毎日更新しますが、時々遅延が発生することがあります。";
+"settings.currency.description" = "無料APIから300以上の通貨の最新為替レートを取得。APIはレートを毎日更新しますが、時々遅延が発生することがあります。";
 "settings.currency.success" = "為替レートの更新に成功しました";
 "settings.currency.failed" = "為替レートの更新に失敗しました";
 "settings.currency.never" = "なし";

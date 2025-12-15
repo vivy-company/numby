@@ -16,3 +16,5 @@ DerivedData/
 # Debug/temp documentation
 *_FIX_SUMMARY.md
 test_*.md
+
+.aizen/

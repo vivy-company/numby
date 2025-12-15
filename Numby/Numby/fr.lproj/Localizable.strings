@@ -20,7 +20,11 @@
 "settings.currency.stale" = "(Périmé)";
 "settings.currency.update" = "Mettre à jour les taux de change";
 "settings.currency.updating" = "Mise à jour...";
-"settings.currency.description" = "Récupère les derniers taux de change pour plus de 300 devises via une API gratuite";
+"settings.currency.updated" = "Mis à jour !";
+"settings.currency.unknown" = "Inconnu";
+"settings.currency.apiDate" = "Date des taux API :";
+"settings.currency.apiInfo" = "L'API met à jour les taux quotidiennement, mais peut avoir des retards occasionnels.";
+"settings.currency.description" = "Récupère les derniers taux de change pour plus de 300 devises via une API gratuite. L'API met à jour les taux quotidiennement, mais peut avoir des retards occasionnels.";
 "settings.currency.success" = "Taux de change mis à jour avec succès";
 "settings.currency.failed" = "Échec de la mise à jour des taux de change";
 "settings.currency.never" = "Jamais";

@@ -20,7 +20,11 @@
 "settings.currency.stale" = "(Veraltet)";
 "settings.currency.update" = "Wechselkurse aktualisieren";
 "settings.currency.updating" = "Aktualisierung...";
-"settings.currency.description" = "Ruft die neuesten Wechselkurse für über 300 Währungen von kostenloser API ab";
+"settings.currency.updated" = "Aktualisiert!";
+"settings.currency.unknown" = "Unbekannt";
+"settings.currency.apiDate" = "API-Kursdatum:";
+"settings.currency.apiInfo" = "API aktualisiert Kurse täglich, kann aber gelegentliche Verzögerungen haben.";
+"settings.currency.description" = "Ruft die neuesten Wechselkurse für über 300 Währungen von kostenloser API ab. API aktualisiert Kurse täglich, kann aber gelegentliche Verzögerungen haben.";
 "settings.currency.success" = "Wechselkurse erfolgreich aktualisiert";
 "settings.currency.failed" = "Fehler beim Aktualisieren der Wechselkurse";
 "settings.currency.never" = "Nie";

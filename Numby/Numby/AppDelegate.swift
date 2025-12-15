@@ -28,6 +28,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Setup notification observers
         setupNotificationObservers()
+
+        // Trigger currency rates update on app launch
+        triggerCurrencyUpdate()
     }
 
     private func setupNotificationObservers() {
@@ -44,6 +47,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: NSNotification.Name("LocaleChanged"),
             object: nil
         )
+    }
+
+    private func triggerCurrencyUpdate() {
+        // Create a NumbyWrapper instance to trigger currency update
+        let numbyWrapper = NumbyWrapper()
+        _ = numbyWrapper.updateCurrencyRates() // Always update on app launch
     }
 
     @objc private func handleLocaleChanged() {

@@ -117,3 +117,11 @@ int32_t libnumby_are_rates_stale(void);
  * Caller must free the returned string with libnumby_free_string
  */
 char *libnumby_get_rates_update_date(void);
+
+/**
+ * Gets the API rates date (when the rates were published by the API)
+ *
+ * Returns a C string with the date in YYYY-MM-DD format, or null if unavailable
+ * Caller must free the returned string with libnumby_free_string
+ */
+char *libnumby_get_api_rates_date(void);

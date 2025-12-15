@@ -20,7 +20,11 @@
 "settings.currency.stale" = "(過期)";
 "settings.currency.update" = "更新匯率";
 "settings.currency.updating" = "更新中...";
-"settings.currency.description" = "從免費API獲取300多種貨幣的最新匯率";
+"settings.currency.updated" = "已更新！";
+"settings.currency.unknown" = "未知";
+"settings.currency.apiDate" = "API匯率日期:";
+"settings.currency.apiInfo" = "API每天更新匯率，但有時可能會有延遲。";
+"settings.currency.description" = "從免費API獲取300多種貨幣的最新匯率。API每天更新匯率，但有時可能會有延遲。";
 "settings.currency.success" = "匯率更新成功";
 "settings.currency.failed" = "更新匯率失敗";
 "settings.currency.never" = "從未";

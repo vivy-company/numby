@@ -6,7 +6,17 @@ class iOSAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Initialize Numby configuration
         Configuration.shared.load()
+
+        // Trigger currency rates update on app launch
+        triggerCurrencyUpdate()
+
         return true
+    }
+
+    private func triggerCurrencyUpdate() {
+        // Create a NumbyWrapper instance to trigger currency update
+        let numbyWrapper = NumbyWrapper()
+        _ = numbyWrapper.updateCurrencyRates() // Always update on app launch
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

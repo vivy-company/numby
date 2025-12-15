@@ -22,7 +22,9 @@ class SettingsViewController: UIViewController {
     }
 
     private var lastCurrencyUpdate: Date?
+    private var apiRatesDate: String?
     private var isUpdatingCurrency = false
+    private var showUpdateSuccess = false
     private let numbyWrapper = NumbyWrapper()
 
     // MARK: - UI Components
@@ -107,6 +109,9 @@ class SettingsViewController: UIViewController {
         if let timestamp = UserDefaults.standard.object(forKey: "lastCurrencyUpdate") as? Date {
             lastCurrencyUpdate = timestamp
         }
+
+        // Load API rates date
+        apiRatesDate = numbyWrapper.getApiRatesDate()
     }
 
     private func updateCurrencyRates() {
@@ -120,8 +125,19 @@ class SettingsViewController: UIViewController {
                 self.isUpdatingCurrency = false
 
                 if success {
+                    // Show success indicator briefly
+                    self.showUpdateSuccess = true
+                    // Hide success indicator after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.showUpdateSuccess = false
+                        self.tableView.reloadSections(IndexSet(integer: Section.currency.rawValue), with: .automatic)
+                    }
+
                     self.lastCurrencyUpdate = Date()
                     UserDefaults.standard.set(Date(), forKey: "lastCurrencyUpdate")
+
+                    // Update API rates date
+                    self.apiRatesDate = self.numbyWrapper.getApiRatesDate()
                 } else {
                     let alert = UIAlertController(
                         title: NSLocalizedString("alert.updateFailed", comment: ""),
@@ -138,9 +154,7 @@ class SettingsViewController: UIViewController {
     }
 
     private func isCurrencyDataStale() -> Bool {
-        guard let lastUpdate = lastCurrencyUpdate else { return true }
-        let hoursSinceUpdate = Date().timeIntervalSince(lastUpdate) / 3600
-        return hoursSinceUpdate > 24
+        return numbyWrapper.areCurrencyRatesStale()
     }
 
     // MARK: - Theme
@@ -183,7 +197,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         case .appearance:
             return 4 // Theme, Font Size, Font, Syntax Highlighting
         case .currency:
-            return 2 // Last update, Update button
+            return 4 // API date, Last update, Update button, API info
         case .about:
             return 2 // Version, GitHub
         }
@@ -222,7 +236,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             else if indexPath.row == 1 { return } // Font size slider
             else if indexPath.row == 2 { showFontSelector() }
         case .currency:
-            if indexPath.row == 1 { updateCurrencyRates() }
+            if indexPath.row == 2 { updateCurrencyRates() }
         case .about:
             if indexPath.row == 1 {
                 if let url = URL(string: "https://github.com/vivy-company/numby") {
@@ -314,8 +328,20 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         var config = cell.defaultContentConfiguration()
 
         switch indexPath.row {
-        case 0: // Last update timestamp
-            config.image = UIImage(systemName: "dollarsign.circle")
+        case 0: // API Rates Date
+            config.image = UIImage(systemName: "calendar.circle")
+            config.text = NSLocalizedString("settings.currency.apiDate", comment: "")
+            if let apiDate = apiRatesDate {
+                config.secondaryText = apiDate
+                config.secondaryTextProperties.color = .secondaryLabel
+            } else {
+                config.secondaryText = NSLocalizedString("settings.currency.unknown", comment: "")
+                config.secondaryTextProperties.color = .secondaryLabel
+            }
+            cell.accessoryType = .none
+
+        case 1: // Last update timestamp
+            config.image = UIImage(systemName: "clock.circle")
             config.text = NSLocalizedString("settings.currency.lastUpdated", comment: "")
             if let lastUpdate = lastCurrencyUpdate {
                 let formatter = DateFormatter()
@@ -330,12 +356,28 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
                 config.secondaryText = NSLocalizedString("settings.currency.never", comment: "")
                 config.secondaryTextProperties.color = .systemRed
             }
+            cell.accessoryType = .none
 
-        case 1: // Update button
+        case 2: // Update button
             config.image = UIImage(systemName: "arrow.clockwise")
-            config.text = isUpdatingCurrency ? NSLocalizedString("settings.currency.updating", comment: "") : NSLocalizedString("settings.currency.update", comment: "")
-            config.textProperties.color = .systemBlue
-            cell.accessoryType = isUpdatingCurrency ? .none : .disclosureIndicator
+            if isUpdatingCurrency {
+                config.text = NSLocalizedString("settings.currency.updating", comment: "")
+            } else if showUpdateSuccess {
+                config.text = NSLocalizedString("settings.currency.updated", comment: "")
+                config.textProperties.color = .systemGreen
+            } else {
+                config.text = NSLocalizedString("settings.currency.update", comment: "")
+                config.textProperties.color = .systemBlue
+            }
+            cell.accessoryType = (isUpdatingCurrency || showUpdateSuccess) ? .none : .disclosureIndicator
+
+        case 3: // API Info
+            config.image = UIImage(systemName: "info.circle")
+            config.text = NSLocalizedString("settings.currency.apiInfo", comment: "")
+            config.textProperties.font = .systemFont(ofSize: 12)
+            config.textProperties.color = .secondaryLabel
+            config.textProperties.numberOfLines = 0
+            cell.accessoryType = .none
 
         default:
             break

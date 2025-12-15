@@ -20,7 +20,11 @@
 "settings.currency.stale" = "(Antiguo)";
 "settings.currency.update" = "Actualizar tasas de cambio";
 "settings.currency.updating" = "Actualizando...";
-"settings.currency.description" = "Obtiene las últimas tasas de cambio para más de 300 monedas de API gratuita";
+"settings.currency.updated" = "¡Actualizado!";
+"settings.currency.unknown" = "Desconocido";
+"settings.currency.apiDate" = "Fecha de tasas API:";
+"settings.currency.apiInfo" = "API actualiza tasas diariamente, pero puede tener retrasos ocasionales.";
+"settings.currency.description" = "Obtiene las últimas tasas de cambio para más de 300 monedas de API gratuita. API actualiza tasas diariamente, pero puede tener retrasos ocasionales.";
 "settings.currency.success" = "Tasas de cambio actualizadas correctamente";
 "settings.currency.failed" = "Error al actualizar tasas de cambio";
 "settings.currency.never" = "Nunca";

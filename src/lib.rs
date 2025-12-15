@@ -639,11 +639,11 @@ pub unsafe extern "C" fn libnumby_set_currency_rates_json(
         rates.insert(currency_code.to_uppercase(), rate);
     }
 
-    let date = api_response.date;
+    let api_date = api_response.date;
 
-    // Update config file
+    // Update config file with both API date and current fetch timestamp
     let config_path = get_config_override_path().unwrap_or_else(crate::config::get_config_path);
-    if crate::config::update_currency_rates_at_path(&config_path, rates.clone(), date).is_err() {
+    if crate::config::update_currency_rates_at_path(&config_path, rates.clone(), api_date).is_err() {
         return -1;
     }
 
@@ -676,7 +676,7 @@ pub extern "C" fn libnumby_are_rates_stale() -> i32 {
     }
 }
 
-/// Gets the last update date for currency rates
+/// Gets the last update date for currency rates (when we last fetched)
 ///
 /// Returns a C string with the date in YYYY-MM-DD format, or null if unavailable
 /// Caller must free the returned string with libnumby_free_string
@@ -688,6 +688,29 @@ pub extern "C" fn libnumby_are_rates_stale() -> i32 {
 pub extern "C" fn libnumby_get_rates_update_date() -> *mut c_char {
     let config = crate::config::load_config();
     match config.rates_updated_at {
+        Some(date) => {
+            if let Ok(cstr) = CString::new(date) {
+                cstr.into_raw()
+            } else {
+                std::ptr::null_mut()
+            }
+        }
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// Gets the API rates date (when the rates were published by the API)
+///
+/// Returns a C string with the date in YYYY-MM-DD format, or null if unavailable
+/// Caller must free the returned string with libnumby_free_string
+///
+/// # Safety
+///
+/// This function is safe to call from C code.
+#[no_mangle]
+pub extern "C" fn libnumby_get_api_rates_date() -> *mut c_char {
+    let config = crate::config::load_config();
+    match config.api_rates_date {
         Some(date) => {
             if let Ok(cstr) = CString::new(date) {
                 cstr.into_raw()

@@ -17,7 +17,9 @@ struct SettingsView: View {
     @State private var selectedFont: String = "SFMono-Regular"
     @State private var availableFonts: [String] = []
     @State private var isUpdatingRates = false
+    @State private var showUpdateSuccess = false
     @State private var lastRatesUpdate: String = "Unknown"
+    @State private var apiRatesDate: String = "Unknown"
     @State private var ratesAreStale = false
     @State private var availableLocales: [(code: String, name: String)] = []
     @State private var selectedLocale: String = "en-US"
@@ -114,7 +116,15 @@ struct SettingsView: View {
 
 
             Section(localizedCurrencySection) {
-                // Last update info
+                // API Rates Date
+                HStack {
+                    Text("API Rates Date:")
+                    Spacer()
+                    Text(apiRatesDate)
+                        .foregroundColor(.secondary)
+                }
+
+                // Last Updated (when we fetched)
                 HStack {
                     Text(localizedLastUpdated)
                     Spacer()
@@ -133,8 +143,12 @@ struct SettingsView: View {
                         if isUpdatingRates {
                             ProgressView()
                                 .scaleEffect(0.7)
+                        } else if showUpdateSuccess {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
                         }
-                        Text(isUpdatingRates ? localizedUpdating : localizedUpdate)
+                        Text(isUpdatingRates ? localizedUpdating : (showUpdateSuccess ? "Updated!" : localizedUpdate))
+                            .foregroundColor(showUpdateSuccess ? .green : nil)
                     }
                 }
                 .disabled(isUpdatingRates)
@@ -260,11 +274,21 @@ struct SettingsView: View {
     }
 
     private func loadCurrencyRatesInfo() {
+        // Get last time we fetched from API
         if let date = numbyWrapper.getCurrencyRatesUpdateDate() {
             lastRatesUpdate = date
         } else {
             lastRatesUpdate = NSLocalizedString("settings.currency.never", comment: "")
         }
+
+        // Get the API rates date (when rates were published)
+        if let apiDate = numbyWrapper.getApiRatesDate() {
+            apiRatesDate = apiDate
+        } else {
+            apiRatesDate = NSLocalizedString("settings.currency.unknown", comment: "")
+        }
+
+        // Use Rust-based staleness check (now handles 7-day tolerance)
         ratesAreStale = numbyWrapper.areCurrencyRatesStale()
     }
 
@@ -276,7 +300,19 @@ struct SettingsView: View {
             DispatchQueue.main.async {
                 isUpdatingRates = false
                 if success {
-                    loadCurrencyRatesInfo()
+                    // Show success indicator briefly
+                    showUpdateSuccess = true
+                    // Hide success indicator after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        showUpdateSuccess = false
+                    }
+
+                    // Add a small delay to ensure file system sync
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        loadCurrencyRatesInfo()
+                        // Force UI refresh by updating localeVersion (which triggers view update)
+                        localeVersion += 1
+                    }
                 }
             }
         }

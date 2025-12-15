@@ -20,7 +20,11 @@
 "settings.currency.stale" = "(Састарэлы)";
 "settings.currency.update" = "Абнавіць курсы валют";
 "settings.currency.updating" = "Абнаўленне...";
-"settings.currency.description" = "Атрымлівае апошнія курсы абмену для больш за 300 валют з бясплатнага API";
+"settings.currency.updated" = "Абноўлена!";
+"settings.currency.unknown" = "Невядома";
+"settings.currency.apiDate" = "Дата курсаў API:";
+"settings.currency.apiInfo" = "API абнаўляе курсы штодзённа, але часам могуць быць затрымкі.";
+"settings.currency.description" = "Атрымлівае апошнія курсы абмену для больш за 300 валют з бясплатнага API. API абнаўляе курсы штодзённа, але часам могуць быць затрымкі.";
 "settings.currency.success" = "Курсы валют паспяхова абноўлены";
 "settings.currency.failed" = "Не атрымалася абнавіць курсы валют";
 "settings.currency.never" = "Ніколі";

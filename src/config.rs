@@ -58,6 +58,8 @@ pub struct Config {
     pub padding_bottom: u16,
     #[serde(default)]
     pub rates_updated_at: Option<String>,
+    #[serde(default)]
+    pub api_rates_date: Option<String>,
     /// Optional default timezone identifier (IANA database, e.g., "UTC", "America/New_York").
     /// If not set, the local system timezone is used.
     #[serde(default)]
@@ -480,6 +482,7 @@ impl Default for Config {
             padding_top: default_padding_top(),
             padding_bottom: default_padding_bottom(),
             rates_updated_at: None,
+            api_rates_date: None,
             default_timezone: None,
         }
     }
@@ -639,8 +642,12 @@ pub fn update_currency_rates(rates: HashMap<String, f64>, date: String) -> anyho
 pub fn update_currency_rates_at_path(
     path: &Path,
     rates: HashMap<String, f64>,
-    date: String,
+    api_date: String,
 ) -> anyhow::Result<()> {
+    // Use current date for last updated timestamp
+    use chrono::Utc;
+    let current_date = Utc::now().format("%Y-%m-%d").to_string();
+
     let mut config = if let Ok(content) = fs::read_to_string(path) {
         serde_json::from_str(&content).unwrap_or_else(|_| Config::default())
     } else {
@@ -648,7 +655,8 @@ pub fn update_currency_rates_at_path(
     };
 
     config.currencies = rates;
-    config.rates_updated_at = Some(date);
+    config.rates_updated_at = Some(current_date);
+    config.api_rates_date = Some(api_date);
     save_config_to_path(path, &config)
 }
 

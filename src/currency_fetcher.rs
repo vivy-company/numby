@@ -171,8 +171,16 @@ pub fn are_rates_stale(stored_date: &str) -> bool {
         None => return true, // If we can't parse, consider it stale
     };
 
-    // Stale if stored date is from yesterday or earlier
-    today_days > stored_days
+    // Handle API date errors - allow up to 7 days difference in either direction
+    let tolerance_days = 7;
+    let day_difference = if today_days > stored_days {
+        today_days - stored_days
+    } else {
+        stored_days - today_days
+    };
+
+    // Consider stale only if more than tolerance_days behind
+    day_difference > tolerance_days as u64
 }
 
 /// Converts YYYY-MM-DD format to days since Unix epoch

@@ -21,11 +21,20 @@ class NumbyWrapper: ObservableObject {
     }
 
     private func setup() {
-        let configPath = loadOrSeedConfigPath() ?? Bundle.main.path(forResource: "config", ofType: "json")
+        let configPath = loadOrSeedConfigPath()
         if let configPath {
             configPath.withCString { cPath in
                 _ = libnumby_load_config(context, cPath)
             }
+        } else {
+            // If we couldn't create a config file, try to load from current directory as fallback
+            let currentDirConfig = "./config.json"
+            if FileManager.default.fileExists(atPath: currentDirConfig) {
+                currentDirConfig.withCString { cPath in
+                    _ = libnumby_load_config(context, cPath)
+                }
+            }
+            // If all else fails, the Rust library will use default config
         }
         // Set locale (prioritize saved config, then system locale)
         let locale = Configuration.shared.config.locale ?? Locale.current.language.languageCode?.identifier ?? "en-US"
@@ -48,11 +57,13 @@ class NumbyWrapper: ObservableObject {
         defer { libnumby_free_string(defaultPathPointer) }
 
         let path = String(cString: defaultPathPointer)
+
         if seedConfigFile(atPath: path) {
             resolvedConfigPath = path
             return path
+        } else {
+            return nil
         }
-        return nil
     }
 
     private func seedConfigFile(atPath path: String) -> Bool {
@@ -67,11 +78,221 @@ class NumbyWrapper: ObservableObject {
         }
 
         if !fm.fileExists(atPath: configURL.path) {
-            guard let bundledURL = Bundle.main.url(forResource: "config", withExtension: "json") else {
-                return false
+            // Try to copy from bundled config first
+            if let bundledURL = Bundle.main.url(forResource: "config", withExtension: "json") {
+                do {
+                    try fm.copyItem(at: bundledURL, to: configURL)
+                    return true
+                } catch {
+                    // Continue to create default config if bundled copy fails
+                }
             }
+
+            // Create default config if bundled config doesn't exist or copy fails
+            let defaultConfig = """
+            {
+              "length_units": {
+                "m": 1.0,
+                "meter": 1.0,
+                "meters": 1.0,
+                "cm": 0.01,
+                "centimeter": 0.01,
+                "centimeters": 0.01,
+                "mm": 0.001,
+                "millimeter": 0.001,
+                "millimeters": 0.001,
+                "km": 1000.0,
+                "kilometer": 1000.0,
+                "kilometers": 1000.0,
+                "ft": 0.3048,
+                "foot": 0.3048,
+                "feet": 0.3048,
+                "in": 0.0254,
+                "inch": 0.0254,
+                "inches": 0.0254,
+                "yard": 0.9144,
+                "yards": 0.9144,
+                "mile": 1609.344,
+                "miles": 1609.344
+              },
+              "time_units": {
+                "s": 1.0,
+                "sec": 1.0,
+                "second": 1.0,
+                "seconds": 1.0,
+                "min": 60.0,
+                "minute": 60.0,
+                "minutes": 60.0,
+                "h": 3600.0,
+                "hr": 3600.0,
+                "hour": 3600.0,
+                "hours": 3600.0,
+                "day": 86400.0,
+                "days": 86400.0,
+                "week": 604800.0,
+                "weeks": 604800.0,
+                "month": 2592000.0,
+                "months": 2592000.0,
+                "year": 31536000.0,
+                "years": 31536000.0
+              },
+              "temperature_units": {
+                "k": "kelvin",
+                "kelvin": "kelvin",
+                "kelvins": "kelvin",
+                "c": "celsius",
+                "celsius": "celsius",
+                "f": "fahrenheit",
+                "fahrenheit": "fahrenheit"
+              },
+              "area_units": {
+                "m2": 1.0,
+                "square meter": 1.0,
+                "square meters": 1.0,
+                "hectare": 10000.0,
+                "hectares": 10000.0,
+                "are": 100.0,
+                "ares": 100.0,
+                "acre": 4046.86,
+                "acres": 4046.86
+              },
+              "volume_units": {
+                "m3": 1.0,
+                "cubic meter": 1.0,
+                "cubic meters": 1.0,
+                "liter": 0.001,
+                "liters": 0.001,
+                "l": 0.001,
+                "milliliter": 0.000001,
+                "milliliters": 0.000001,
+                "ml": 0.000001,
+                "pint": 0.000473176,
+                "pints": 0.000473176,
+                "quart": 0.000946353,
+                "quarts": 0.000946353,
+                "gallon": 0.00378541,
+                "gallons": 0.00378541,
+                "teaspoon": 4.92892e-6,
+                "teaspoons": 4.92892e-6,
+                "tsp": 4.92892e-6,
+                "tablespoon": 1.47868e-5,
+                "tablespoons": 1.47868e-5,
+                "tbsp": 1.47868e-5,
+                "cup": 0.000236588,
+                "cups": 0.000236588
+              },
+              "weight_units": {
+                "gram": 1.0,
+                "grams": 1.0,
+                "g": 1.0,
+                "kilogram": 1000.0,
+                "kilograms": 1000.0,
+                "kg": 1000.0,
+                "tonne": 1000000.0,
+                "tonnes": 1000000.0,
+                "carat": 0.2,
+                "carats": 0.2,
+                "centner": 100000.0,
+                "pound": 453.592,
+                "pounds": 453.592,
+                "lb": 453.592,
+                "lbs": 453.592,
+                "stone": 6350.29,
+                "stones": 6350.29,
+                "ounce": 28.3495,
+                "ounces": 28.3495,
+                "oz": 28.3495
+              },
+              "angular_units": {
+                "radian": 1.0,
+                "radians": 1.0,
+                "degree": 0.0174533,
+                "degrees": 0.0174533,
+                "°": 0.0174533
+              },
+              "data_units": {
+                "bit": 1.0,
+                "bits": 1.0,
+                "byte": 8.0,
+                "bytes": 8.0,
+                "b": 1.0,
+                "B": 8.0
+              },
+              "speed_units": {
+                "m/s": 1.0,
+                "meter per second": 1.0,
+                "meters per second": 1.0,
+                "km/h": 0.277778,
+                "kilometer per hour": 0.277778,
+                "kilometers per hour": 0.277778,
+                "mph": 0.44704,
+                "mile per hour": 0.44704,
+                "miles per hour": 0.44704,
+                "knot": 0.514444,
+                "knots": 0.514444
+              },
+              "currencies": {
+                "USD": 1.0,
+                "EUR": 0.86,
+                "GBP": 0.76,
+                "JPY": 154.0,
+                "CAD": 1.40
+              },
+              "operators": {
+                "plus": "+",
+                "minus": "-",
+                "times": "*",
+                "multiplied by": "*",
+                "divided by": "/",
+                "divide by": "/",
+                "subtract": "-",
+                "and": "+",
+                "with": "+",
+                "mod": "%"
+              },
+              "scales": {
+                "k": 1000,
+                "kilo": 1000,
+                "thousand": 1000,
+                "M": 1000000,
+                "mega": 1000000,
+                "million": 1000000,
+                "G": 1000000000,
+                "giga": 1000000000,
+                "billion": 1000000000,
+                "T": 1000000000000,
+                "tera": 1000000000000,
+                "b": 1000000000
+              },
+              "functions": {
+                "log": "log10(",
+                "ln": "ln(",
+                "abs": "abs(",
+                "round": "round(",
+                "ceil": "ceil(",
+                "floor": "floor(",
+                "sinh": "sinh(",
+                "cosh": "cosh(",
+                "tanh": "tanh(",
+                "arcsin": "asin(",
+                "arccos": "acos(",
+                "arctan": "atan("
+              },
+              "custom_units": {
+                "energy": {
+                  "joule": 1.0,
+                  "joules": 1.0,
+                  "j": 1.0,
+                  "calorie": 4.184,
+                  "calories": 4.184,
+                  "cal": 4.184
+                }
+              },
+              "rates_updated_at": null
+            }
+            """
             do {
-                try fm.copyItem(at: bundledURL, to: configURL)
+                try defaultConfig.write(to: configURL, atomically: true, encoding: .utf8)
             } catch {
                 return false
             }
@@ -163,10 +384,20 @@ class NumbyWrapper: ObservableObject {
         return result != 0 // Stale if 1 or error (-1)
     }
 
-    /// Gets the date when currency rates were last updated
+    /// Gets the date when currency rates were last updated (when we fetched)
     /// - Returns: Date string in YYYY-MM-DD format, or nil if unavailable
     func getCurrencyRatesUpdateDate() -> String? {
         guard let cString = libnumby_get_rates_update_date() else {
+            return nil
+        }
+        defer { libnumby_free_string(cString) }
+        return String(cString: cString)
+    }
+
+    /// Gets the API rates date (when the rates were published by the API)
+    /// - Returns: Date string in YYYY-MM-DD format, or nil if unavailable
+    func getApiRatesDate() -> String? {
+        guard let cString = libnumby_get_api_rates_date() else {
             return nil
         }
         defer { libnumby_free_string(cString) }

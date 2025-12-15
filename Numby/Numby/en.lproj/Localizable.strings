@@ -20,7 +20,11 @@
 "settings.currency.stale" = "(Stale)";
 "settings.currency.update" = "Update Currency Rates";
 "settings.currency.updating" = "Updating...";
-"settings.currency.description" = "Fetches latest exchange rates for 300+ currencies from free API";
+"settings.currency.updated" = "Updated!";
+"settings.currency.unknown" = "Unknown";
+"settings.currency.apiDate" = "API Rates Date:";
+"settings.currency.apiInfo" = "API updates rates daily, but may have occasional delays.";
+"settings.currency.description" = "Fetches latest exchange rates for 300+ currencies from free API. API updates rates daily, but may have occasional delays.";
 "settings.currency.success" = "Currency rates updated successfully";
 "settings.currency.failed" = "Failed to update currency rates";
 "settings.currency.never" = "Never";
