@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Numby</string>
+    <string name="calculator">Калькулятар</string>
+    <string name="settings">Налады</string>
+    <string name="history">Гісторыя</string>
+    <string name="clear_history">Ачысціць гісторыю</string>
+    <string name="clear_history_confirm">Вы ўпэўнены, што хочаце ачысціць гісторыю?</string>
+    <string name="clear">Ачысціць</string>
+    <string name="cancel">Скасаваць</string>
+    <string name="new_tab">Новая ўкладка</string>
+    <string name="close_tab">Закрыць укладку</string>
+    <string name="split_horizontal">Падзяліць гарызантальна</string>
+    <string name="split_vertical">Падзяліць вертыкальна</string>
+    <string name="close_pane">Закрыць панэль</string>
+
+    <string name="language">Мова</string>
+    <string name="appearance">Знешні выгляд</string>
+    <string name="theme">Тэма</string>
+    <string name="font_size">Памер шрыфта</string>
+    <string name="currency">Валюта</string>
+    <string name="update_rates">Абнавіць курсы</string>
+    <string name="rates_updated">Курсы абноўлены</string>
+    <string name="rates_stale">Курсы састарэлі</string>
+    <string name="last_updated">Апошняе абнаўленне: %1$s</string>
+    <string name="about">Пра праграму</string>
+    <string name="version">Версія %1$s</string>
+
+    <string name="theme_system">Сістэмная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Цёмная</string>
+
+    <string name="calculator_hint">Увядзіце выраз...</string>
+    <string name="example_expressions">Прыклады: 5 км у мілях, 100 USD у EUR, 20% ад 150</string>
+</resources>

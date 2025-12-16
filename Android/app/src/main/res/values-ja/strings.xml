@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Numby</string>
+    <string name="calculator">電卓</string>
+    <string name="settings">設定</string>
+    <string name="history">履歴</string>
+    <string name="clear_history">履歴をクリア</string>
+    <string name="clear_history_confirm">履歴をクリアしてもよろしいですか？</string>
+    <string name="clear">クリア</string>
+    <string name="cancel">キャンセル</string>
+    <string name="new_tab">新しいタブ</string>
+    <string name="close_tab">タブを閉じる</string>
+    <string name="split_horizontal">横に分割</string>
+    <string name="split_vertical">縦に分割</string>
+    <string name="close_pane">ペインを閉じる</string>
+
+    <string name="language">言語</string>
+    <string name="appearance">外観</string>
+    <string name="theme">テーマ</string>
+    <string name="font_size">フォントサイズ</string>
+    <string name="currency">通貨</string>
+    <string name="update_rates">レートを更新</string>
+    <string name="rates_updated">レートが更新されました</string>
+    <string name="rates_stale">レートが古くなっています</string>
+    <string name="last_updated">最終更新：%1$s</string>
+    <string name="about">バージョン情報</string>
+    <string name="version">バージョン %1$s</string>
+
+    <string name="theme_system">システム</string>
+    <string name="theme_light">ライト</string>
+    <string name="theme_dark">ダーク</string>
+
+    <string name="calculator_hint">式を入力...</string>
+    <string name="example_expressions">例：5 km をマイルに、100 USD を EUR に、150 の 20%</string>
+</resources>

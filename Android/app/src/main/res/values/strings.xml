@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Numby</string>
+    <string name="calculator">Calculator</string>
+    <string name="settings">Settings</string>
+    <string name="history">History</string>
+    <string name="clear_history">Clear History</string>
+    <string name="clear_history_confirm">Are you sure you want to clear history?</string>
+    <string name="clear">Clear</string>
+    <string name="cancel">Cancel</string>
+    <string name="new_tab">New Tab</string>
+    <string name="close_tab">Close Tab</string>
+    <string name="split_horizontal">Split Horizontal</string>
+    <string name="split_vertical">Split Vertical</string>
+    <string name="close_pane">Close Pane</string>
+    <string name="share">Share</string>
+    <string name="new_calculation">New Calculation</string>
+    <string name="copy_as_text">Copy as Text</string>
+    <string name="copy_as_image">Copy as Image</string>
+    <string name="copy_as_link">Copy as Link</string>
+    <string name="copied">Copied!</string>
+    <string name="no_history">No history yet</string>
+    <string name="no_result">No result</string>
+
+    <!-- Settings -->
+    <string name="language">Language</string>
+    <string name="appearance">Appearance</string>
+    <string name="theme">Theme</string>
+    <string name="font_size">Font Size</string>
+    <string name="font_size_small">Small</string>
+    <string name="font_size_medium">Medium</string>
+    <string name="font_size_large">Large</string>
+    <string name="font_size_extra_large">Extra Large</string>
+    <string name="font">Font</string>
+    <string name="font_default">System Default</string>
+    <string name="select_font">Select Font</string>
+    <string name="syntax_highlighting">Syntax Highlighting</string>
+    <string name="syntax_highlighting_desc">Highlight numbers, units, and currencies</string>
+    <string name="currency">Currency</string>
+    <string name="update_rates">Update Rates</string>
+    <string name="rates_updated">Rates updated</string>
+    <string name="rates_stale">Rates are outdated</string>
+    <string name="last_updated">Last updated: %1$s</string>
+    <string name="api_rates_date">API Rates Date</string>
+    <string name="last_fetched">Last Fetched</string>
+    <string name="never">Never</string>
+    <string name="unknown">Unknown</string>
+    <string name="updating">Updating…</string>
+    <string name="currency_api_info">Rates from fawazahmed0/currency-api</string>
+    <string name="about">About</string>
+    <string name="version">Version %1$s</string>
+
+    <!-- Themes -->
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="search_themes">Search themes...</string>
+
+    <!-- Calculator hints -->
+    <string name="calculator_hint">Enter expression...</string>
+    <string name="example_expressions">Examples: 5 km in miles, 100 USD in EUR, 20% of 150</string>
+</resources>

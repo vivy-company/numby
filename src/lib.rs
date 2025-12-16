@@ -23,6 +23,9 @@ pub mod parser;
 pub mod prettify;
 pub mod security;
 
+#[cfg(feature = "android")]
+pub mod android_jni;
+
 #[cfg(test)]
 mod event_tests {
     use crate::config::Config;

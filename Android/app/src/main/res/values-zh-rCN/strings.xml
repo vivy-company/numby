@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Numby</string>
+    <string name="calculator">计算器</string>
+    <string name="settings">设置</string>
+    <string name="history">历史记录</string>
+    <string name="clear_history">清除历史记录</string>
+    <string name="clear_history_confirm">确定要清除历史记录吗？</string>
+    <string name="clear">清除</string>
+    <string name="cancel">取消</string>
+    <string name="new_tab">新标签页</string>
+    <string name="close_tab">关闭标签页</string>
+    <string name="split_horizontal">水平分割</string>
+    <string name="split_vertical">垂直分割</string>
+    <string name="close_pane">关闭窗格</string>
+
+    <string name="language">语言</string>
+    <string name="appearance">外观</string>
+    <string name="theme">主题</string>
+    <string name="font_size">字体大小</string>
+    <string name="currency">货币</string>
+    <string name="update_rates">更新汇率</string>
+    <string name="rates_updated">汇率已更新</string>
+    <string name="rates_stale">汇率已过期</string>
+    <string name="last_updated">上次更新：%1$s</string>
+    <string name="about">关于</string>
+    <string name="version">版本 %1$s</string>
+
+    <string name="theme_system">跟随系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+
+    <string name="calculator_hint">输入表达式...</string>
+    <string name="example_expressions">示例：5 km 转换为英里，100 USD 转换为 EUR，150 的 20%</string>
+</resources>

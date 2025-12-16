@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Numby</string>
+    <string name="calculator">Calculatrice</string>
+    <string name="settings">Paramètres</string>
+    <string name="history">Historique</string>
+    <string name="clear_history">Effacer l\'historique</string>
+    <string name="clear_history_confirm">Voulez-vous vraiment effacer l\'historique ?</string>
+    <string name="clear">Effacer</string>
+    <string name="cancel">Annuler</string>
+    <string name="new_tab">Nouvel onglet</string>
+    <string name="close_tab">Fermer l\'onglet</string>
+    <string name="split_horizontal">Diviser horizontalement</string>
+    <string name="split_vertical">Diviser verticalement</string>
+    <string name="close_pane">Fermer le volet</string>
+
+    <string name="language">Langue</string>
+    <string name="appearance">Apparence</string>
+    <string name="theme">Thème</string>
+    <string name="font_size">Taille de police</string>
+    <string name="currency">Devise</string>
+    <string name="update_rates">Mettre à jour les taux</string>
+    <string name="rates_updated">Taux mis à jour</string>
+    <string name="rates_stale">Les taux sont obsolètes</string>
+    <string name="last_updated">Dernière mise à jour : %1$s</string>
+    <string name="about">À propos</string>
+    <string name="version">Version %1$s</string>
+
+    <string name="theme_system">Système</string>
+    <string name="theme_light">Clair</string>
+    <string name="theme_dark">Sombre</string>
+
+    <string name="calculator_hint">Saisir une expression...</string>
+    <string name="example_expressions">Exemples : 5 km en miles, 100 USD en EUR, 20% de 150</string>
+</resources>

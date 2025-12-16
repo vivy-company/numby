@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Numby</string>
+    <string name="calculator">Calculadora</string>
+    <string name="settings">Configuración</string>
+    <string name="history">Historial</string>
+    <string name="clear_history">Borrar historial</string>
+    <string name="clear_history_confirm">¿Está seguro de que desea borrar el historial?</string>
+    <string name="clear">Borrar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="new_tab">Nueva pestaña</string>
+    <string name="close_tab">Cerrar pestaña</string>
+    <string name="split_horizontal">Dividir horizontal</string>
+    <string name="split_vertical">Dividir vertical</string>
+    <string name="close_pane">Cerrar panel</string>
+
+    <string name="language">Idioma</string>
+    <string name="appearance">Apariencia</string>
+    <string name="theme">Tema</string>
+    <string name="font_size">Tamaño de fuente</string>
+    <string name="currency">Moneda</string>
+    <string name="update_rates">Actualizar tasas</string>
+    <string name="rates_updated">Tasas actualizadas</string>
+    <string name="rates_stale">Las tasas están desactualizadas</string>
+    <string name="last_updated">Última actualización: %1$s</string>
+    <string name="about">Acerca de</string>
+    <string name="version">Versión %1$s</string>
+
+    <string name="theme_system">Sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Oscuro</string>
+
+    <string name="calculator_hint">Introducir expresión...</string>
+    <string name="example_expressions">Ejemplos: 5 km en millas, 100 USD en EUR, 20% de 150</string>
+</resources>

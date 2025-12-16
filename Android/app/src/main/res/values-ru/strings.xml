@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Numby</string>
+    <string name="calculator">Калькулятор</string>
+    <string name="settings">Настройки</string>
+    <string name="history">История</string>
+    <string name="clear_history">Очистить историю</string>
+    <string name="clear_history_confirm">Вы уверены, что хотите очистить историю?</string>
+    <string name="clear">Очистить</string>
+    <string name="cancel">Отмена</string>
+    <string name="new_tab">Новая вкладка</string>
+    <string name="close_tab">Закрыть вкладку</string>
+    <string name="split_horizontal">Разделить горизонтально</string>
+    <string name="split_vertical">Разделить вертикально</string>
+    <string name="close_pane">Закрыть панель</string>
+
+    <string name="language">Язык</string>
+    <string name="appearance">Внешний вид</string>
+    <string name="theme">Тема</string>
+    <string name="font_size">Размер шрифта</string>
+    <string name="currency">Валюта</string>
+    <string name="update_rates">Обновить курсы</string>
+    <string name="rates_updated">Курсы обновлены</string>
+    <string name="rates_stale">Курсы устарели</string>
+    <string name="last_updated">Последнее обновление: %1$s</string>
+    <string name="about">О программе</string>
+    <string name="version">Версия %1$s</string>
+
+    <string name="theme_system">Системная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+
+    <string name="calculator_hint">Введите выражение...</string>
+    <string name="example_expressions">Примеры: 5 км в милях, 100 USD в EUR, 20% от 150</string>
+</resources>

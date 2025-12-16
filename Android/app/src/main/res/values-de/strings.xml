@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Numby</string>
+    <string name="calculator">Rechner</string>
+    <string name="settings">Einstellungen</string>
+    <string name="history">Verlauf</string>
+    <string name="clear_history">Verlauf löschen</string>
+    <string name="clear_history_confirm">Möchten Sie den Verlauf wirklich löschen?</string>
+    <string name="clear">Löschen</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="new_tab">Neuer Tab</string>
+    <string name="close_tab">Tab schließen</string>
+    <string name="split_horizontal">Horizontal teilen</string>
+    <string name="split_vertical">Vertikal teilen</string>
+    <string name="close_pane">Bereich schließen</string>
+
+    <string name="language">Sprache</string>
+    <string name="appearance">Erscheinungsbild</string>
+    <string name="theme">Design</string>
+    <string name="font_size">Schriftgröße</string>
+    <string name="currency">Währung</string>
+    <string name="update_rates">Kurse aktualisieren</string>
+    <string name="rates_updated">Kurse aktualisiert</string>
+    <string name="rates_stale">Kurse sind veraltet</string>
+    <string name="last_updated">Zuletzt aktualisiert: %1$s</string>
+    <string name="about">Über</string>
+    <string name="version">Version %1$s</string>
+
+    <string name="theme_system">System</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_dark">Dunkel</string>
+
+    <string name="calculator_hint">Ausdruck eingeben...</string>
+    <string name="example_expressions">Beispiele: 5 km in Meilen, 100 USD in EUR, 20% von 150</string>
+</resources>

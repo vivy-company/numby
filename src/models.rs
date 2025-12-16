@@ -86,6 +86,8 @@ pub struct AppState {
     /// Tracks the last evaluated content of each line to detect edits
     /// Maps line_index -> evaluated_content
     pub line_content: Arc<RwLock<HashMap<usize, String>>>,
+    /// Override path for config file (used on Android/iOS)
+    pub config_override_path: Option<String>,
 }
 
 pub struct AppStateBuilder {
@@ -126,6 +128,7 @@ impl AppStateBuilder {
             line_variables: Arc::new(RwLock::new(HashMap::new())),
             current_line: Arc::new(RwLock::new(None)),
             line_content: Arc::new(RwLock::new(HashMap::new())),
+            config_override_path: None,
         }
     }
 }
@@ -169,6 +172,7 @@ impl AppState {
             line_variables: Arc::new(RwLock::new(HashMap::new())),
             current_line: Arc::new(RwLock::new(None)),
             line_content: Arc::new(RwLock::new(HashMap::new())),
+            config_override_path: None,
         }
     }
 

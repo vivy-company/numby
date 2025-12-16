@@ -11,7 +11,7 @@ categories = ["command-line-utilities", "mathematics"]
 [lib]
 name = "numby"
 path = "src/lib.rs"
-crate-type = ["lib", "staticlib"]
+crate-type = ["lib", "staticlib", "cdylib"]
 
 [[bin]]
 name = "numby"
@@ -21,6 +21,7 @@ path = "src/main.rs"
 default = ["desktop"]
 desktop = ["ratatui", "crossterm", "arboard"]
 visionos = []
+android = ["jni"]
 
 [dependencies]
 regex = "1.10"
@@ -47,6 +48,9 @@ chrono-tz = "0.8"
 ratatui = { version = "0.26", optional = true }
 crossterm = { version = "0.27", optional = true }
 arboard = { version = "3.4", optional = true }
+
+# Android-only dependencies
+jni = { version = "0.21", optional = true }
 
 [dev-dependencies]
 approx = "0.5"

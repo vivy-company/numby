@@ -8,6 +8,22 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::RwLock;
+
+/// Global config path override (used on Android/iOS)
+static CONFIG_PATH_OVERRIDE: RwLock<Option<String>> = RwLock::new(None);
+
+/// Set a global config path override (for mobile platforms)
+pub fn set_config_path_override(path: &str) {
+    if let Ok(mut override_path) = CONFIG_PATH_OVERRIDE.write() {
+        *override_path = Some(path.to_string());
+    }
+}
+
+/// Get the config path override if set
+pub fn get_config_path_override() -> Option<String> {
+    CONFIG_PATH_OVERRIDE.read().ok().and_then(|p| p.clone())
+}
 
 /// Main configuration structure containing all calculator settings.
 ///
@@ -528,6 +544,15 @@ pub fn parse_rate(rate_str: &str) -> Option<(String, f64)> {
 /// assert!(config.length_units.len() > 0);
 /// ```
 pub fn load_config() -> Config {
+    // Check for override path first (used on Android/iOS)
+    if let Some(override_path) = get_config_path_override() {
+        if let Ok(content) = fs::read_to_string(&override_path) {
+            if let Ok(config) = serde_json::from_str::<Config>(&content) {
+                return config;
+            }
+        }
+    }
+
     let config_path = get_config_path();
     if let Ok(content) = fs::read_to_string(&config_path) {
         if let Ok(config) = serde_json::from_str::<Config>(&content) {

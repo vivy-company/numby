@@ -18,6 +18,7 @@ IOS_SIM_LIB="Numby/iOS/libnumby-ios-sim.a"
 VISIONOS_DEVICE_LIB="Numby/visionOS/libnumby-visionos.a"
 VISIONOS_SIM_LIB="Numby/visionOS/libnumby-visionos-sim.a"
 XCFRAMEWORK_PATH="Numby/libnumby.xcframework"
+ANDROID_JNILIBS_DIR="Android/app/src/main/jniLibs"
 
 # Temp file tracking for cleanup
 ZIP_PATH=""
@@ -123,21 +124,115 @@ create_xcframework() {
     echo -e "${GREEN}✓ XCFramework created: ${XCFRAMEWORK_PATH}${NC}"
 }
 
-# Build all platforms
-build_macos
-build_ios
-build_visionos
-create_xcframework
+build_android() {
+    echo -e "${BLUE}🤖 Building shared library for Android...${NC}"
+
+    # Check if cargo-ndk is installed
+    if ! command -v cargo-ndk &> /dev/null; then
+        echo -e "${YELLOW}⚠️  cargo-ndk not found. Install with: cargo install cargo-ndk${NC}"
+        echo -e "${YELLOW}   Also ensure Android NDK is installed and ANDROID_NDK_HOME is set${NC}"
+        return 1
+    fi
+
+    # Check if Android targets are installed
+    if ! rustup target list --installed | grep -q "aarch64-linux-android"; then
+        echo -e "${YELLOW}⚠️  Android targets not installed. Installing...${NC}"
+        rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+    fi
+
+    # Create jniLibs directories
+    mkdir -p "$ANDROID_JNILIBS_DIR/arm64-v8a"
+    mkdir -p "$ANDROID_JNILIBS_DIR/armeabi-v7a"
+    mkdir -p "$ANDROID_JNILIBS_DIR/x86_64"
+
+    # Build for all Android ABIs (--lib to skip TUI binary which doesn't compile for Android)
+    echo "  Building for arm64-v8a (ARM64)..."
+    cargo ndk -t arm64-v8a --platform 26 -o "$ANDROID_JNILIBS_DIR" build --release --lib --no-default-features --features android
+
+    echo "  Building for armeabi-v7a (ARM32)..."
+    cargo ndk -t armeabi-v7a --platform 26 -o "$ANDROID_JNILIBS_DIR" build --release --lib --no-default-features --features android
+
+    echo "  Building for x86_64 (emulator)..."
+    cargo ndk -t x86_64 --platform 26 -o "$ANDROID_JNILIBS_DIR" build --release --lib --no-default-features --features android
+
+    # Report sizes
+    if [ -f "$ANDROID_JNILIBS_DIR/arm64-v8a/libnumby.so" ]; then
+        ARM64_SIZE=$(ls -lh "$ANDROID_JNILIBS_DIR/arm64-v8a/libnumby.so" | awk '{print $5}')
+        echo -e "${GREEN}✓ Android arm64-v8a: ${ANDROID_JNILIBS_DIR}/arm64-v8a/libnumby.so (${ARM64_SIZE})${NC}"
+    fi
+    if [ -f "$ANDROID_JNILIBS_DIR/armeabi-v7a/libnumby.so" ]; then
+        ARM32_SIZE=$(ls -lh "$ANDROID_JNILIBS_DIR/armeabi-v7a/libnumby.so" | awk '{print $5}')
+        echo -e "${GREEN}✓ Android armeabi-v7a: ${ANDROID_JNILIBS_DIR}/armeabi-v7a/libnumby.so (${ARM32_SIZE})${NC}"
+    fi
+    if [ -f "$ANDROID_JNILIBS_DIR/x86_64/libnumby.so" ]; then
+        X86_64_SIZE=$(ls -lh "$ANDROID_JNILIBS_DIR/x86_64/libnumby.so" | awk '{print $5}')
+        echo -e "${GREEN}✓ Android x86_64: ${ANDROID_JNILIBS_DIR}/x86_64/libnumby.so (${X86_64_SIZE})${NC}"
+    fi
+}
+
+# Parse command line arguments
+BUILD_ANDROID=false
+BUILD_APPLE=true
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --android)
+            BUILD_ANDROID=true
+            shift
+            ;;
+        --android-only)
+            BUILD_ANDROID=true
+            BUILD_APPLE=false
+            shift
+            ;;
+        --help)
+            echo "Usage: ./build.sh [options]"
+            echo "Options:"
+            echo "  --android       Build Android libraries in addition to Apple"
+            echo "  --android-only  Build only Android libraries"
+            echo "  --help          Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Build platforms
+if [ "$BUILD_APPLE" = true ]; then
+    build_macos
+    build_ios
+    build_visionos
+    create_xcframework
+fi
+
+if [ "$BUILD_ANDROID" = true ]; then
+    build_android
+fi
 
 echo ""
 echo -e "${GREEN}✅ Build complete!${NC}"
 echo ""
 echo "Artifacts:"
-echo "  • macOS library:        ${MACOS_APP_LIB}"
-echo "  • iOS device:           ${IOS_DEVICE_LIB}"
-echo "  • iOS simulator:        ${IOS_SIM_LIB}"
-echo "  • visionOS device:      ${VISIONOS_DEVICE_LIB}"
-echo "  • visionOS simulator:   ${VISIONOS_SIM_LIB}"
-echo "  • XCFramework:          ${XCFRAMEWORK_PATH}"
+if [ "$BUILD_APPLE" = true ]; then
+    echo "  • macOS library:        ${MACOS_APP_LIB}"
+    echo "  • iOS device:           ${IOS_DEVICE_LIB}"
+    echo "  • iOS simulator:        ${IOS_SIM_LIB}"
+    echo "  • visionOS device:      ${VISIONOS_DEVICE_LIB}"
+    echo "  • visionOS simulator:   ${VISIONOS_SIM_LIB}"
+    echo "  • XCFramework:          ${XCFRAMEWORK_PATH}"
+fi
+if [ "$BUILD_ANDROID" = true ]; then
+    echo "  • Android arm64-v8a:    ${ANDROID_JNILIBS_DIR}/arm64-v8a/libnumby.so"
+    echo "  • Android armeabi-v7a:  ${ANDROID_JNILIBS_DIR}/armeabi-v7a/libnumby.so"
+    echo "  • Android x86_64:       ${ANDROID_JNILIBS_DIR}/x86_64/libnumby.so"
+fi
 echo ""
-echo "To build the app, open Numby.xcodeproj in Xcode and select your target."
+if [ "$BUILD_APPLE" = true ]; then
+    echo "To build the iOS/macOS app, open Numby.xcodeproj in Xcode and select your target."
+fi
+if [ "$BUILD_ANDROID" = true ]; then
+    echo "To build the Android app, open the Android folder in Android Studio."
+fi
