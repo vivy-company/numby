@@ -1,7 +1,7 @@
 use crate::evaluator::agents::PRIORITY_PERCENTAGE;
 use crate::evaluator::{evaluate_expr, preprocess_input, EvalContext};
 use crate::models::{Agent, AppState};
-use crate::parser::parse_percentage_op;
+use crate::parser::{parse_percentage_op, preprocess_percentage_parens};
 use crate::prettify::prettify_number;
 use regex::Regex;
 
@@ -31,10 +31,51 @@ impl Agent for PercentageAgent {
         state: &mut AppState,
         config: &crate::config::Config,
     ) -> Option<(String, bool, Option<f64>, Option<String>)> {
-        // Handle "X% of Y" pattern
+        // First, preprocess any percentage expressions in parentheses
+        let preprocessed_input = preprocess_percentage_parens(input.to_string());
+
+        // If preprocessing resolved all percentage expressions, evaluate as regular expression
+        if !preprocessed_input.contains('%') {
+            let mut vars_guard = state.variables.write().ok()?;
+            let history_guard = state.history.read().ok()?;
+
+            let preprocessed = preprocess_input(&preprocessed_input, &vars_guard, config);
+
+            let mut ctx = EvalContext {
+                variables: &mut vars_guard,
+                history: &history_guard,
+                length_units: &config.length_units,
+                time_units: &config.time_units,
+                temperature_units: &config.temperature_units,
+                area_units: &config.area_units,
+                volume_units: &config.volume_units,
+                weight_units: &config.weight_units,
+                angular_units: &config.angular_units,
+                data_units: &config.data_units,
+                speed_units: &config.speed_units,
+                rates: &config.currencies,
+                custom_units: &config.custom_units,
+            };
+
+            if let Ok(result) = evaluate_expr(&preprocessed, &mut ctx) {
+                let pretty_result = prettify_number(result.value);
+                if let Some(unit) = result.unit {
+                    return Some((
+                        format!("{} {}", pretty_result, unit),
+                        true,
+                        Some(result.value),
+                        Some(unit),
+                    ));
+                } else {
+                    return Some((pretty_result, true, Some(result.value), None));
+                }
+            }
+        }
+
+        // Handle "X% of Y" pattern (use preprocessed input in case some nested parens were resolved)
         let percent_of_re = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(.+)")
             .expect("Invalid regex pattern for percent-of expression");
-        if let Some(caps) = percent_of_re.captures(input) {
+        if let Some(caps) = percent_of_re.captures(&preprocessed_input) {
             if let (Some(percent_str), Some(base_str)) = (caps.get(1), caps.get(2)) {
                 if let Ok(percent) = percent_str.as_str().parse::<f64>() {
                     // Recursively evaluate the base expression
@@ -80,7 +121,7 @@ impl Agent for PercentageAgent {
         }
 
         // Handle "X + Y%" pattern
-        if let Some(result) = parse_percentage_op(input) {
+        if let Some(result) = parse_percentage_op(&preprocessed_input) {
             // Extract numeric value from result string
             let numeric_value = result
                 .split_whitespace()

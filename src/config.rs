@@ -14,6 +14,7 @@ use std::sync::RwLock;
 static CONFIG_PATH_OVERRIDE: RwLock<Option<String>> = RwLock::new(None);
 
 /// Set a global config path override (for mobile platforms)
+#[allow(dead_code)]
 pub fn set_config_path_override(path: &str) {
     if let Ok(mut override_path) = CONFIG_PATH_OVERRIDE.write() {
         *override_path = Some(path.to_string());

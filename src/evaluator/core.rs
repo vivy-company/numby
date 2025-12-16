@@ -8,7 +8,7 @@ use crate::conversions::{
 };
 use crate::evaluator::{EvaluatorError, Result};
 use crate::models::{HistoryEntry, Rates, TempUnits, Units};
-use crate::parser::{apply_function_parsing, apply_replacements, parse_percentage_op};
+use crate::parser::{apply_function_parsing, apply_replacements, parse_percentage_op, preprocess_percentage_parens};
 use crate::prettify::prettify_number;
 
 #[derive(Debug, Clone)]
@@ -149,6 +149,9 @@ pub fn evaluate_expr_with_original(
     // Preprocessing is now handled elsewhere before calling this function
     // This function receives already preprocessed input
     let mut expr_str = expr.to_string();
+
+    // Pre-process percentage expressions in parentheses first
+    expr_str = preprocess_percentage_parens(expr_str);
 
     // Track unit from variables that are actually used in the ORIGINAL expression
     // (before preprocessing replaced variable names with values)

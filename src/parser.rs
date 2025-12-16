@@ -33,8 +33,10 @@ lazy_static! {
         Regex::new(r"(\d+(?:\.\d+)?)\s*giga\b").expect("Invalid regex pattern for giga scale");
     static ref TERA_RE: Regex =
         Regex::new(r"(\d+(?:\.\d+)?)\s*tera\b").expect("Invalid regex pattern for tera scale");
-    static ref PERCENT_OP_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)%")
+    static ref PERCENT_OP_RE: Regex = Regex::new(r"(-?\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)%")
         .expect("Invalid regex pattern for percent-operation expression");
+    static ref PERCENT_OF_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(-?\d+(?:\.\d+)?)")
+        .expect("Invalid regex pattern for percent-of expression");
     static ref FUNC_RE: Regex =
         Regex::new(r"(\w+)\s+(\d+(?:\.\d+)?)").expect("Invalid regex pattern for function parsing");
     static ref BIL_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)\s*billion\b")
@@ -238,6 +240,169 @@ pub fn parse_percentage_op(expr_str: &str) -> Option<String> {
 /// assert_eq!(apply_function_parsing("sqrt 16".to_string()), "sqrt(16)");
 /// ```
 pub fn apply_function_parsing(mut num_expr: String) -> String {
-    num_expr = FUNC_RE.replace_all(&num_expr, "$1($2)").to_string();
+    // Don't convert "of" to a function - it's used in percentage expressions
+    num_expr = FUNC_RE
+        .replace_all(&num_expr, |caps: &regex::Captures| {
+            let func_name = &caps[1];
+            let arg = &caps[2];
+            // Skip "of" as it's used in "X% of Y" expressions
+            if func_name.eq_ignore_ascii_case("of") {
+                caps[0].to_string()
+            } else {
+                format!("{}({})", func_name, arg)
+            }
+        })
+        .to_string();
     num_expr
+}
+
+/// Evaluate a simple percentage expression like "30% of 15" or "100 + 10%".
+/// Returns Some(result) if successfully evaluated, None otherwise.
+fn evaluate_simple_percentage(expr: &str) -> Option<f64> {
+    // Try "X% of Y" pattern
+    if let Some(caps) = PERCENT_OF_RE.captures(expr) {
+        if let (Some(percent_str), Some(base_str)) = (caps.get(1), caps.get(2)) {
+            if let (Ok(percent), Ok(base)) = (
+                percent_str.as_str().parse::<f64>(),
+                base_str.as_str().parse::<f64>(),
+            ) {
+                return Some(percent / 100.0 * base);
+            }
+        }
+    }
+
+    // Try "X + Y%" pattern
+    if let Some(caps) = PERCENT_OP_RE.captures(expr) {
+        if let (Some(base_str), Some(op), Some(percent_str)) =
+            (caps.get(1), caps.get(2), caps.get(3))
+        {
+            if let (Ok(base), Ok(percent)) = (
+                base_str.as_str().parse::<f64>(),
+                percent_str.as_str().parse::<f64>(),
+            ) {
+                let percent_decimal = percent / 100.0;
+                let result = match op.as_str() {
+                    "+" => base + (base * percent_decimal),
+                    "-" => base - (base * percent_decimal),
+                    "*" => base * percent_decimal,
+                    "/" => base / percent_decimal,
+                    _ => return None,
+                };
+                return Some(result);
+            }
+        }
+    }
+
+    None
+}
+
+/// Pre-process percentage expressions in parentheses.
+/// Recursively evaluates expressions like (30% of 15) or (100 + 10%)
+/// and replaces them with their numeric results.
+///
+/// # Examples
+///
+/// ```
+/// use numby::parser::preprocess_percentage_parens;
+///
+/// assert_eq!(preprocess_percentage_parens("15 - (30% of 15)".to_string()), "15 - 4.5");
+/// assert_eq!(preprocess_percentage_parens("(100 + 50%)".to_string()), "150");
+/// ```
+pub fn preprocess_percentage_parens(mut expr: String) -> String {
+    // Limit iterations to prevent infinite loops
+    let max_iterations = 100;
+    let mut iterations = 0;
+
+    loop {
+        if iterations >= max_iterations {
+            break;
+        }
+        iterations += 1;
+
+        // Find innermost parentheses containing %
+        let mut best_start = None;
+        let mut best_end = None;
+        let mut depth = 0;
+        let mut current_start = None;
+
+        for (i, c) in expr.char_indices() {
+            match c {
+                '(' => {
+                    depth += 1;
+                    current_start = Some(i);
+                }
+                ')' => {
+                    if depth > 0 {
+                        if let Some(start) = current_start {
+                            let content = &expr[start + 1..i];
+                            // Check if this paren contains % and no nested parens
+                            if content.contains('%') && !content.contains('(') {
+                                best_start = Some(start);
+                                best_end = Some(i);
+                                break; // Process innermost first
+                            }
+                        }
+                        depth -= 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // If we found a parenthesized percentage expression, evaluate it
+        if let (Some(start), Some(end)) = (best_start, best_end) {
+            let content = &expr[start + 1..end];
+            if let Some(result) = evaluate_simple_percentage(content) {
+                let replacement = result.to_string();
+                expr = format!("{}{}{}", &expr[..start], replacement, &expr[end + 1..]);
+                continue; // Try again for nested cases
+            }
+        }
+
+        // No more parenthesized percentage expressions found
+        break;
+    }
+
+    expr
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_preprocess_percentage_parens_simple() {
+        assert_eq!(
+            preprocess_percentage_parens("(30% of 15)".to_string()),
+            "4.5"
+        );
+    }
+
+    #[test]
+    fn test_preprocess_percentage_parens_subtraction() {
+        assert_eq!(
+            preprocess_percentage_parens("15 - (30% of 15)".to_string()),
+            "15 - 4.5"
+        );
+    }
+
+    #[test]
+    fn test_preprocess_percentage_parens_op() {
+        assert_eq!(
+            preprocess_percentage_parens("(100 + 50%)".to_string()),
+            "150"
+        );
+    }
+
+    #[test]
+    fn test_evaluate_simple_percentage_of() {
+        assert_eq!(evaluate_simple_percentage("30% of 15"), Some(4.5));
+        assert_eq!(evaluate_simple_percentage("50% of 100"), Some(50.0));
+    }
+
+    #[test]
+    fn test_evaluate_simple_percentage_op() {
+        assert_eq!(evaluate_simple_percentage("100 + 50%"), Some(150.0));
+        assert_eq!(evaluate_simple_percentage("100 - 20%"), Some(80.0));
+    }
 }

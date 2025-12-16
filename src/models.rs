@@ -87,6 +87,7 @@ pub struct AppState {
     /// Maps line_index -> evaluated_content
     pub line_content: Arc<RwLock<HashMap<usize, String>>>,
     /// Override path for config file (used on Android/iOS)
+    #[allow(dead_code)]
     pub config_override_path: Option<String>,
 }
 
