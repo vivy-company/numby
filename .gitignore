@@ -4,6 +4,7 @@ macos/
 *.swp
 .DS_Store
 *.a
+!Numby/libnumby.xcframework/**/*.a
 
 # Xcode user-specific files
 *.xcuserstate
