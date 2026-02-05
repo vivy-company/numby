@@ -61,6 +61,10 @@ class iOSSceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Save current iPad tab state to history if needed
         if let tabContainer = window?.rootViewController as? iPadTabContainerViewController {
             tabContainer.saveCurrentTabToHistory()
+            tabContainer.autosaveTabsNow()
+        } else if let nav = window?.rootViewController as? UINavigationController,
+                  let calculatorVC = nav.viewControllers.first as? CalculatorViewController {
+            calculatorVC.autosaveNow()
         }
         Persistence.shared.save()
     }

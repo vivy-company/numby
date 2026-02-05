@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "字体大小";
 "settings.appearance.font" = "字体";
 "settings.appearance.syntaxHighlighting" = "语法高亮";
+"settings.number.format" = "数字格式";
+"settings.number.maxDecimals" = "最大小数位";
+"settings.number.format.pretty" = "简洁";
+"settings.number.format.precision" = "精确";
+"settings.number.preview" = "预览";
+"settings.number.maxDecimalsHint" = "仅在精确模式下使用";
 
 /* Settings - Behavior Section */
 "settings.behavior.section" = "行为";

@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "フォントサイズ";
 "settings.appearance.font" = "フォント";
 "settings.appearance.syntaxHighlighting" = "構文の強調表示";
+"settings.number.format" = "数値形式";
+"settings.number.maxDecimals" = "最大小数桁";
+"settings.number.format.pretty" = "簡易";
+"settings.number.format.precision" = "精密";
+"settings.number.preview" = "プレビュー";
+"settings.number.maxDecimalsHint" = "精密モードでのみ使用";
 
 /* Settings - Behavior Section */
 "settings.behavior.section" = "動作";

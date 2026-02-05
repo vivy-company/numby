@@ -46,6 +46,8 @@ tui-help-ctrlshift-t-key = Ctrl+Shift+T
 tui-help-ctrlshift-t-desc = 時刻形式の選択
 tui-help-ctrlshift-d-key = Ctrl+Shift+D
 tui-help-ctrlshift-d-desc = 日付形式の選択
+tui-help-ctrlshift-n-key = Ctrl+Shift+N
+tui-help-ctrlshift-n-desc = 数値形式の選択
 tui-help-ctrlshift-l-key = Ctrl+Shift+L
 tui-help-ctrlshift-l-desc = 言語選択
 tui-help-f1-key = F1
@@ -62,6 +64,11 @@ tui-format-time-title = 時間
 tui-format-date-title = 日付
 tui-format-footer = ↑/↓ 選択   ←/→ リスト切替   Enter 適用   Esc 閉じる
 
+# 数値形式選択
+tui-number-format-title = 数値形式
+tui-number-decimals-title = 最大小数桁
+tui-number-format-footer = ↑/↓ 選択   ←/→ リスト切替   Enter 適用   Esc 閉じる
+
 # 保存プロンプト
 tui-save-default-filename = untitled.numby
 tui-save-label = 名前を付けて保存:
@@ -69,6 +76,7 @@ tui-save-hint = (Enter で保存、Esc でキャンセル)
 
 # ステータス
 tui-format-set-status = 形式を設定しました: 時刻 {$time}, 日付 {$date}
+tui-number-format-set-status = 数値形式を設定しました: {$format}、最大小数桁: {$decimals}
 tui-locale-set-status = 言語を {$name} に設定しました
 tui-quit-ctrlc = もう一度 Ctrl+C で終了
 tui-quit-esc = もう一度 Esc で終了

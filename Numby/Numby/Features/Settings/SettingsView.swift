@@ -37,6 +37,11 @@ struct SettingsView: View {
     private var localizedFontSize: String { _ = localeVersion; return NSLocalizedString("settings.appearance.fontSize", comment: "") }
     private var localizedFont: String { _ = localeVersion; return NSLocalizedString("settings.appearance.font", comment: "") }
     private var localizedSyntaxHighlighting: String { _ = localeVersion; return NSLocalizedString("settings.appearance.syntaxHighlighting", comment: "") }
+    private var localizedNumberFormat: String { _ = localeVersion; return NSLocalizedString("settings.number.format", comment: "") }
+    private var localizedNumberMaxDecimals: String { _ = localeVersion; return NSLocalizedString("settings.number.maxDecimals", comment: "") }
+    private var localizedNumberMaxDecimalsHint: String { _ = localeVersion; return NSLocalizedString("settings.number.maxDecimalsHint", comment: "") }
+    private var localizedNumberPretty: String { _ = localeVersion; return NSLocalizedString("settings.number.format.pretty", comment: "") }
+    private var localizedNumberPrecision: String { _ = localeVersion; return NSLocalizedString("settings.number.format.precision", comment: "") }
     private var localizedBehaviorSection: String { _ = localeVersion; return NSLocalizedString("settings.behavior.section", comment: "") }
     private var localizedAutoEvaluate: String { _ = localeVersion; return NSLocalizedString("settings.behavior.autoEvaluate", comment: "") }
     private var localizedSplitRatio: String { _ = localeVersion; return NSLocalizedString("settings.behavior.splitRatio", comment: "") }
@@ -112,6 +117,39 @@ struct SettingsView: View {
 
                 // Syntax highlighting toggle
                 Toggle(localizedSyntaxHighlighting, isOn: $configManager.config.syntaxHighlighting)
+
+                Picker(localizedNumberFormat, selection: $configManager.config.numberFormat) {
+                    Text(localizedNumberPretty).tag("pretty")
+                    Text(localizedNumberPrecision).tag("precision")
+                }
+                .pickerStyle(.menu)
+                .onChange(of: configManager.config.numberFormat) { newValue in
+                    configManager.config.numberFormat = newValue
+                    configManager.save()
+                    _ = numbyWrapper.setNumberFormat(
+                        newValue,
+                        maxDecimals: configManager.config.numberMaxDecimals
+                    )
+                }
+
+                Stepper(
+                    "\(localizedNumberMaxDecimals): \(configManager.config.numberMaxDecimals)",
+                    value: $configManager.config.numberMaxDecimals,
+                    in: 0...15,
+                    step: 1
+                )
+                .onChange(of: configManager.config.numberMaxDecimals) { newValue in
+                    configManager.config.numberMaxDecimals = newValue
+                    configManager.save()
+                    _ = numbyWrapper.setNumberFormat(
+                        configManager.config.numberFormat,
+                        maxDecimals: newValue
+                    )
+                }
+
+                Text(localizedNumberMaxDecimalsHint)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
 
 

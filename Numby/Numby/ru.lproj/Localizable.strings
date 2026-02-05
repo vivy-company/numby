@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "Размер шрифта";
 "settings.appearance.font" = "Шрифт";
 "settings.appearance.syntaxHighlighting" = "Подсветка синтаксиса";
+"settings.number.format" = "Формат чисел";
+"settings.number.maxDecimals" = "Макс. десятичных";
+"settings.number.format.pretty" = "Краткий";
+"settings.number.format.precision" = "Точный";
+"settings.number.preview" = "Предпросмотр";
+"settings.number.maxDecimalsHint" = "Используется только в режиме точности";
 
 /* Settings - Behavior Section */
 "settings.behavior.section" = "Поведение";

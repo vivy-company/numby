@@ -9,7 +9,7 @@ use crate::conversions::{
 use crate::evaluator::{EvaluatorError, Result};
 use crate::models::{HistoryEntry, Rates, TempUnits, Units};
 use crate::parser::{apply_function_parsing, apply_replacements, parse_percentage_op, preprocess_percentage_parens};
-use crate::prettify::prettify_number;
+use crate::prettify::format_number;
 
 #[derive(Debug, Clone)]
 pub struct EvalResult {
@@ -31,6 +31,8 @@ pub struct EvalContext<'a> {
     pub speed_units: &'a Units,
     pub rates: &'a Rates,
     pub custom_units: &'a HashMap<String, HashMap<String, f64>>,
+    pub number_format: &'a str,
+    pub number_max_decimals: usize,
 }
 
 lazy_static! {
@@ -199,7 +201,9 @@ pub fn evaluate_expr_with_original(
 
     expr_str = apply_replacements(expr_str);
     expr_str = apply_function_parsing(expr_str);
-    if let Some(result_str) = parse_percentage_op(&expr_str) {
+    if let Some(result_str) =
+        parse_percentage_op(&expr_str, ctx.number_format, ctx.number_max_decimals)
+    {
         let value = result_str
             .split_whitespace()
             .next()
@@ -277,21 +281,37 @@ pub fn evaluate_expr_with_original(
             target_unit
         };
 
+        let length_units = ctx.length_units;
+        let time_units = ctx.time_units;
+        let temperature_units = ctx.temperature_units;
+        let area_units = ctx.area_units;
+        let volume_units = ctx.volume_units;
+        let weight_units = ctx.weight_units;
+        let angular_units = ctx.angular_units;
+        let data_units = ctx.data_units;
+        let speed_units = ctx.speed_units;
+        let rates = ctx.rates;
+        let custom_units = ctx.custom_units;
+        let number_format = ctx.number_format;
+        let number_max_decimals = ctx.number_max_decimals;
+
         let try_conversion = |source: &str| -> Option<EvalResult> {
             evaluate_unit_conversion(
                 source,
                 right_for_conversion,
-                ctx.length_units,
-                ctx.time_units,
-                ctx.temperature_units,
-                ctx.area_units,
-                ctx.volume_units,
-                ctx.weight_units,
-                ctx.angular_units,
-                ctx.data_units,
-                ctx.speed_units,
-                ctx.rates,
-                ctx.custom_units,
+                length_units,
+                time_units,
+                temperature_units,
+                area_units,
+                volume_units,
+                weight_units,
+                angular_units,
+                data_units,
+                speed_units,
+                rates,
+                custom_units,
+                number_format,
+                number_max_decimals,
             )
             .map(parse_conversion_result)
         };
@@ -489,56 +509,116 @@ pub fn evaluate_unit_conversion(
     speed_units: &Units,
     rates: &Rates,
     custom_units: &HashMap<String, HashMap<String, f64>>,
+    number_format: &str,
+    number_max_decimals: usize,
 ) -> Option<String> {
+    fn normalized_unit(right: &str, units: &Units) -> Option<String> {
+        let trimmed = right.trim();
+        let compact = trimmed.replace(' ', "");
+        let trimmed_lower = trimmed.to_lowercase();
+        let compact_lower = compact.to_lowercase();
+        if units.contains_key(&trimmed_lower) {
+            return Some(trimmed.to_string());
+        }
+        if units.contains_key(&compact_lower) {
+            return Some(compact);
+        }
+        None
+    }
+
     let right_lower = right.to_lowercase();
     // Determine unit type based on right unit
-    if length_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_generic_conversion(left, right, length_units) {
-            return Some(format!("{} {}", prettify_number(val), right));
+    if let Some(unit) = normalized_unit(right, length_units) {
+        if let Some(val) = evaluate_generic_conversion(left, &unit, length_units) {
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                unit
+            ));
         }
-    } else if time_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_generic_conversion(left, right, time_units) {
-            return Some(format!("{} {}", prettify_number(val), right));
+    } else if let Some(unit) = normalized_unit(right, time_units) {
+        if let Some(val) = evaluate_generic_conversion(left, &unit, time_units) {
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                unit
+            ));
         }
     } else if temperature_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_temperature_conversion(left, right) {
-            return Some(format!("{} {}", prettify_number(val), right));
+        if let Some(val) = evaluate_temperature_conversion(left, right.trim()) {
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                right.trim()
+            ));
         }
-    } else if area_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_generic_conversion(left, right, area_units) {
-            return Some(format!("{} {}", prettify_number(val), right));
+    } else if let Some(unit) = normalized_unit(right, area_units) {
+        if let Some(val) = evaluate_generic_conversion(left, &unit, area_units) {
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                unit
+            ));
         }
-    } else if volume_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_generic_conversion(left, right, volume_units) {
-            return Some(format!("{} {}", prettify_number(val), right));
+    } else if let Some(unit) = normalized_unit(right, volume_units) {
+        if let Some(val) = evaluate_generic_conversion(left, &unit, volume_units) {
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                unit
+            ));
         }
-    } else if weight_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_generic_conversion(left, right, weight_units) {
-            return Some(format!("{} {}", prettify_number(val), right));
+    } else if let Some(unit) = normalized_unit(right, weight_units) {
+        if let Some(val) = evaluate_generic_conversion(left, &unit, weight_units) {
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                unit
+            ));
         }
-    } else if angular_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_generic_conversion(left, right, angular_units) {
-            return Some(format!("{} {}", prettify_number(val), right));
+    } else if let Some(unit) = normalized_unit(right, angular_units) {
+        if let Some(val) = evaluate_generic_conversion(left, &unit, angular_units) {
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                unit
+            ));
         }
-    } else if data_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_generic_conversion(left, right, data_units) {
-            return Some(format!("{} {}", prettify_number(val), right));
+    } else if let Some(unit) = normalized_unit(right, data_units) {
+        if let Some(val) = evaluate_generic_conversion(left, &unit, data_units) {
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                unit
+            ));
         }
-    } else if speed_units.contains_key(&right_lower) {
-        if let Some(val) = evaluate_generic_conversion(left, right, speed_units) {
-            return Some(format!("{} {}", prettify_number(val), right));
+    } else if let Some(unit) = normalized_unit(right, speed_units) {
+        if let Some(val) = evaluate_generic_conversion(left, &unit, speed_units) {
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                unit
+            ));
         }
     } else if rates.contains_key(&right.to_uppercase()) {
         // Currency
         if let Some(val) = evaluate_currency_conversion(left, right, rates) {
-            return Some(format!("{} {}", prettify_number(val), right));
+            return Some(format!(
+                "{} {}",
+                format_number(val, number_format, number_max_decimals),
+                right
+            ));
         }
     } else {
         // Check custom units
         for units in custom_units.values() {
-            if units.contains_key(&right_lower) {
-                if let Some(val) = evaluate_generic_conversion(left, right, units) {
-                    return Some(format!("{} {}", prettify_number(val), right));
+            if let Some(unit) = normalized_unit(right, units) {
+                if let Some(val) = evaluate_generic_conversion(left, &unit, units) {
+                    return Some(format!(
+                        "{} {}",
+                        format_number(val, number_format, number_max_decimals),
+                        unit
+                    ));
                 }
             }
         }

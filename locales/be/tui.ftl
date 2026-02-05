@@ -46,6 +46,8 @@ tui-help-ctrlshift-t-key = Ctrl+Shift+T
 tui-help-ctrlshift-t-desc = выбар фармату часу
 tui-help-ctrlshift-d-key = Ctrl+Shift+D
 tui-help-ctrlshift-d-desc = выбар фармату даты
+tui-help-ctrlshift-n-key = Ctrl+Shift+N
+tui-help-ctrlshift-n-desc = выбар фармату лікаў
 tui-help-ctrlshift-l-key = Ctrl+Shift+L
 tui-help-ctrlshift-l-desc = выбар мовы
 tui-help-f1-key = F1
@@ -62,6 +64,11 @@ tui-format-time-title = Час
 tui-format-date-title = Дата
 tui-format-footer = ↑/↓ выбар   ←/→ змяніць спіс   Enter прымяніць   Esc закрыць
 
+# Выбар фармату лікаў
+tui-number-format-title = Фармат лікаў
+tui-number-decimals-title = Макс. дзесятковых
+tui-number-format-footer = ↑/↓ выбар   ←/→ змяніць спіс   Enter прымяніць   Esc закрыць
+
 # Захаванне
 tui-save-default-filename = untitled.numby
 tui-save-label = Захаваць як:
@@ -69,6 +76,7 @@ tui-save-hint = (Enter — захаваць, Esc — скасаваць)
 
 # Статусы
 tui-format-set-status = Фарматы заданы: час {$time}, дата {$date}
+tui-number-format-set-status = Фармат лікаў: {$format}, макс. дзесятковых: {$decimals}
 tui-locale-set-status = Мова ўстаноўлена: {$name}
 tui-quit-ctrlc = Націсніце Ctrl+C яшчэ раз для выхаду
 tui-quit-esc = Націсніце Esc яшчэ раз для выхаду

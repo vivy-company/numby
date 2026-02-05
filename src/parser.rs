@@ -6,7 +6,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::prettify::prettify_number;
+use crate::prettify::format_number;
 
 lazy_static! {
     static ref BIN_RE: Regex =
@@ -192,19 +192,23 @@ pub fn apply_replacements(mut expr_str: String) -> String {
 /// use numby::parser::parse_percentage_op;
 ///
 /// // 100 + 10% = 110
-/// let result = parse_percentage_op("100 + 10%");
+/// let result = parse_percentage_op("100 + 10%", "pretty", 12);
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap(), "110");
 ///
 /// // 200 - 25% = 150
-/// let result = parse_percentage_op("200 - 25%");
+/// let result = parse_percentage_op("200 - 25%", "pretty", 12);
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap(), "150");
 ///
 /// // No percentage operation
-/// assert!(parse_percentage_op("100 + 10").is_none());
+/// assert!(parse_percentage_op("100 + 10", "pretty", 12).is_none());
 /// ```
-pub fn parse_percentage_op(expr_str: &str) -> Option<String> {
+pub fn parse_percentage_op(
+    expr_str: &str,
+    number_format: &str,
+    number_max_decimals: usize,
+) -> Option<String> {
     if let Some(caps) = PERCENT_OP_RE.captures(expr_str) {
         if let (Some(base_str), Some(op), Some(percent_str)) =
             (caps.get(1), caps.get(2), caps.get(3))
@@ -221,7 +225,11 @@ pub fn parse_percentage_op(expr_str: &str) -> Option<String> {
                     "/" => base / percent_decimal,
                     _ => return None,
                 };
-                return Some(prettify_number(result));
+                return Some(format_number(
+                    result,
+                    number_format,
+                    number_max_decimals,
+                ));
             }
         }
     }

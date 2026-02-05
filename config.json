@@ -213,5 +213,7 @@
       "calories": 4.184,
       "cal": 4.184
     }
-  }
+  },
+  "number_format": "pretty",
+  "number_max_decimals": 12
 }

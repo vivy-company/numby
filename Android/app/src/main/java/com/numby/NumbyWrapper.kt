@@ -72,6 +72,18 @@ class NumbyWrapper : Closeable {
     }
 
     /**
+     * Set number format and max decimals.
+     *
+     * @param format "pretty" or "precision"
+     * @param maxDecimals Max decimals for precision mode
+     * @return true if successful, false otherwise
+     */
+    fun setNumberFormat(format: String, maxDecimals: Int): Boolean {
+        if (contextPtr == 0L) return false
+        return setNumberFormat(contextPtr, format, maxDecimals) == 0
+    }
+
+    /**
      * Set currency rates from JSON data.
      *
      * Expected format: {"date": "2025-01-01", "usd": {"eur": 0.92, "gbp": 0.79, ...}}
@@ -131,6 +143,7 @@ class NumbyWrapper : Closeable {
     private external fun setVariable(ctx: Long, name: String, value: Double, unit: String?): Int
     private external fun loadConfig(ctx: Long, path: String): Int
     private external fun setLocale(ctx: Long, locale: String): Int
+    private external fun setNumberFormat(ctx: Long, format: String, maxDecimals: Int): Int
     private external fun setCurrencyRatesJson(ctx: Long, jsonData: String): Int
     private external fun clearHistory(ctx: Long): Int
     private external fun clearVariables(ctx: Long): Int

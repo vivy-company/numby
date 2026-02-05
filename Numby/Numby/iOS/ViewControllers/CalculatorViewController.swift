@@ -21,6 +21,14 @@ class CalculatorViewController: UIViewController {
     private var accessoryButtons: [UIButton] = []
     #endif
 
+    private var autosaveWorkItem: DispatchWorkItem?
+    private var lastAutosaveSignature: String = ""
+    private var lastHistorySignature: String = ""
+    private var lastHistorySnapshotDate: Date = .distantPast
+    private let autosaveDebounce: TimeInterval = 0.8
+    private let historySnapshotInterval: TimeInterval = 120
+    private let autosaveKey = "numby.autosave.phone"
+
     // Reference to tab container (iPad only)
     weak var tabContainer: iPadTabContainerViewController?
 
@@ -192,7 +200,13 @@ class CalculatorViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(_:)), name: UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(themeDidChange), name: NSNotification.Name("ThemeDidChange"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(configDidChange), name: NSNotification.Name("ConfigurationDidChange"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(loadHistoryEntry(_:)), name: NSNotification.Name("LoadHistoryEntry"), object: nil)
+
+        applyNumberFormat()
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            restoreAutosavedStateIfAvailable()
+        }
     }
 
     private func setupNavigationItems() {
@@ -227,6 +241,33 @@ class CalculatorViewController: UIViewController {
                 }
             }
         }
+    }
+
+    // MARK: - Keyboard Shortcuts (Undo/Redo)
+
+    override var keyCommands: [UIKeyCommand]? {
+        [
+            UIKeyCommand(
+                title: NSLocalizedString("menu.undo", comment: ""),
+                action: #selector(handleUndo),
+                input: "Z",
+                modifierFlags: .command
+            ),
+            UIKeyCommand(
+                title: NSLocalizedString("menu.redo", comment: ""),
+                action: #selector(handleRedo),
+                input: "Z",
+                modifierFlags: [.command, .shift]
+            ),
+        ]
+    }
+
+    @objc private func handleUndo() {
+        textView.undoManager?.undo()
+    }
+
+    @objc private func handleRedo() {
+        textView.undoManager?.redo()
     }
 
     deinit {
@@ -341,15 +382,18 @@ class CalculatorViewController: UIViewController {
             guard let self = self else { return }
             guard evalID == self.currentEvalID else { return }
 
-            let newResults = lines.map { line -> String in
-                // Check if cancelled
-                guard evalID == self.currentEvalID else { return "" }
+            let groups = self.buildLineGroups(lines)
+            var newResults: [String] = Array(repeating: "", count: lines.count)
 
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if trimmed.isEmpty || trimmed.hasPrefix("//") || trimmed.hasPrefix("#") {
-                    return ""
+            for group in groups {
+                guard evalID == self.currentEvalID else { return }
+                let expr = group.expr.trimmingCharacters(in: .whitespaces)
+                guard !expr.isEmpty else { continue }
+                let result = self.numbyWrapper.evaluate(expr).formatted?
+                    .replacingOccurrences(of: "\n", with: "  ") ?? ""
+                if group.end < newResults.count {
+                    newResults[group.end] = result
                 }
-                return self.numbyWrapper.evaluate(trimmed).formatted?.replacingOccurrences(of: "\n", with: "  ") ?? ""
             }
 
             // Skip updating if stale
@@ -366,6 +410,147 @@ class CalculatorViewController: UIViewController {
     private func updateResultsOverlay() {
         let font = textView.font ?? .monospacedSystemFont(ofSize: 16, weight: .regular)
         resultsOverlay.update(results: results, font: font, textColor: Theme.current.syntaxColor(for: .results), textView: textView)
+    }
+
+    // MARK: - Autosave & History Snapshots
+
+    private struct PhoneAutosaveState: Codable {
+        let inputText: String
+        let cursorPosition: Int
+    }
+
+    private func autosaveSignature(text: String) -> String {
+        let cursor = textView.selectedRange.location
+        let resultSignature = results.joined(separator: "\n")
+        return "\(text)\n|\(cursor)|\n\(resultSignature)"
+    }
+
+    private func scheduleAutosave() {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        autosaveWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.performAutosaveIfNeeded()
+        }
+        autosaveWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + autosaveDebounce, execute: work)
+    }
+
+    private func performAutosaveIfNeeded() {
+        let text = textView.text ?? ""
+        let signature = autosaveSignature(text: text)
+        guard signature != lastAutosaveSignature else { return }
+
+        let state = PhoneAutosaveState(inputText: text, cursorPosition: textView.selectedRange.location)
+        if let data = try? JSONEncoder().encode(state) {
+            UserDefaults.standard.set(data, forKey: autosaveKey)
+            lastAutosaveSignature = signature
+        }
+
+        let now = Date()
+        if now.timeIntervalSince(lastHistorySnapshotDate) >= historySnapshotInterval {
+            let historySignature = signature
+            if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               historySignature != lastHistorySignature {
+                let resultText = results.filter { !$0.isEmpty }.joined(separator: "\n")
+                Persistence.shared.addHistoryEntry(
+                    expression: text,
+                    result: resultText.isEmpty ? "No result" : resultText
+                )
+                NotificationCenter.default.post(name: NSNotification.Name("HistoryDidUpdate"), object: nil)
+                lastHistorySignature = historySignature
+                lastHistorySnapshotDate = now
+            }
+        }
+    }
+
+    private func restoreAutosavedStateIfAvailable() {
+        guard let data = UserDefaults.standard.data(forKey: autosaveKey),
+              let state = try? JSONDecoder().decode(PhoneAutosaveState.self, from: data) else {
+            return
+        }
+
+        textView.text = state.inputText
+        if state.cursorPosition <= (textView.text?.count ?? 0) {
+            textView.selectedRange = NSRange(location: state.cursorPosition, length: 0)
+        }
+        applySyntaxHighlighting()
+        scheduleEvaluation()
+    }
+
+    func autosaveNow() {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        performAutosaveIfNeeded()
+    }
+
+    private func buildLineGroups(_ lines: [String]) -> [(start: Int, end: Int, expr: String)] {
+        var groups: [(start: Int, end: Int, expr: String)] = []
+        var currentStart: Int? = nil
+        var currentParts: [String] = []
+        var prevLine: String?
+
+        for (idx, line) in lines.enumerated() {
+            if isCommentOrEmpty(line) {
+                if let start = currentStart {
+                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: " ")))
+                    currentStart = nil
+                    currentParts.removeAll()
+                }
+                prevLine = nil
+                continue
+            }
+
+            let startsWithOp = lineStartsWithOperator(line)
+            let prevEndsWithOp = prevLine.map { lineEndsWithOperator($0) } ?? false
+            let isContinuation = startsWithOp || prevEndsWithOp
+
+            if currentStart == nil || !isContinuation {
+                if let start = currentStart {
+                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: " ")))
+                    currentParts.removeAll()
+                }
+                currentStart = idx
+            }
+
+            currentParts.append(line.trimmingCharacters(in: .whitespaces))
+            prevLine = line
+        }
+
+        if let start = currentStart {
+            groups.append((start: start, end: max(0, lines.count - 1), expr: currentParts.joined(separator: " ")))
+        }
+
+        return groups
+    }
+
+    private func isCommentOrEmpty(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed.hasPrefix("//") || trimmed.hasPrefix("#")
+    }
+
+    private func lineStartsWithOperator(_ line: String) -> Bool {
+        let trimmed = stripLineCommentsForContinuation(line).trimmingCharacters(in: .whitespaces)
+        guard let first = trimmed.first else { return false }
+        return "+-*/%^".contains(first)
+    }
+
+    private func lineEndsWithOperator(_ line: String) -> Bool {
+        let trimmed = stripLineCommentsForContinuation(line).trimmingCharacters(in: .whitespaces)
+        guard let last = trimmed.last else { return false }
+        return "+-*/%^(".contains(last)
+    }
+
+    private func stripLineCommentsForContinuation(_ line: String) -> String {
+        var end = line.endIndex
+        if let range = line.range(of: "//") {
+            end = min(end, range.lowerBound)
+        }
+        if let range = line.range(of: "#") {
+            end = min(end, range.lowerBound)
+        }
+        if let range = line.range(of: "/*") {
+            end = min(end, range.lowerBound)
+        }
+        return String(line[..<end])
     }
 
     // MARK: - Syntax Highlighting
@@ -439,7 +624,7 @@ class CalculatorViewController: UIViewController {
         // Assignment equals
         applyPattern("\\s(=)\\s", color: theme.syntaxColor(for: .assignment), to: storage, text: text, captureGroup: 1)
         // Comments (last - overrides all)
-        applyPattern("(//|#).*$", color: theme.syntaxColor(for: .comments), to: storage, text: text, options: .anchorsMatchLines)
+        applyPattern("(//|#).*$|/\\*.*?\\*/", color: theme.syntaxColor(for: .comments), to: storage, text: text, options: [.anchorsMatchLines, .dotMatchesLineSeparators])
 
         storage.endEditing()
 
@@ -479,6 +664,18 @@ class CalculatorViewController: UIViewController {
 
     @objc private func themeDidChange() {
         updateTheme()
+    }
+
+    @objc private func configDidChange() {
+        applyNumberFormat()
+    }
+
+    private func applyNumberFormat() {
+        let config = Configuration.shared.config
+        _ = numbyWrapper.setNumberFormat(
+            config.numberFormat,
+            maxDecimals: config.numberMaxDecimals
+        )
     }
 
     private func updateTheme() {
@@ -674,6 +871,8 @@ extension CalculatorViewController: UITextViewDelegate {
         applySyntaxHighlighting()
         // Debounce evaluation (expensive)
         scheduleEvaluation()
+        // Debounce autosave + history snapshots
+        scheduleAutosave()
     }
 }
 

@@ -37,6 +37,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,12 +64,16 @@ import com.numby.NumbyWrapper
 import com.numby.R
 import com.numby.getFontFamily
 import com.numby.getFontSize
+import com.numby.getNumberFormat
+import com.numby.getNumberMaxDecimals
 import com.numby.getLastRatesFetch
 import com.numby.getLocale
 import com.numby.getSyntaxHighlighting
 import com.numby.getTheme
 import com.numby.setFontFamily
 import com.numby.setFontSize
+import com.numby.setNumberFormat
+import com.numby.setNumberMaxDecimals
 import com.numby.setLastRatesFetch
 import com.numby.setLocale
 import com.numby.setSyntaxHighlighting
@@ -101,10 +106,14 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showFontSizeDialog by remember { mutableStateOf(false) }
     var showFontFamilyDialog by remember { mutableStateOf(false) }
+    var showNumberFormatDialog by remember { mutableStateOf(false) }
+    var showNumberDecimalsDialog by remember { mutableStateOf(false) }
     var currentLocale by remember { mutableStateOf("en-US") }
     var currentTheme by remember { mutableStateOf("mocha") }
     var currentFontSize by remember { mutableStateOf("medium") }
     var currentFontFamily by remember { mutableStateOf("default") }
+    var currentNumberFormat by remember { mutableStateOf("pretty") }
+    var currentNumberMaxDecimals by remember { mutableStateOf(12) }
     var syntaxHighlighting by remember { mutableStateOf(true) }
     var isUpdatingRates by remember { mutableStateOf(false) }
     var apiRatesDate by remember { mutableStateOf<String?>(null) }
@@ -117,6 +126,8 @@ fun SettingsScreen(
         currentTheme = dataStore.getTheme().first()
         currentFontSize = dataStore.getFontSize().first()
         currentFontFamily = dataStore.getFontFamily().first()
+        currentNumberFormat = dataStore.getNumberFormat().first()
+        currentNumberMaxDecimals = dataStore.getNumberMaxDecimals().first()
         syntaxHighlighting = dataStore.getSyntaxHighlighting().first()
         apiRatesDate = NumbyWrapper.getApiRatesDate()
         lastRatesFetch = dataStore.getLastRatesFetch().first()
@@ -212,6 +223,23 @@ fun SettingsScreen(
                             }
                         )
                     }
+                )
+
+                val numberFormatLabel = when (currentNumberFormat) {
+                    "precision" -> stringResource(R.string.number_format_precision)
+                    else -> stringResource(R.string.number_format_pretty)
+                }
+
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.number_format)) },
+                    supportingContent = { Text(numberFormatLabel) },
+                    modifier = Modifier.clickable { showNumberFormatDialog = true }
+                )
+
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.number_max_decimals)) },
+                    supportingContent = { Text(currentNumberMaxDecimals.toString()) },
+                    modifier = Modifier.clickable { showNumberDecimalsDialog = true }
                 )
             }
 
@@ -392,6 +420,36 @@ fun SettingsScreen(
                 showFontFamilyDialog = false
             },
             onDismiss = { showFontFamilyDialog = false }
+        )
+    }
+
+    if (showNumberFormatDialog) {
+        NumberFormatPickerSheet(
+            currentFormat = currentNumberFormat,
+            onFormatSelected = { format ->
+                scope.launch {
+                    dataStore.setNumberFormat(format)
+                    currentNumberFormat = format
+                    NumbyWrapper().use { it.setNumberFormat(format, currentNumberMaxDecimals) }
+                }
+                showNumberFormatDialog = false
+            },
+            onDismiss = { showNumberFormatDialog = false }
+        )
+    }
+
+    if (showNumberDecimalsDialog) {
+        NumberDecimalsSheet(
+            currentValue = currentNumberMaxDecimals,
+            onValueSelected = { value ->
+                scope.launch {
+                    dataStore.setNumberMaxDecimals(value)
+                    currentNumberMaxDecimals = value
+                    NumbyWrapper().use { it.setNumberFormat(currentNumberFormat, value) }
+                }
+                showNumberDecimalsDialog = false
+            },
+            onDismiss = { showNumberDecimalsDialog = false }
         )
     }
 }
@@ -642,6 +700,129 @@ private fun FontFamilyPickerSheet(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NumberFormatPickerSheet(
+    currentFormat: String,
+    onFormatSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    val formats = listOf(
+        "pretty" to R.string.number_format_pretty,
+        "precision" to R.string.number_format_precision
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.number_format),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            formats.forEach { (format, labelRes) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onFormatSelected(format) }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = format == currentFormat,
+                        onClick = null
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(labelRes),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NumberDecimalsSheet(
+    currentValue: Int,
+    onValueSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    var value by remember { mutableStateOf(currentValue.coerceIn(0, 15)) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.number_max_decimals),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = value.toString(),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(end = 12.dp)
+                )
+                Slider(
+                    value = value.toFloat(),
+                    onValueChange = { value = it.toInt() },
+                    valueRange = 0f..15f,
+                    steps = 14,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = { onValueSelected(value) }) {
+                    Text(text = stringResource(R.string.apply))
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.number_max_decimals_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

@@ -36,6 +36,11 @@
     <string name="select_font">Select Font</string>
     <string name="syntax_highlighting">Syntax Highlighting</string>
     <string name="syntax_highlighting_desc">Highlight numbers, units, and currencies</string>
+    <string name="number_format">Number Format</string>
+    <string name="number_format_pretty">Pretty</string>
+    <string name="number_format_precision">Precision</string>
+    <string name="number_max_decimals">Max Decimals</string>
+    <string name="number_max_decimals_hint">Used only in Precision mode</string>
     <string name="currency">Currency</string>
     <string name="update_rates">Update Rates</string>
     <string name="rates_updated">Rates updated</string>
@@ -45,6 +50,7 @@
     <string name="last_fetched">Last Fetched</string>
     <string name="never">Never</string>
     <string name="unknown">Unknown</string>
+    <string name="apply">Apply</string>
     <string name="updating">Updating…</string>
     <string name="currency_api_info">Rates from fawazahmed0/currency-api</string>
     <string name="about">About</string>

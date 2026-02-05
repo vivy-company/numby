@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "Schriftgröße";
 "settings.appearance.font" = "Schriftart";
 "settings.appearance.syntaxHighlighting" = "Syntaxhervorhebung";
+"settings.number.format" = "Zahlenformat";
+"settings.number.maxDecimals" = "Max. Dezimalstellen";
+"settings.number.format.pretty" = "Kompakt";
+"settings.number.format.precision" = "Präzision";
+"settings.number.preview" = "Vorschau";
+"settings.number.maxDecimalsHint" = "Nur im Präzisionsmodus verwendet";
 
 /* Settings - Behavior Section */
 "settings.behavior.section" = "Verhalten";

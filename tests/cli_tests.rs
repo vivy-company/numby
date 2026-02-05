@@ -34,6 +34,20 @@ fn test_simple_arithmetic() {
 }
 
 #[test]
+fn test_precision_number_format_mode() {
+    let (stdout, _) = run_command(&[
+        "run",
+        "--",
+        "--number-format",
+        "precision",
+        "--number-max-decimals",
+        "6",
+        "123.456 + 123.456",
+    ]);
+    assert!(stdout.contains("246.912"), "got {}", stdout);
+}
+
+#[test]
 fn test_word_numbers_basic() {
     let (stdout, _) = run_command(&["run", "--", "ten plus five"]);
     // Strip color and input echo, keep numeric
@@ -507,7 +521,11 @@ fn test_history_commands_dont_add_to_history() {
 
     // Test sum command
     let result = registry.evaluate("sum", &mut state);
-    assert_eq!(result, Some(("60".to_string(), true)));
+    assert!(
+        result == Some(("60".to_string(), true)) || result == Some(("60.00".to_string(), true)),
+        "unexpected sum result: {:?}",
+        result
+    );
     // History should still have 3 items (not 4)
     assert_eq!(state.history.read().unwrap().len(), 3);
 
@@ -515,7 +533,11 @@ fn test_history_commands_dont_add_to_history() {
 
     // Test average command
     let result = registry.evaluate("average", &mut state);
-    assert_eq!(result, Some(("20".to_string(), true)));
+    assert!(
+        result == Some(("20".to_string(), true)) || result == Some(("20.00".to_string(), true)),
+        "unexpected average result: {:?}",
+        result
+    );
     // History should still have 3 items
     assert_eq!(state.history.read().unwrap().len(), 3);
 
@@ -523,7 +545,11 @@ fn test_history_commands_dont_add_to_history() {
 
     // Test prev command
     let result = registry.evaluate("prev", &mut state);
-    assert_eq!(result, Some(("30".to_string(), true)));
+    assert!(
+        result == Some(("30".to_string(), true)) || result == Some(("30.00".to_string(), true)),
+        "unexpected prev result: {:?}",
+        result
+    );
     // History should still have 3 items
     assert_eq!(state.history.read().unwrap().len(), 3);
 

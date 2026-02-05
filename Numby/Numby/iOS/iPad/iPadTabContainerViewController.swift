@@ -8,6 +8,17 @@ class iPadTabContainerViewController: UIViewController, iPadTabBarDelegate {
     private var tabBarHeightConstraint: NSLayoutConstraint?
 
     private let tabBarHeight: CGFloat = 40
+    private let autosaveKey = "numby.autosave.ipad"
+
+    private struct iPadAutosaveTab: Codable {
+        let name: String
+        let snapshot: CalculatorSessionSnapshot
+    }
+
+    private struct iPadAutosaveState: Codable {
+        let tabs: [iPadAutosaveTab]
+        let selectedIndex: Int
+    }
 
     // Tab bar goes BELOW the navigation bar
     private let tabBar: iPadTabBar = {
@@ -53,7 +64,9 @@ class iPadTabContainerViewController: UIViewController, iPadTabBarDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        createInitialTab()
+        if !restoreAutosavedTabsIfAvailable() {
+            createInitialTab()
+        }
 
         NotificationCenter.default.addObserver(self, selector: #selector(themeDidChange), name: NSNotification.Name("ThemeDidChange"), object: nil)
     }
@@ -376,6 +389,37 @@ class iPadTabContainerViewController: UIViewController, iPadTabBarDelegate {
         selectedTabIndex = 0
         updateTabBar(animated: false)
         loadTabState(tab)
+    }
+
+    // MARK: - Autosave
+
+    private func restoreAutosavedTabsIfAvailable() -> Bool {
+        guard let data = UserDefaults.standard.data(forKey: autosaveKey),
+              let state = try? JSONDecoder().decode(iPadAutosaveState.self, from: data),
+              !state.tabs.isEmpty else {
+            return false
+        }
+
+        tabs = state.tabs.map { CalculatorTab(name: $0.name, snapshot: $0.snapshot) }
+        selectedTabIndex = min(state.selectedIndex, max(0, tabs.count - 1))
+        updateTabBar(animated: false)
+        loadTabState(tabs[selectedTabIndex])
+
+        if tabs.count > 1 {
+            showTabBar(animated: false)
+        }
+        return true
+    }
+
+    func autosaveTabsNow() {
+        currentSplitContainer?.saveAllCalculatorStates()
+        let autosaveTabs: [iPadAutosaveTab] = tabs.map { tab in
+            iPadAutosaveTab(name: tab.name, snapshot: tab.createSnapshot())
+        }
+        let state = iPadAutosaveState(tabs: autosaveTabs, selectedIndex: selectedTabIndex)
+        if let data = try? JSONEncoder().encode(state) {
+            UserDefaults.standard.set(data, forKey: autosaveKey)
+        }
     }
 
     // MARK: - Public API

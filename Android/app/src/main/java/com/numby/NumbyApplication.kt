@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -69,7 +70,8 @@ class NumbyApplication : Application() {
             val defaultConfig = """
 {
   "locale": "en-US",
-  "precision": 10,
+  "number_format": "pretty",
+  "number_max_decimals": 12,
   "currencies": {
     "USD": 1.0
   },
@@ -99,6 +101,8 @@ class NumbyApplication : Application() {
         val FONT_FAMILY_KEY = stringPreferencesKey("font_family")
         val SYNTAX_HIGHLIGHTING_KEY = stringPreferencesKey("syntax_highlighting")
         val LAST_RATES_FETCH_KEY = stringPreferencesKey("last_rates_fetch")
+        val NUMBER_FORMAT_KEY = stringPreferencesKey("number_format")
+        val NUMBER_MAX_DECIMALS_KEY = intPreferencesKey("number_max_decimals")
     }
 }
 
@@ -149,6 +153,30 @@ suspend fun DataStore<Preferences>.setSyntaxHighlighting(enabled: Boolean) {
 fun DataStore<Preferences>.getSyntaxHighlighting(): Flow<Boolean> {
     return data.map { preferences ->
         preferences[NumbyApplication.SYNTAX_HIGHLIGHTING_KEY] != "false"
+    }
+}
+
+suspend fun DataStore<Preferences>.setNumberFormat(format: String) {
+    edit { preferences ->
+        preferences[NumbyApplication.NUMBER_FORMAT_KEY] = format
+    }
+}
+
+fun DataStore<Preferences>.getNumberFormat(): Flow<String> {
+    return data.map { preferences ->
+        preferences[NumbyApplication.NUMBER_FORMAT_KEY] ?: "pretty"
+    }
+}
+
+suspend fun DataStore<Preferences>.setNumberMaxDecimals(value: Int) {
+    edit { preferences ->
+        preferences[NumbyApplication.NUMBER_MAX_DECIMALS_KEY] = value
+    }
+}
+
+fun DataStore<Preferences>.getNumberMaxDecimals(): Flow<Int> {
+    return data.map { preferences ->
+        preferences[NumbyApplication.NUMBER_MAX_DECIMALS_KEY] ?: 12
     }
 }
 

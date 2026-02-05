@@ -26,6 +26,7 @@ class iPadCalculatorController {
 
     var onSplitTreeChanged: (() -> Void)?
     var onFocusChanged: ((SplitLeafID?) -> Void)?
+    private var configObserver: NSObjectProtocol?
 
     // MARK: - Initialization
 
@@ -34,6 +35,7 @@ class iPadCalculatorController {
         self.splitTree = SplitTree(leafId: initialLeafId)
         self.calculators[initialLeafId] = iPadCalculatorInstance(leafId: initialLeafId)
         self.focusedLeafId = initialLeafId
+        startConfigObserver()
     }
 
     init(snapshot: CalculatorSessionSnapshot) {
@@ -53,6 +55,34 @@ class iPadCalculatorController {
 
         // Set focus to first leaf
         focusedLeafId = splitTree.getAllLeafIds().first
+        startConfigObserver()
+    }
+
+    deinit {
+        if let observer = configObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    private func startConfigObserver() {
+        applyNumberFormatToAll()
+        configObserver = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("ConfigurationDidChange"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.applyNumberFormatToAll()
+        }
+    }
+
+    private func applyNumberFormatToAll() {
+        let config = Configuration.shared.config
+        for instance in calculators.values {
+            _ = instance.numbyWrapper.setNumberFormat(
+                config.numberFormat,
+                maxDecimals: config.numberMaxDecimals
+            )
+        }
     }
 
     // MARK: - Split Operations

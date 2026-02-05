@@ -65,6 +65,15 @@
     "currency_symbols": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "number_format": {
+      "type": "string",
+      "enum": ["pretty", "precision"]
+    },
+    "number_max_decimals": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 15
     }
   },
   "required": ["currencies", "currency_symbols"]

@@ -173,6 +173,23 @@ class CalculatorController: ObservableObject {
         focusedLeafId = nil
     }
 
+    // MARK: - Snapshot
+
+    func createSnapshot() -> CalculatorSessionSnapshot {
+        var calculatorStates: [String: CalculatorSessionSnapshot.CalculatorStateSnapshot] = [:]
+        for (leafId, calculator) in calculators {
+            calculatorStates[leafId.uuid.uuidString] = CalculatorSessionSnapshot.CalculatorStateSnapshot(
+                inputText: calculator.inputText,
+                results: calculator.results,
+                cursorPosition: calculator.cursorPosition
+            )
+        }
+        return CalculatorSessionSnapshot(
+            splitTree: splitTree,
+            calculatorStates: calculatorStates
+        )
+    }
+
     // MARK: - State Restoration
 
     /// Restore split tree from saved state
@@ -234,6 +251,7 @@ class CalculatorInstance: ObservableObject {
 
     init() {
         self.numby = NumbyWrapper()
+        applyNumberFormat()
         setupObservers()
     }
 
@@ -243,6 +261,15 @@ class CalculatorInstance: ObservableObject {
             .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
             .sink { [weak self] text in
                 self?.evaluateAllLines()
+#if os(macOS)
+                AutosaveManager.shared.scheduleAutosave()
+#endif
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: NSNotification.Name("ConfigurationDidChange"))
+            .sink { [weak self] _ in
+                self?.applyNumberFormat()
             }
             .store(in: &cancellables)
     }
@@ -252,13 +279,98 @@ class CalculatorInstance: ObservableObject {
     /// Evaluate all lines in input text
     func evaluateAllLines() {
         let lines = inputText.components(separatedBy: .newlines)
-        results = lines.map { line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty else { return nil }
+        let groups = buildLineGroups(lines)
+        var newResults: [String?] = Array(repeating: nil, count: lines.count)
 
-            // Evaluate line using Numby
-            return numby.evaluate(expression: trimmed)
+        for group in groups {
+            let expr = group.expr.trimmingCharacters(in: .whitespaces)
+            guard !expr.isEmpty else { continue }
+            let result = numby.evaluate(expression: expr)
+            if group.end < newResults.count {
+                newResults[group.end] = result
+            }
         }
+
+        results = newResults
+    }
+
+    private func buildLineGroups(_ lines: [String]) -> [(start: Int, end: Int, expr: String)] {
+        var groups: [(start: Int, end: Int, expr: String)] = []
+        var currentStart: Int? = nil
+        var currentParts: [String] = []
+        var prevLine: String?
+
+        for (idx, line) in lines.enumerated() {
+            if isCommentOrEmpty(line) {
+                if let start = currentStart {
+                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: " ")))
+                    currentStart = nil
+                    currentParts.removeAll()
+                }
+                prevLine = nil
+                continue
+            }
+
+            let startsWithOp = lineStartsWithOperator(line)
+            let prevEndsWithOp = prevLine.map { lineEndsWithOperator($0) } ?? false
+            let isContinuation = startsWithOp || prevEndsWithOp
+
+            if currentStart == nil || !isContinuation {
+                if let start = currentStart {
+                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: " ")))
+                    currentParts.removeAll()
+                }
+                currentStart = idx
+            }
+
+            currentParts.append(line.trimmingCharacters(in: .whitespaces))
+            prevLine = line
+        }
+
+        if let start = currentStart {
+            groups.append((start: start, end: max(0, lines.count - 1), expr: currentParts.joined(separator: " ")))
+        }
+
+        return groups
+    }
+
+    private func isCommentOrEmpty(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed.hasPrefix("//") || trimmed.hasPrefix("#")
+    }
+
+    private func lineStartsWithOperator(_ line: String) -> Bool {
+        let trimmed = stripLineCommentsForContinuation(line).trimmingCharacters(in: .whitespaces)
+        guard let first = trimmed.first else { return false }
+        return "+-*/%^".contains(first)
+    }
+
+    private func lineEndsWithOperator(_ line: String) -> Bool {
+        let trimmed = stripLineCommentsForContinuation(line).trimmingCharacters(in: .whitespaces)
+        guard let last = trimmed.last else { return false }
+        return "+-*/%^(".contains(last)
+    }
+
+    private func stripLineCommentsForContinuation(_ line: String) -> String {
+        var end = line.endIndex
+        if let range = line.range(of: "//") {
+            end = min(end, range.lowerBound)
+        }
+        if let range = line.range(of: "#") {
+            end = min(end, range.lowerBound)
+        }
+        if let range = line.range(of: "/*") {
+            end = min(end, range.lowerBound)
+        }
+        return String(line[..<end])
+    }
+
+    private func applyNumberFormat() {
+        let config = Configuration.shared.config
+        _ = numby.setNumberFormat(
+            config.numberFormat,
+            maxDecimals: config.numberMaxDecimals
+        )
     }
 
     /// Insert text at cursor

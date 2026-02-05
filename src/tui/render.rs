@@ -27,6 +27,11 @@ pub struct RenderContext<'a> {
     pub format_focus_time: bool,
     pub format_time_offset: usize,
     pub format_date_offset: usize,
+    pub number_format_picker_visible: bool,
+    pub number_format_selection: usize,
+    pub number_decimals_selection: usize,
+    pub number_decimals_offset: usize,
+    pub number_format_focus: bool,
     pub locale_picker_visible: bool,
     pub locale_selection: usize,
     pub current_locale: &'a str,
@@ -116,7 +121,15 @@ pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
             ctx.format_time_offset,
             ctx.format_date_offset,
             ctx.format_focus_time,
-            ctx.state,
+        );
+    } else if ctx.number_format_picker_visible {
+        render_number_format_overlay(
+            f,
+            size,
+            ctx.number_format_selection,
+            ctx.number_decimals_selection,
+            ctx.number_decimals_offset,
+            ctx.number_format_focus,
         );
     } else if ctx.help_visible {
         render_help_overlay(f, size);
@@ -190,7 +203,7 @@ fn render_help_overlay(f: &mut Frame, size: Rect) {
         height,
     };
 
-    let entries: [(String, String); 12] = [
+    let entries: [(String, String); 13] = [
         (fl!("tui-help-enter-key"), fl!("tui-help-enter-desc")),
         (fl!("tui-help-ctrls-key"), fl!("tui-help-ctrls-desc")),
         (fl!("tui-help-ctrlq-key"), fl!("tui-help-ctrlq-desc")),
@@ -205,6 +218,10 @@ fn render_help_overlay(f: &mut Frame, size: Rect) {
         (
             fl!("tui-help-ctrlshift-d-key"),
             fl!("tui-help-ctrlshift-d-desc"),
+        ),
+        (
+            fl!("tui-help-ctrlshift-n-key"),
+            fl!("tui-help-ctrlshift-n-desc"),
         ),
         (
             fl!("tui-help-ctrlshift-l-key"),
@@ -342,7 +359,6 @@ fn render_format_overlay(
     time_offset: usize,
     date_offset: usize,
     focus_time: bool,
-    _state: &AppState,
 ) {
     let options_time = ["iso", "long", "short", "time", "12h"];
     let options_date = ["iso", "long", "short"];
@@ -468,6 +484,121 @@ fn render_format_overlay(
     f.render_widget(controls, footer_area);
 }
 
+fn render_number_format_overlay(
+    f: &mut Frame,
+    size: Rect,
+    format_idx: usize,
+    decimals_idx: usize,
+    decimals_offset: usize,
+    focus_format: bool,
+) {
+    let options_format = ["pretty", "precision"];
+    let decimals: Vec<usize> = (0..=15).collect();
+    let preview_value = 1234567.89;
+
+    let height = 12u16;
+    let area = Rect {
+        x: 0,
+        y: size.height.saturating_sub(height).saturating_sub(2),
+        width: size.width,
+        height,
+    };
+
+    let bg_style = Style::default().bg(Color::Rgb(16, 18, 24)).fg(Color::White);
+    let block = Block::default().style(bg_style);
+    f.render_widget(block, area);
+
+    let selected_style = Style::default().fg(Color::Yellow).bold();
+    let focus_bg = Color::Rgb(48, 52, 63);
+
+    let columns = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(Rect {
+            x: area.x,
+            y: area.y + 1,
+            width: area.width,
+            height: area.height.saturating_sub(1),
+        });
+
+    let mut format_lines: Vec<Line> = Vec::new();
+    format_lines.push(Line::from(vec![Span::styled(
+        fl!("tui-number-format-title"),
+        Style::default().fg(Color::LightCyan).bold(),
+    )]));
+    let format_visible = columns[0].height as usize - 1;
+    for (i, opt) in options_format
+        .iter()
+        .enumerate()
+        .take(format_visible)
+    {
+        let is_selected = i == format_idx;
+        let marker = if is_selected { "●" } else { "○" };
+        let preview = crate::prettify::format_number(preview_value, opt, decimals_idx);
+        let mut line = Line::from(vec![
+            Span::styled(marker, Style::default().fg(Color::Gray)),
+            Span::raw(" "),
+            Span::styled(*opt, Style::default().fg(Color::White)),
+            Span::raw("   "),
+            Span::styled(preview, Style::default().fg(Color::Gray)),
+        ]);
+        if focus_format {
+            line = line.style(Style::default().bg(focus_bg));
+        }
+        if is_selected {
+            line = line.style(selected_style);
+        }
+        format_lines.push(line);
+    }
+
+    let mut decimals_lines: Vec<Line> = Vec::new();
+    decimals_lines.push(Line::from(vec![Span::styled(
+        fl!("tui-number-decimals-title"),
+        Style::default().fg(Color::LightCyan).bold(),
+    )]));
+    let decimals_visible = columns[1].height as usize - 1;
+    for (i, value) in decimals
+        .iter()
+        .enumerate()
+        .skip(decimals_offset)
+        .take(decimals_visible)
+    {
+        let is_selected = i == decimals_idx;
+        let marker = if is_selected { "●" } else { "○" };
+        let preview = crate::prettify::format_number(preview_value, "precision", *value);
+        let mut line = Line::from(vec![
+            Span::styled(marker, Style::default().fg(Color::Gray)),
+            Span::raw(" "),
+            Span::styled(format!("{value}"), Style::default().fg(Color::White)),
+            Span::raw("   "),
+            Span::styled(preview, Style::default().fg(Color::Gray)),
+        ]);
+        if !focus_format {
+            line = line.style(Style::default().bg(focus_bg));
+        }
+        if is_selected {
+            line = line.style(selected_style);
+        }
+        decimals_lines.push(line);
+    }
+
+    f.render_widget(Paragraph::new(format_lines).style(bg_style), columns[0]);
+    f.render_widget(Paragraph::new(decimals_lines).style(bg_style), columns[1]);
+
+    let controls = Paragraph::new(Line::from(vec![Span::raw(
+        fl!("tui-number-format-footer"),
+    )]))
+    .style(bg_style)
+    .alignment(Alignment::Left);
+    let footer_area = Rect {
+        x: area.x,
+        y: area.y + area.height.saturating_sub(1),
+        width: area.width,
+        height: 1,
+    };
+    f.render_widget(controls, footer_area);
+}
+
 fn render_save_prompt(f: &mut Frame, size: Rect, prompt: &str) {
     let area = Rect {
         x: 0,
@@ -534,47 +665,41 @@ fn render_input_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
 fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
     let mut right_text = Text::default();
 
-    for line in ctx
-        .input
-        .lines()
-        .skip(*ctx.scroll_offset)
-        .take(rect.height as usize)
-    {
-        let line_str = line.to_string();
-        let line_trim = line_str.trim();
+    let all_lines: Vec<String> = ctx.input.lines().map(|l| l.to_string()).collect();
+    let groups = crate::utils::group_multiline_expressions(&all_lines);
+    let mut line_results: Vec<Option<String>> = vec![None; all_lines.len()];
 
-        if line_trim.is_empty() {
-            right_text.lines.push(Line::default());
+    // Create cache key that includes variables state
+    let vars = ctx
+        .state
+        .variables
+        .read()
+        .expect("Failed to acquire read lock on variables");
+    // Use sorted BTreeMap for deterministic cache key generation
+    let vars_sorted: std::collections::BTreeMap<_, _> =
+        vars.iter().map(|(k, v)| (k.as_str(), v)).collect();
+    let vars_hash = format!("{:?}", vars_sorted);
+    drop(vars); // Release read lock
+
+    for group in groups {
+        let expr_trim = group.expr.trim();
+        if expr_trim.is_empty() {
             continue;
         }
 
-        // Create cache key that includes variables state
-        let vars = ctx
-            .state
-            .variables
-            .read()
-            .expect("Failed to acquire read lock on variables");
-        // Use sorted BTreeMap for deterministic cache key generation
-        let vars_sorted: std::collections::BTreeMap<_, _> =
-            vars.iter().map(|(k, v)| (k.as_str(), v)).collect();
-        let vars_hash = format!("{:?}", vars_sorted);
-        drop(vars); // Release read lock
-
         let cache_key = format!(
             "{}::{}::{}",
-            line_trim,
+            expr_trim,
             vars_hash,
             ctx.state.cache.generation()
         );
 
-        // Check display cache
         let result = if let Some(cached) = ctx.state.cache.get_display(&cache_key) {
             cached
         } else {
-            // Evaluate and cache
             let eval_result = ctx
                 .registry
-                .evaluate_for_display(line_trim, ctx.state)
+                .evaluate_for_display(expr_trim, ctx.state)
                 .map(|(r, _)| r);
             if let Some(ref res) = eval_result {
                 ctx.state.cache.set_display(cache_key, Some(res.clone()));
@@ -585,6 +710,25 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
         };
 
         if let Some(result) = result {
+            if group.end < line_results.len() {
+                line_results[group.end] = Some(result);
+            }
+        }
+    }
+
+    for (idx, line) in ctx
+        .input
+        .lines()
+        .enumerate()
+        .skip(*ctx.scroll_offset)
+        .take(rect.height as usize)
+    {
+        if line.to_string().trim().is_empty() {
+            right_text.lines.push(Line::default());
+            continue;
+        }
+
+        if let Some(result) = line_results.get(idx).and_then(|r| r.clone()) {
             right_text.lines.push(Line::from(Span::styled(
                 result,
                 Style::default().fg(Color::Green).bold(),

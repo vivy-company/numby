@@ -1,5 +1,5 @@
 use crate::evaluator::agents::PRIORITY_UNIT;
-use crate::evaluator::{evaluate_expr, evaluate_unit_conversion, preprocess_input, EvalContext};
+use crate::evaluator::{evaluate_expr, evaluate_unit_conversion, EvalContext};
 use crate::models::{Agent, AppState};
 
 pub struct UnitAgent;
@@ -42,6 +42,8 @@ impl Agent for UnitAgent {
                 &state.speed_units,
                 &state.rates,
                 &config.custom_units,
+                state.number_format.as_str(),
+                state.number_max_decimals,
             ) {
                 // Extract numeric value from result string for history
                 let mut parts = val.split_whitespace();
@@ -55,7 +57,7 @@ impl Agent for UnitAgent {
             let mut vars_guard = state.variables.write().ok()?;
             let history_guard = state.history.read().ok()?;
 
-            let preprocessed = preprocess_input(left, &vars_guard, config);
+            let preprocessed = left.to_string();
 
             let mut ctx = EvalContext {
                 variables: &mut vars_guard,
@@ -71,6 +73,8 @@ impl Agent for UnitAgent {
                 speed_units: &config.speed_units,
                 rates: &config.currencies,
                 custom_units: &config.custom_units,
+                number_format: state.number_format.as_str(),
+                number_max_decimals: state.number_max_decimals,
             };
 
             if let Ok(left_result) = evaluate_expr(&preprocessed, &mut ctx) {
@@ -95,6 +99,8 @@ impl Agent for UnitAgent {
                     &config.speed_units,
                     &config.currencies,
                     &config.custom_units,
+                    state.number_format.as_str(),
+                    state.number_max_decimals,
                 ) {
                     // Extract numeric value from result string for history
                     let mut parts = val.split_whitespace();

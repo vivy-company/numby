@@ -95,7 +95,10 @@ pub fn compute_spans(
     let mut spans = Vec::new();
 
     // Find comment position
-    let comment_pos = line.find("//").or_else(|| line.find("#"));
+    let comment_pos = line
+        .find("//")
+        .or_else(|| line.find("#"))
+        .or_else(|| line.find("/*"));
     let code_part_end = comment_pos.unwrap_or(line.len());
     let code_part = &line[..code_part_end];
 

@@ -13,6 +13,8 @@ lazy_static! {
     static ref UNDERSCORE_RE: Regex =
         Regex::new(r"(\d)_(\d)").expect("Invalid regex for underscore removal");
     static ref COMMA_RE: Regex = Regex::new(r"(\d),(\d)").expect("Invalid regex for comma removal");
+    static ref BLOCK_COMMENT_RE: Regex =
+        Regex::new(r"(?s)/\*.*?\*/").expect("Invalid regex for block comments");
     static ref WORD_NUMBER_RE: Regex = Regex::new(
         r"(?i)\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b"
     )
@@ -47,6 +49,8 @@ pub fn preprocess_input(
     config: &Config,
 ) -> String {
     let mut expr_str = input.to_string();
+    // Strip block comments (/* ... */), including multiline
+    expr_str = BLOCK_COMMENT_RE.replace_all(&expr_str, " ").to_string();
 
     // Remove underscores and commas from numbers (1_000_000 -> 1000000, 10,000 -> 10000)
     while UNDERSCORE_RE.is_match(&expr_str) {
@@ -152,7 +156,7 @@ pub fn preprocess_input(
     let unit_re = Regex::new(r"(\d)([A-Z]{2,})").expect("Invalid regex for unit separation");
     expr_str = unit_re.replace_all(&expr_str, "$1 $2").to_string();
 
-    // Strip comments
+    // Strip line comments
     let expr_str_comments = expr_str
         .lines()
         .map(|line| {
@@ -181,7 +185,7 @@ pub fn preprocess_input(
     };
 
     // Replace variables with cached regexes (only in right side for assignments)
-    let mut preprocessed_right = right_side.clone();
+    let mut preprocessed_right = strip_inline_annotations(&right_side, variables, config);
 
     for (var, (val, unit)) in variables {
         let re = get_variable_regex(var);
@@ -357,10 +361,242 @@ fn replace_currency_words(input: &str) -> String {
         .to_string()
 }
 
+#[derive(Copy, Clone, PartialEq)]
+enum PrevKind {
+    None,
+    Operator,
+    Value,
+}
+
+fn is_operator_token(token: &str) -> bool {
+    let trimmed = token.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    trimmed
+        .chars()
+        .all(|c| "+-*/%^=(),".contains(c) || c.is_whitespace())
+}
+
+fn is_operator_word(word: &str, config: &Config) -> bool {
+    config.operators.keys().any(|op| {
+        op.eq_ignore_ascii_case(word)
+            || op.split_whitespace().any(|part| part.eq_ignore_ascii_case(word))
+    })
+}
+
+fn is_history_keyword(word: &str) -> bool {
+    matches!(word, "sum" | "total" | "average" | "avg" | "prev")
+}
+
+fn is_datetime_keyword(word: &str) -> bool {
+    matches!(
+        word,
+        "time"
+            | "now"
+            | "today"
+            | "tomorrow"
+            | "yesterday"
+            | "ago"
+            | "before"
+            | "after"
+            | "next"
+            | "last"
+            | "this"
+            | "between"
+            | "from"
+            | "in"
+            | "to"
+    )
+}
+
+fn is_inline_operator_keyword(word: &str) -> bool {
+    matches!(word, "in" | "to" | "of" | "from" | "per")
+}
+
+fn is_currency_word(word: &str) -> bool {
+    matches!(
+        word,
+        "dollar"
+            | "dollars"
+            | "euro"
+            | "euros"
+            | "pound"
+            | "pounds"
+            | "yen"
+            | "yuan"
+            | "rmb"
+            | "rupee"
+            | "rupees"
+            | "ruble"
+            | "rubles"
+            | "won"
+            | "franc"
+            | "francs"
+            | "peso"
+            | "pesos"
+            | "krona"
+            | "krone"
+            | "lira"
+            | "bitcoin"
+            | "btc"
+            | "ethereum"
+            | "eth"
+    )
+}
+
+fn strip_inline_annotations(
+    input: &str,
+    variables: &HashMap<String, (f64, Option<String>)>,
+    config: &Config,
+) -> String {
+    let mut out: Vec<String> = Vec::new();
+    let mut prev_kind = PrevKind::None;
+
+    let tokens: Vec<&str> = input.split_whitespace().collect();
+    for (idx, token) in tokens.iter().enumerate() {
+        let trimmed = token.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.starts_with("//") || trimmed.starts_with('#') {
+            break;
+        }
+        if let Some(pos) = trimmed.find("//").or_else(|| trimmed.find('#')) {
+            if pos == 0 {
+                break;
+            }
+            let before = &trimmed[..pos];
+            if !before.is_empty() {
+                out.push(before.to_string());
+            }
+            break;
+        }
+
+        // Preserve operator-only tokens (e.g., "+", "-", "()", etc.)
+        if is_operator_token(trimmed) {
+            out.push(trimmed.to_string());
+            if trimmed.contains(')') {
+                prev_kind = PrevKind::Value;
+            } else {
+                prev_kind = PrevKind::Operator;
+            }
+            continue;
+        }
+
+        let cleaned = trimmed
+            .trim_matches(|c: char| !c.is_alphanumeric() && c != '/' && c != '_')
+            .to_string();
+        if cleaned.is_empty() {
+            out.push(trimmed.to_string());
+            prev_kind = PrevKind::Operator;
+            continue;
+        }
+
+        let lower = cleaned.to_lowercase();
+        let upper = cleaned.to_uppercase();
+        let next_is_conversion = tokens
+            .get(idx + 1)
+            .map(|next| {
+                next.trim_matches(|c: char| !c.is_alphanumeric() && c != '/' && c != '_')
+                    .to_lowercase()
+            })
+            .map(|next| next == "in" || next == "to")
+            .unwrap_or(false);
+
+        let has_digits = cleaned.chars().any(|c| c.is_ascii_digit());
+        let is_known_operator = is_operator_word(cleaned.as_str(), config);
+        let is_known_function = config.functions.contains_key(cleaned.as_str());
+        let is_known_scale = config.scales.contains_key(cleaned.as_str());
+        let is_known_unit = config.length_units.contains_key(&lower)
+            || config.time_units.contains_key(&lower)
+            || config.temperature_units.contains_key(&lower)
+            || config.area_units.contains_key(&lower)
+            || config.volume_units.contains_key(&lower)
+            || config.weight_units.contains_key(&lower)
+            || config.angular_units.contains_key(&lower)
+            || config.data_units.contains_key(&lower)
+            || config.speed_units.contains_key(&lower);
+        let is_known_currency = config.currencies.contains_key(upper.as_str()) || is_currency_word(&lower);
+        let is_known_keyword =
+            is_history_keyword(&lower) || is_datetime_keyword(&lower) || is_inline_operator_keyword(&lower);
+        let is_known_variable = variables.contains_key(cleaned.as_str());
+
+        let looks_like_code = cleaned.len() >= 2 && cleaned.chars().all(|c| c.is_ascii_uppercase());
+
+        if has_digits
+            || is_known_operator
+            || is_known_function
+            || is_known_scale
+            || is_known_unit
+            || is_known_currency
+            || is_known_keyword
+            || is_known_variable
+            || looks_like_code
+        {
+            out.push(trimmed.to_string());
+            if is_known_operator || is_inline_operator_keyword(&lower) || is_known_function {
+                prev_kind = PrevKind::Operator;
+            } else {
+                prev_kind = PrevKind::Value;
+            }
+            continue;
+        }
+
+        // Unknown word: treat as inline annotation if it follows a value.
+        if prev_kind == PrevKind::Value && !next_is_conversion {
+            continue;
+        }
+
+        out.push(trimmed.to_string());
+        prev_kind = PrevKind::Value;
+    }
+
+    out.join(" ")
+}
+
 pub fn preprocess(input: &str, state: &mut AppState, config: &Config) -> String {
     let variables_guard = state
         .variables
         .read()
         .expect("Failed to acquire read lock on variables");
     preprocess_input(input, &variables_guard, config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_strip_block_comments() {
+        let config = Config::default();
+        let vars: HashMap<String, (f64, Option<String>)> = HashMap::new();
+        let input = "10 + /* note */ 5";
+        let out = preprocess_input(input, &vars, &config);
+        assert!(out.contains("10"));
+        assert!(out.contains("+"));
+        assert!(out.contains("5"));
+        assert!(!out.contains("note"));
+    }
+
+    #[test]
+    fn test_inline_annotations_are_removed_after_values() {
+        let config = Config::default();
+        let vars: HashMap<String, (f64, Option<String>)> = HashMap::new();
+        let input = "14.50 CAD internet + 16 USD spotify";
+        let out = preprocess_input(input, &vars, &config);
+        assert!(!out.contains("internet"));
+        assert!(!out.contains("spotify"));
+    }
+
+    #[test]
+    fn test_unknown_word_at_start_is_preserved() {
+        let config = Config::default();
+        let vars: HashMap<String, (f64, Option<String>)> = HashMap::new();
+        let input = "foo + 2";
+        let out = preprocess_input(input, &vars, &config);
+        assert!(out.contains("foo"));
+    }
 }

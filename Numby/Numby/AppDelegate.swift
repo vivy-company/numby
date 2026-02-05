@@ -20,8 +20,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Disable automatic window restoration
         UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
 
-        // Create initial window
-        createNewWindow()
+        // Restore autosaved windows if available; otherwise create initial window
+        let autosaved = AutosaveManager.shared.loadAutosavedStates()
+        if autosaved.isEmpty {
+            createNewWindow()
+        } else {
+            for state in autosaved {
+                let controller = CalculatorWindowController(withSnapshot: state.snapshot)
+                windowControllers.append(controller)
+                if let window = controller.window {
+                    window.setFrame(NSRectFromString(state.frame), display: true)
+                    window.level = NSWindow.Level(rawValue: state.windowLevel)
+                }
+                controller.showWindow(nil)
+            }
+        }
 
         // Configure app behavior
         setupMenus()
@@ -159,6 +172,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        AutosaveManager.shared.saveNow()
         // Cleanup window controllers
         windowControllers.removeAll()
     }
@@ -517,9 +531,11 @@ class CalculatorWindowController: NSWindowController, NSWindowDelegate {
             if response == .alertFirstButtonReturn {
                 // Save and close
                 saveCurrentSession(controller: controller)
+                AutosaveManager.shared.saveNow()
                 return true
             } else if response == .alertSecondButtonReturn {
                 // Close without saving
+                AutosaveManager.shared.saveNow()
                 return true
             } else {
                 // Cancel
@@ -527,6 +543,7 @@ class CalculatorWindowController: NSWindowController, NSWindowDelegate {
             }
         }
 
+        AutosaveManager.shared.saveNow()
         return true
     }
 
@@ -613,6 +630,8 @@ class NumbyWindow: NSWindow, NSToolbarDelegate {
         // Disable window restoration completely
         isRestorable = false
         restorationClass = nil
+
+        WindowManager.shared.register(window: self)
 
     }
 

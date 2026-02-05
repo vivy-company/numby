@@ -59,6 +59,12 @@ struct AppConfiguration: Codable {
     /// Auto-evaluate on input
     var autoEvaluate: Bool = true
 
+    /// Number format ("pretty" or "precision")
+    var numberFormat: String = "pretty"
+
+    /// Max decimals for precision mode
+    var numberMaxDecimals: Int = 12
+
     /// Preferred locale (language code like "en-US", "fr", etc.)
     var locale: String? = nil
 

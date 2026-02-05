@@ -41,6 +41,13 @@ int32_t libnumby_load_config(NumbyContext *ctx, const char *path);
 int32_t libnumby_set_locale(NumbyContext *ctx, const char *locale);
 
 /**
+ * Set number format and max decimals for the context.
+ * format: "pretty" or "precision"
+ * max_decimals: max decimals used in precision mode
+ */
+int32_t libnumby_set_number_format(NumbyContext *ctx, const char *format, int32_t max_decimals);
+
+/**
  * Gets the current locale
  * Caller must free the returned string with libnumby_free_string
  */

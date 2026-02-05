@@ -63,7 +63,14 @@ impl Agent for DateTimeAgent {
                 let delta = d2 - d1;
                 let days = delta.num_seconds() as f64 / 86_400.0;
                 return Some((
-                    format!("{} days", crate::prettify::prettify_number(days)),
+                    format!(
+                        "{} days",
+                        crate::prettify::format_number(
+                            days,
+                            state.number_format.as_str(),
+                            state.number_max_decimals
+                        )
+                    ),
                     false,
                     None,
                     None,
@@ -223,7 +230,7 @@ fn handle_base_day_chain(
         let sign = caps.get(1).unwrap().as_str();
         let n: i64 = caps.get(2).unwrap().as_str().parse().ok()?;
         let delta = if sign == "+" { n } else { -n };
-        date = date + Duration::days(delta);
+        date += Duration::days(delta);
     }
 
     let dfmt = current_date_format(state);
@@ -422,7 +429,7 @@ fn apply_offset(base: NaiveDateTime, num: i64, unit: &str) -> Option<NaiveDateTi
             }
         }
         u if u.starts_with("year") => {
-            let months = 12 * num.abs() as u32;
+            let months = num.unsigned_abs().saturating_mul(12).min(u32::MAX as u64) as u32;
             if num >= 0 {
                 Some(base + Months::new(months))
             } else {

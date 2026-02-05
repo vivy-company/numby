@@ -322,7 +322,23 @@ pub fn handle_normal_mode(
                         if let Ok(mut current_line) = state.current_line.write() {
                             *current_line = Some(line_idx);
                         }
-                        registry.evaluate(trimmed, state);
+                        let lines: Vec<String> = input.lines().map(|l| l.to_string()).collect();
+                        let mut evaluated = false;
+                        for group in crate::utils::group_multiline_expressions(&lines) {
+                            if line_idx >= group.start && line_idx <= group.end {
+                                if line_idx == group.end {
+                                    let expr = group.expr.trim();
+                                    if !expr.is_empty() {
+                                        registry.evaluate(expr, state);
+                                    }
+                                }
+                                evaluated = true;
+                                break;
+                            }
+                        }
+                        if !evaluated {
+                            registry.evaluate(trimmed, state);
+                        }
                         // Clear current line after evaluation
                         if let Ok(mut current_line) = state.current_line.write() {
                             *current_line = None;
@@ -354,10 +370,10 @@ fn format_buffer_as_markdown_list(
     registry: &crate::evaluator::AgentRegistry,
 ) -> String {
     let mut rows: Vec<(String, String)> = Vec::new();
-    for line in input.lines() {
-        let expr = line.to_string();
-        let trimmed = expr.trim();
-        if trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with('#') {
+    let lines: Vec<String> = input.lines().map(|l| l.to_string()).collect();
+    for group in crate::utils::group_multiline_expressions(&lines) {
+        let trimmed = group.expr.trim();
+        if trimmed.is_empty() {
             continue;
         }
         let result = registry

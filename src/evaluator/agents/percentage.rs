@@ -2,7 +2,7 @@ use crate::evaluator::agents::PRIORITY_PERCENTAGE;
 use crate::evaluator::{evaluate_expr, preprocess_input, EvalContext};
 use crate::models::{Agent, AppState};
 use crate::parser::{parse_percentage_op, preprocess_percentage_parens};
-use crate::prettify::prettify_number;
+use crate::prettify::format_number;
 use regex::Regex;
 
 pub struct PercentageAgent;
@@ -55,10 +55,16 @@ impl Agent for PercentageAgent {
                 speed_units: &config.speed_units,
                 rates: &config.currencies,
                 custom_units: &config.custom_units,
+                number_format: state.number_format.as_str(),
+                number_max_decimals: state.number_max_decimals,
             };
 
             if let Ok(result) = evaluate_expr(&preprocessed, &mut ctx) {
-                let pretty_result = prettify_number(result.value);
+                let pretty_result = format_number(
+                    result.value,
+                    state.number_format.as_str(),
+                    state.number_max_decimals,
+                );
                 if let Some(unit) = result.unit {
                     return Some((
                         format!("{} {}", pretty_result, unit),
@@ -98,11 +104,17 @@ impl Agent for PercentageAgent {
                         speed_units: &config.speed_units,
                         rates: &config.currencies,
                         custom_units: &config.custom_units,
+                        number_format: state.number_format.as_str(),
+                        number_max_decimals: state.number_max_decimals,
                     };
 
                     if let Ok(base_result) = evaluate_expr(&preprocessed, &mut ctx) {
                         let result = percent / 100.0 * base_result.value;
-                        let pretty_result = prettify_number(result);
+                        let pretty_result = format_number(
+                            result,
+                            state.number_format.as_str(),
+                            state.number_max_decimals,
+                        );
 
                         // Preserve unit from base if present
                         if let Some(unit) = base_result.unit {
@@ -121,7 +133,11 @@ impl Agent for PercentageAgent {
         }
 
         // Handle "X + Y%" pattern
-        if let Some(result) = parse_percentage_op(&preprocessed_input) {
+        if let Some(result) = parse_percentage_op(
+            &preprocessed_input,
+            state.number_format.as_str(),
+            state.number_max_decimals,
+        ) {
             // Extract numeric value from result string
             let numeric_value = result
                 .split_whitespace()

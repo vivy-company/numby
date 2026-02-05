@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "Tamaño de fuente";
 "settings.appearance.font" = "Fuente";
 "settings.appearance.syntaxHighlighting" = "Resaltado de sintaxis";
+"settings.number.format" = "Formato de números";
+"settings.number.maxDecimals" = "Máx. decimales";
+"settings.number.format.pretty" = "Compacto";
+"settings.number.format.precision" = "Precisión";
+"settings.number.preview" = "Vista previa";
+"settings.number.maxDecimalsHint" = "Solo se usa en el modo Precisión";
 
 /* Settings - Behavior Section */
 "settings.behavior.section" = "Comportamiento";

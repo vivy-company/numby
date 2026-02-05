@@ -1,7 +1,7 @@
 use crate::evaluator::agents::PRIORITY_VARIABLE;
 use crate::evaluator::{preprocess_input, EvalContext};
 use crate::models::{Agent, AppState};
-use crate::prettify::prettify_number;
+use crate::prettify::format_number;
 
 pub struct VariableAgent;
 
@@ -72,6 +72,8 @@ impl Agent for VariableAgent {
                 speed_units: &config.speed_units,
                 rates: &config.currencies,
                 custom_units: &config.custom_units,
+                number_format: state.number_format.as_str(),
+                number_max_decimals: state.number_max_decimals,
             };
 
             // Pass original expression for unit tracking
@@ -83,7 +85,11 @@ impl Agent for VariableAgent {
                 // Block variable assignments in display-only mode
                 if state.is_display_only {
                     // Format the result for display but don't store it
-                    let formatted = prettify_number(eval_result.value);
+                    let formatted = format_number(
+                        eval_result.value,
+                        state.number_format.as_str(),
+                        state.number_max_decimals,
+                    );
                     let unit_clone = eval_result.unit.clone();
                     let val_str = if let Some(unit) = unit_clone.as_ref() {
                         format!("{} {}", formatted, unit)
@@ -165,7 +171,11 @@ impl Agent for VariableAgent {
                 ));
 
                 // Format the result string for display
-                let formatted = prettify_number(eval_result.value);
+                let formatted = format_number(
+                    eval_result.value,
+                    state.number_format.as_str(),
+                    state.number_max_decimals,
+                );
                 let unit_clone = eval_result.unit.clone();
                 let val_str = if let Some(unit) = unit_clone.as_ref() {
                     format!("{} {}", formatted, unit)

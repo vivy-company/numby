@@ -63,6 +63,12 @@ pub struct Config {
     /// Preferred date-only format (iso|long|short) shared by CLI and TUI.
     #[serde(default = "default_date_format")]
     pub date_format: String,
+    /// Preferred number format (pretty|precision).
+    #[serde(default = "default_number_format")]
+    pub number_format: String,
+    /// Maximum decimals when number_format=precision.
+    #[serde(default = "default_number_max_decimals")]
+    pub number_max_decimals: usize,
     #[serde(default)]
     pub locale: Option<String>,
     #[serde(default = "default_padding_left")]
@@ -473,6 +479,14 @@ fn default_date_format() -> String {
     "iso".to_string()
 }
 
+fn default_number_format() -> String {
+    "pretty".to_string()
+}
+
+fn default_number_max_decimals() -> usize {
+    crate::prettify::DEFAULT_MAX_DECIMALS
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
@@ -493,6 +507,8 @@ impl Default for Config {
             city_aliases: create_city_aliases(),
             time_format: default_time_format(),
             date_format: default_date_format(),
+            number_format: default_number_format(),
+            number_max_decimals: default_number_max_decimals(),
             locale: None,
             padding_left: default_padding_left(),
             padding_right: default_padding_right(),

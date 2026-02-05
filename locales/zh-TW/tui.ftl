@@ -46,6 +46,8 @@ tui-help-ctrlshift-t-key = Ctrl+Shift+T
 tui-help-ctrlshift-t-desc = 時間格式選擇器
 tui-help-ctrlshift-d-key = Ctrl+Shift+D
 tui-help-ctrlshift-d-desc = 日期格式選擇器
+tui-help-ctrlshift-n-key = Ctrl+Shift+N
+tui-help-ctrlshift-n-desc = 數字格式選擇器
 tui-help-ctrlshift-l-key = Ctrl+Shift+L
 tui-help-ctrlshift-l-desc = 語言選擇器
 tui-help-f1-key = F1
@@ -62,6 +64,11 @@ tui-format-time-title = 時間
 tui-format-date-title = 日期
 tui-format-footer = ↑/↓ 選擇   ←/→ 切換列表   Enter 套用   Esc 關閉
 
+# 數字格式選擇
+tui-number-format-title = 數字格式
+tui-number-decimals-title = 最大小數位
+tui-number-format-footer = ↑/↓ 選擇   ←/→ 切換列表   Enter 套用   Esc 關閉
+
 # 儲存提示
 tui-save-default-filename = untitled.numby
 tui-save-label = 另存為：
@@ -69,6 +76,7 @@ tui-save-hint = （Enter 儲存，Esc 取消）
 
 # 狀態訊息
 tui-format-set-status = 格式已設定：時間 {$time}，日期 {$date}
+tui-number-format-set-status = 數字格式已設定：{$format}，最大小數位：{$decimals}
 tui-locale-set-status = 語言已切換為 {$name}
 tui-quit-ctrlc = 再按一次 Ctrl+C 以退出
 tui-quit-esc = 再按一次 Esc 以退出

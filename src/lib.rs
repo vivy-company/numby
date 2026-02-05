@@ -366,6 +366,8 @@ pub unsafe extern "C" fn libnumby_load_config(ctx: *mut NumbyContext, path: *con
                     context.data_units = config.data_units;
                     context.speed_units = config.speed_units;
                     context.rates = config.currencies;
+                    context.number_format = config.number_format;
+                    context.number_max_decimals = config.number_max_decimals;
                     set_config_override_path(validated_path);
                     0
                 }
@@ -395,6 +397,41 @@ pub unsafe extern "C" fn libnumby_set_locale(ctx: *mut NumbyContext, locale: *co
         Ok(_) => 0,
         Err(_) => -1,
     }
+}
+
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_set_number_format(
+    ctx: *mut NumbyContext,
+    format: *const c_char,
+    max_decimals: i32,
+) -> i32 {
+    if ctx.is_null() || format.is_null() {
+        return -1;
+    }
+
+    let format_str = match CStr::from_ptr(format).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+
+    let normalized = match crate::prettify::normalize_number_format(format_str) {
+        Some(val) => val,
+        None => return -1,
+    };
+
+    let max_decimals = if max_decimals < 0 {
+        return -1;
+    } else {
+        crate::prettify::clamp_max_decimals(max_decimals as usize)
+    };
+
+    let context = &mut *ctx;
+    context.number_format = normalized.to_string();
+    context.number_max_decimals = max_decimals;
+    0
 }
 
 /// Get the current locale

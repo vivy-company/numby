@@ -195,7 +195,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         case .language:
             return 1 // Locale picker
         case .appearance:
-            return 4 // Theme, Font Size, Font, Syntax Highlighting
+            return 8 // Theme, Font Size, Font, Syntax Highlighting, Number Format, Max Decimals, Hint, Preview
         case .currency:
             return 4 // API date, Last update, Update button, API info
         case .about:
@@ -235,6 +235,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             if indexPath.row == 0 { showThemeSelector() }
             else if indexPath.row == 1 { return } // Font size slider
             else if indexPath.row == 2 { showFontSelector() }
+            else if indexPath.row == 4 { showNumberFormatSelector() }
         case .currency:
             if indexPath.row == 2 { updateCurrencyRates() }
         case .about:
@@ -315,6 +316,62 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
                     NotificationCenter.default.post(name: NSNotification.Name("ThemeDidChange"), object: nil)
                 }
             )
+            return cell
+
+        case 4: // Number Format
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
+            var cellConfig = cell.defaultContentConfiguration()
+            cellConfig.image = UIImage(systemName: "number")
+            cellConfig.text = NSLocalizedString("settings.number.format", comment: "")
+            let formatLabel = config.numberFormat == "precision"
+                ? NSLocalizedString("settings.number.format.precision", comment: "")
+                : NSLocalizedString("settings.number.format.pretty", comment: "")
+            cellConfig.secondaryText = formatLabel
+            cell.contentConfiguration = cellConfig
+            cell.accessoryType = .disclosureIndicator
+            return cell
+
+        case 5: // Max Decimals Slider
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "SliderCell", for: indexPath) as? SliderCell else {
+                return UITableViewCell()
+            }
+            cell.configure(
+                title: NSLocalizedString("settings.number.maxDecimals", comment: ""),
+                value: Float(config.numberMaxDecimals),
+                min: 0,
+                max: 15,
+                icon: "number.circle",
+                onChange: { value in
+                    Configuration.shared.config.numberMaxDecimals = Int(value)
+                    Configuration.shared.save()
+                    _ = self.numbyWrapper.setNumberFormat(
+                        Configuration.shared.config.numberFormat,
+                        maxDecimals: Configuration.shared.config.numberMaxDecimals
+                    )
+                }
+            )
+            return cell
+
+        case 6: // Max Decimals Hint
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
+            var cellConfig = cell.defaultContentConfiguration()
+            cellConfig.text = NSLocalizedString("settings.number.maxDecimalsHint", comment: "")
+            cellConfig.textProperties.color = .secondaryLabel
+            cell.contentConfiguration = cellConfig
+            cell.accessoryType = .none
+            cell.selectionStyle = .none
+            return cell
+
+        case 7: // Preview
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
+            var cellConfig = cell.defaultContentConfiguration()
+            cellConfig.image = UIImage(systemName: "eye")
+            cellConfig.text = NSLocalizedString("settings.number.preview", comment: "")
+            let preview = numbyWrapper.evaluate("1234567.89").formatted ?? "—"
+            cellConfig.secondaryText = preview
+            cell.contentConfiguration = cellConfig
+            cell.accessoryType = .none
+            cell.selectionStyle = .none
             return cell
 
         default:
@@ -492,6 +549,47 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         }
         #endif
         present(nav, animated: true)
+    }
+
+    private func showNumberFormatSelector() {
+        let title = NSLocalizedString("settings.number.format", comment: "")
+        let prettyTitle = NSLocalizedString("settings.number.format.pretty", comment: "")
+        let precisionTitle = NSLocalizedString("settings.number.format.precision", comment: "")
+
+        let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+        let applyFormat: (String) -> Void = { [weak self] format in
+            Configuration.shared.config.numberFormat = format
+            Configuration.shared.save()
+            _ = self?.numbyWrapper.setNumberFormat(
+                format,
+                maxDecimals: Configuration.shared.config.numberMaxDecimals
+            )
+            self?.tableView.reloadData()
+        }
+
+        alert.addAction(UIAlertAction(title: prettyTitle, style: .default) { _ in
+            applyFormat("pretty")
+        })
+        alert.addAction(UIAlertAction(title: precisionTitle, style: .default) { _ in
+            applyFormat("precision")
+        })
+        alert.addAction(UIAlertAction(
+            title: NSLocalizedString("alert.cancel", comment: ""),
+            style: .cancel
+        ))
+
+        if let popover = alert.popoverPresentationController,
+           let cell = tableView.cellForRow(
+            at: IndexPath(row: 4, section: Section.appearance.rawValue)
+           ) {
+            popover.sourceView = cell
+            popover.sourceRect = cell.bounds
+        } else if let popover = alert.popoverPresentationController {
+            popover.sourceView = tableView
+            popover.sourceRect = tableView.bounds
+        }
+
+        present(alert, animated: true)
     }
 }
 

@@ -46,6 +46,8 @@ tui-help-ctrlshift-t-key = Ctrl+Shift+T
 tui-help-ctrlshift-t-desc = time format picker
 tui-help-ctrlshift-d-key = Ctrl+Shift+D
 tui-help-ctrlshift-d-desc = date format picker
+tui-help-ctrlshift-n-key = Ctrl+Shift+N
+tui-help-ctrlshift-n-desc = number format picker
 tui-help-ctrlshift-l-key = Ctrl+Shift+L
 tui-help-ctrlshift-l-desc = locale picker
 tui-help-f1-key = F1
@@ -62,6 +64,11 @@ tui-format-time-title = Time
 tui-format-date-title = Date
 tui-format-footer = ↑/↓ select   ←/→ switch list   Enter apply   Esc close
 
+# Number format picker overlay
+tui-number-format-title = Number format
+tui-number-decimals-title = Max decimals
+tui-number-format-footer = ↑/↓ select   ←/→ switch list   Enter apply   Esc close
+
 # Save prompt
 tui-save-default-filename = untitled.numby
 tui-save-label = Save as:
@@ -69,6 +76,7 @@ tui-save-hint = (Enter to save, Esc to cancel)
 
 # Status messages
 tui-format-set-status = Formats set to time: {$time}, date: {$date}
+tui-number-format-set-status = Number format set to {$format}, max decimals: {$decimals}
 tui-locale-set-status = Locale set to {$name}
 tui-quit-ctrlc = Press Ctrl+C again to quit
 tui-quit-esc = Press Esc again to quit

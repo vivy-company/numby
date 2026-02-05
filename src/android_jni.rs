@@ -216,6 +216,8 @@ pub extern "system" fn Java_com_numby_NumbyWrapper_loadConfig(
                     context.data_units = config.data_units;
                     context.speed_units = config.speed_units;
                     context.rates = config.currencies;
+                    context.number_format = config.number_format;
+                    context.number_max_decimals = config.number_max_decimals;
                     // Store the config path for later use (currency rate saving)
                     context.config_override_path = Some(path_str.clone());
                     // Set global config path override for load_config() calls
@@ -246,6 +248,40 @@ pub extern "system" fn Java_com_numby_NumbyWrapper_setLocale(
         Ok(_) => 0,
         Err(_) => -1,
     }
+}
+
+/// Set number format and max decimals for the context
+#[no_mangle]
+pub extern "system" fn Java_com_numby_NumbyWrapper_setNumberFormat(
+    mut env: JNIEnv,
+    _class: JClass,
+    ctx: jlong,
+    format: JString,
+    max_decimals: jint,
+) -> jint {
+    if ctx == 0 {
+        return -1;
+    }
+
+    let format_str = match jstring_to_string(&mut env, &format) {
+        Some(s) => s,
+        None => return -1,
+    };
+
+    let normalized = match crate::prettify::normalize_number_format(&format_str) {
+        Some(val) => val,
+        None => return -1,
+    };
+
+    if max_decimals < 0 {
+        return -1;
+    }
+
+    let context = unsafe { &mut *(ctx as *mut AppState) };
+    context.number_format = normalized.to_string();
+    context.number_max_decimals =
+        crate::prettify::clamp_max_decimals(max_decimals as usize);
+    0
 }
 
 /// Get the current locale

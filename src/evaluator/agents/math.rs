@@ -1,7 +1,7 @@
 use crate::evaluator::agents::PRIORITY_MATH;
 use crate::evaluator::{evaluate_expr, preprocess_input, EvalContext};
 use crate::models::{Agent, AppState};
-use crate::prettify::prettify_number;
+use crate::prettify::format_number;
 
 pub struct MathAgent;
 
@@ -39,10 +39,16 @@ impl Agent for MathAgent {
             speed_units: &config.speed_units,
             rates: &config.currencies,
             custom_units: &config.custom_units,
+            number_format: state.number_format.as_str(),
+            number_max_decimals: state.number_max_decimals,
         };
 
         evaluate_expr(&preprocessed, &mut ctx).ok().map(|result| {
-            let formatted = prettify_number(result.value);
+            let formatted = format_number(
+                result.value,
+                state.number_format.as_str(),
+                state.number_max_decimals,
+            );
             let output = if let Some(unit) = &result.unit {
                 format!("{} {}", formatted, unit)
             } else {

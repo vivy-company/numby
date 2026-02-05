@@ -13,11 +13,13 @@ pub fn evaluate_expression(
     // Allow users to pass "\n" in a single-arg invocation; normalize to real newlines
     let normalized = expression.replace("\\n", "\n");
 
-    // Collect evaluated lines
+    let lines: Vec<String> = normalized.lines().map(|l| l.to_string()).collect();
+
+    // Collect evaluated groups
     let mut rows: Vec<(String, Option<String>)> = Vec::new();
-    for line in normalized.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with("#") {
+    for group in crate::utils::group_multiline_expressions(&lines) {
+        let trimmed = group.expr.trim();
+        if trimmed.is_empty() {
             continue;
         }
         let result = match registry.evaluate(trimmed, state) {

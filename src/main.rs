@@ -48,6 +48,14 @@ struct Args {
     /// Output format for CLI mode: pretty (default), markdown, table/box, plain
     #[arg(long, default_value = "pretty")]
     format: String,
+
+    /// Number format for results: pretty or precision
+    #[arg(long)]
+    number_format: Option<String>,
+
+    /// Max decimals when number format is precision
+    #[arg(long)]
+    number_max_decimals: Option<usize>,
 }
 
 fn determine_filename(file_arg: Option<String>, expression_arg: Option<&String>) -> Option<String> {
@@ -154,6 +162,26 @@ fn main() -> Result<()> {
         }
     }
     config.currencies = rates;
+
+    if let Some(fmt) = args.number_format.as_deref() {
+        match crate::prettify::normalize_number_format(fmt) {
+            Some(normalized) => {
+                config.number_format = normalized.to_string();
+            }
+            None => {
+                let msg = format!("Invalid --number-format '{}'; using {}", fmt, config.number_format);
+                if run_cli {
+                    eprintln!("{}", msg);
+                } else {
+                    startup_msgs.push(msg);
+                }
+            }
+        }
+    }
+
+    if let Some(max_decimals) = args.number_max_decimals {
+        config.number_max_decimals = crate::prettify::clamp_max_decimals(max_decimals);
+    }
 
     let current_filename = determine_filename(args.file, args.expression.as_ref());
 

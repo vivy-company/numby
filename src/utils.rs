@@ -17,7 +17,10 @@ pub fn highlight_word_owned(
         .contains_key(clean_word)
     {
         Span::styled(word.to_string(), Style::default().fg(Color::Blue).bold())
-    } else if config.operators.contains_key(clean_word)
+    } else if config
+        .operators
+        .keys()
+        .any(|op| op.eq_ignore_ascii_case(clean_word) || op.split_whitespace().any(|p| p.eq_ignore_ascii_case(clean_word)))
         || config.functions.contains_key(clean_word)
         || config.scales.contains_key(clean_word)
     {
@@ -40,7 +43,7 @@ pub fn highlight_word_owned(
     } else if is_datetime_keyword(&lower) || is_timezone_keyword(&lower, config) {
         Span::styled(word.to_string(), Style::default().fg(Color::Cyan).bold())
     } else {
-        Span::raw(word.to_string())
+        Span::styled(word.to_string(), Style::default().fg(Color::Gray))
     }
 }
 
@@ -145,4 +148,107 @@ pub fn find_line_end(rope: &Rope, pos: usize) -> usize {
 pub fn get_current_line(rope: &Rope, cursor_pos: usize) -> String {
     let line_idx = rope.char_to_line(cursor_pos);
     rope.line(line_idx).to_string()
+}
+
+pub struct LineGroup {
+    pub start: usize,
+    pub end: usize,
+    pub expr: String,
+}
+
+fn strip_line_comments_for_continuation(line: &str) -> &str {
+    let mut end = line.len();
+    if let Some(pos) = line.find("//") {
+        end = end.min(pos);
+    }
+    if let Some(pos) = line.find('#') {
+        end = end.min(pos);
+    }
+    if let Some(pos) = line.find("/*") {
+        end = end.min(pos);
+    }
+    &line[..end]
+}
+
+fn line_starts_with_operator(line: &str) -> bool {
+    let trimmed = strip_line_comments_for_continuation(line).trim_start();
+    matches!(
+        trimmed.chars().next(),
+        Some('+') | Some('-') | Some('*') | Some('/') | Some('%') | Some('^')
+    )
+}
+
+fn line_ends_with_operator(line: &str) -> bool {
+    let trimmed = strip_line_comments_for_continuation(line).trim_end();
+    if trimmed.is_empty() {
+        return false;
+    }
+    matches!(
+        trimmed.chars().last(),
+        Some('+') | Some('-') | Some('*') | Some('/') | Some('%') | Some('^') | Some('(')
+    )
+}
+
+fn is_comment_or_empty(line: &str) -> bool {
+    let trimmed = line.trim();
+    trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with('#')
+}
+
+pub fn group_multiline_expressions(lines: &[String]) -> Vec<LineGroup> {
+    let mut groups = Vec::new();
+    let mut current_start: Option<usize> = None;
+    let mut current_parts: Vec<String> = Vec::new();
+    let mut prev_line: Option<String> = None;
+
+    for (idx, line) in lines.iter().enumerate() {
+        if is_comment_or_empty(line) {
+            if let Some(start) = current_start {
+                let expr = current_parts.join(" ");
+                groups.push(LineGroup {
+                    start,
+                    end: idx.saturating_sub(1),
+                    expr,
+                });
+                current_start = None;
+                current_parts.clear();
+            }
+            prev_line = None;
+            continue;
+        }
+
+        let starts_with_op = line_starts_with_operator(line);
+        let prev_ends_with_op = prev_line
+            .as_ref()
+            .map(|p| line_ends_with_operator(p))
+            .unwrap_or(false);
+
+        let is_continuation = starts_with_op || prev_ends_with_op;
+
+        if current_start.is_none() || !is_continuation {
+            if let Some(start) = current_start {
+                let expr = current_parts.join(" ");
+                groups.push(LineGroup {
+                    start,
+                    end: idx.saturating_sub(1),
+                    expr,
+                });
+                current_parts.clear();
+            }
+            current_start = Some(idx);
+        }
+
+        current_parts.push(line.trim().to_string());
+        prev_line = Some(line.to_string());
+    }
+
+    if let Some(start) = current_start {
+        let expr = current_parts.join(" ");
+        groups.push(LineGroup {
+            start,
+            end: lines.len().saturating_sub(1),
+            expr,
+        });
+    }
+
+    groups
 }

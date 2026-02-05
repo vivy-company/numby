@@ -147,8 +147,10 @@ fn fetch_from_url(url: &str) -> Result<(HashMap<String, f64>, String)> {
 /// // Old date is stale
 /// assert!(are_rates_stale("2020-01-01"));
 ///
-/// // Future date is not stale
-/// assert!(!are_rates_stale("2030-12-31"));
+/// // Near-future date within tolerance is not stale
+/// use chrono::{Duration, Utc};
+/// let future = Utc::now().date_naive() + Duration::days(2);
+/// assert!(!are_rates_stale(&future.format("%Y-%m-%d").to_string()));
 ///
 /// // Invalid date is considered stale
 /// assert!(are_rates_stale("invalid-date"));
@@ -173,11 +175,7 @@ pub fn are_rates_stale(stored_date: &str) -> bool {
 
     // Handle API date errors - allow up to 7 days difference in either direction
     let tolerance_days = 7;
-    let day_difference = if today_days > stored_days {
-        today_days - stored_days
-    } else {
-        stored_days - today_days
-    };
+    let day_difference = today_days.abs_diff(stored_days);
 
     // Consider stale only if more than tolerance_days behind
     day_difference > tolerance_days as u64
@@ -243,11 +241,14 @@ mod tests {
 
     #[test]
     fn test_staleness_check() {
+        use chrono::{Duration, Utc};
+
         // A date from yesterday should be stale
         assert!(are_rates_stale("2020-01-01"));
 
-        // A date from far future should not be stale
-        assert!(!are_rates_stale("2030-12-31"));
+        // A date within tolerance should not be stale
+        let future = Utc::now().date_naive() + Duration::days(2);
+        assert!(!are_rates_stale(&future.format("%Y-%m-%d").to_string()));
     }
 
     #[test]

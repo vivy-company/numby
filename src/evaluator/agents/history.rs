@@ -1,5 +1,6 @@
 use crate::evaluator::agents::PRIORITY_HISTORY;
 use crate::models::{Agent, AppState};
+use crate::prettify::format_number;
 
 pub struct HistoryAgent;
 
@@ -28,10 +29,15 @@ impl Agent for HistoryAgent {
         match trimmed {
             "sum" | "total" => {
                 let sum = history_guard.iter().map(|h| h.value).sum::<f64>();
+                let formatted_sum = format_number(
+                    sum,
+                    state.number_format.as_str(),
+                    state.number_max_decimals,
+                );
                 let formatted = if let Some(ref u) = unit {
-                    format!("{} {}", sum, u)
+                    format!("{} {}", formatted_sum, u)
                 } else {
-                    format!("{}", sum)
+                    formatted_sum
                 };
                 Some((formatted, true, Some(sum), unit.clone()))
             }
@@ -41,19 +47,29 @@ impl Agent for HistoryAgent {
                 } else {
                     let avg = history_guard.iter().map(|h| h.value).sum::<f64>()
                         / history_guard.len() as f64;
+                    let formatted_avg = format_number(
+                        avg,
+                        state.number_format.as_str(),
+                        state.number_max_decimals,
+                    );
                     let formatted = if let Some(ref u) = unit {
-                        format!("{} {}", avg, u)
+                        format!("{} {}", formatted_avg, u)
                     } else {
-                        format!("{}", avg)
+                        formatted_avg
                     };
                     Some((formatted, true, Some(avg), unit.clone()))
                 }
             }
             "prev" => history_guard.last().map(|h| {
+                let formatted_value = format_number(
+                    h.value,
+                    state.number_format.as_str(),
+                    state.number_max_decimals,
+                );
                 let formatted = if let Some(ref u) = h.unit {
-                    format!("{} {}", h.value, u)
+                    format!("{} {}", formatted_value, u)
                 } else {
-                    format!("{}", h.value)
+                    formatted_value
                 };
                 (formatted, true, Some(h.value), h.unit.clone())
             }),

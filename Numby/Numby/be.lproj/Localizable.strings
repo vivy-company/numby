@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "Памер шрыфту";
 "settings.appearance.font" = "Шрыфт";
 "settings.appearance.syntaxHighlighting" = "Падсвятленне сінтаксісу";
+"settings.number.format" = "Фармат лікаў";
+"settings.number.maxDecimals" = "Макс. дзесятковых";
+"settings.number.format.pretty" = "Сціслы";
+"settings.number.format.precision" = "Дакладны";
+"settings.number.preview" = "Перадпрагляд";
+"settings.number.maxDecimalsHint" = "Выкарыстоўваецца толькі ў рэжыме дакладнасці";
 
 /* Settings - Behavior Section */
 "settings.behavior.section" = "Паводзіны";

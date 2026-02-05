@@ -42,6 +42,10 @@ class NumbyWrapper: ObservableObject {
             _ = libnumby_set_locale(context, cLocale)
         }
 
+        let numberFormat = Configuration.shared.config.numberFormat
+        let maxDecimals = Configuration.shared.config.numberMaxDecimals
+        _ = setNumberFormat(numberFormat, maxDecimals: maxDecimals)
+
         // Check if rates are stale and update in background if needed
         updateCurrencyRatesIfStale()
     }
@@ -420,6 +424,14 @@ class NumbyWrapper: ObservableObject {
         guard let ctx = context else { return false }
         return locale.withCString { cLocale in
             libnumby_set_locale(ctx, cLocale) == 0
+        }
+    }
+
+    /// Set number format and max decimals
+    func setNumberFormat(_ format: String, maxDecimals: Int) -> Bool {
+        guard let ctx = context else { return false }
+        return format.withCString { cFormat in
+            libnumby_set_number_format(ctx, cFormat, Int32(maxDecimals)) == 0
         }
     }
 

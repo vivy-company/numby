@@ -469,6 +469,8 @@ struct InputTextView: NSViewRepresentable {
         textView.isAutomaticSpellingCorrectionEnabled = false
         textView.delegate = context.coordinator
         textView.textContainerInset = NSSize(width: 16, height: 16)
+        textView.allowsUndo = true
+        textView.undoManager = context.environment.undoManager
 
         // Match SwiftUI text line spacing exactly
         let paragraph = NSMutableParagraphStyle()
@@ -681,8 +683,11 @@ struct InputTextView: NSViewRepresentable {
         }
 
         // Highlight comments (both // and # styles) - MUST BE LAST to override other colors
-        let commentPattern = "(//|#).*$"
-        if let regex = try? NSRegularExpression(pattern: commentPattern, options: .anchorsMatchLines) {
+        let commentPattern = "(//|#).*$|/\\*.*?\\*/"
+        if let regex = try? NSRegularExpression(
+            pattern: commentPattern,
+            options: [.anchorsMatchLines, .dotMatchesLineSeparators]
+        ) {
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 if let range = match?.range {
                     storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .comments), range: range)

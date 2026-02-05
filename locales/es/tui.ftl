@@ -46,6 +46,8 @@ tui-help-ctrlshift-t-key = Ctrl+Shift+T
 tui-help-ctrlshift-t-desc = selector de formato de hora
 tui-help-ctrlshift-d-key = Ctrl+Shift+D
 tui-help-ctrlshift-d-desc = selector de formato de fecha
+tui-help-ctrlshift-n-key = Ctrl+Shift+N
+tui-help-ctrlshift-n-desc = selector de formato de números
 tui-help-ctrlshift-l-key = Ctrl+Shift+L
 tui-help-ctrlshift-l-desc = selector de idioma
 tui-help-f1-key = F1
@@ -62,6 +64,11 @@ tui-format-time-title = Hora
 tui-format-date-title = Fecha
 tui-format-footer = ↑/↓ seleccionar   ←/→ cambiar lista   Enter aplicar   Esc cerrar
 
+# Selector de formato numérico
+tui-number-format-title = Formato de números
+tui-number-decimals-title = Máx. decimales
+tui-number-format-footer = ↑/↓ seleccionar   ←/→ cambiar lista   Enter aplicar   Esc cerrar
+
 # Diálogo de guardado
 tui-save-default-filename = untitled.numby
 tui-save-label = Guardar como:
@@ -69,6 +76,7 @@ tui-save-hint = (Enter para guardar, Esc para cancelar)
 
 # Mensajes de estado
 tui-format-set-status = Formatos establecidos a hora: {$time}, fecha: {$date}
+tui-number-format-set-status = Formato numérico: {$format}, máx. decimales: {$decimals}
 tui-locale-set-status = Idioma establecido a {$name}
 tui-quit-ctrlc = Presiona Ctrl+C otra vez para salir
 tui-quit-esc = Presiona Esc otra vez para salir

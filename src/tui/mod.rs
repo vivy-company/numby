@@ -69,6 +69,11 @@ pub fn run(
     let mut format_time_offset: usize = 0;
     let mut format_date_offset: usize = 0;
     let mut format_focus_time: bool = true;
+    let mut number_format_picker_visible = false;
+    let mut number_format_selection: usize = 0;
+    let mut number_decimals_selection: usize = 0;
+    let mut number_decimals_offset: usize = 0;
+    let mut number_format_focus: bool = true;
     let mut locale_selection: usize = 0;
     let mut locale_scroll_offset: usize = 0;
     let mut save_prompt_active = false;
@@ -123,6 +128,11 @@ pub fn run(
                     format_time_offset,
                     format_date_offset,
                     format_focus_time,
+                    number_format_picker_visible,
+                    number_format_selection,
+                    number_decimals_selection,
+                    number_decimals_offset,
+                    number_format_focus,
                     locale_picker_visible,
                     locale_selection,
                     current_locale: &current_locale_string,
@@ -218,6 +228,65 @@ pub fn run(
                             continue;
                         }
 
+                        if number_format_picker_visible {
+                            const FORMAT_OPTS: [&str; 2] = ["pretty", "precision"];
+                            const DECIMALS_MAX: usize = 15;
+                            const VISIBLE: usize = 6;
+                            match key.code {
+                                KeyCode::Up => {
+                                    if number_format_focus {
+                                        number_format_selection =
+                                            number_format_selection.saturating_sub(1);
+                                    } else if number_decimals_selection > 0 {
+                                        number_decimals_selection -= 1;
+                                        if number_decimals_selection < number_decimals_offset {
+                                            number_decimals_offset = number_decimals_selection;
+                                        }
+                                    }
+                                }
+                                KeyCode::Down => {
+                                    if number_format_focus {
+                                        let max = FORMAT_OPTS.len() - 1;
+                                        if number_format_selection < max {
+                                            number_format_selection += 1;
+                                        }
+                                    } else if number_decimals_selection < DECIMALS_MAX {
+                                        number_decimals_selection += 1;
+                                        if number_decimals_selection
+                                            >= number_decimals_offset + VISIBLE
+                                        {
+                                            number_decimals_offset =
+                                                number_decimals_selection + 1 - VISIBLE;
+                                        }
+                                    }
+                                }
+                                KeyCode::Left => {
+                                    number_format_focus = true;
+                                }
+                                KeyCode::Right => {
+                                    number_format_focus = false;
+                                }
+                                KeyCode::Enter => {
+                                    state.number_format =
+                                        FORMAT_OPTS[number_format_selection].to_string();
+                                    state.number_max_decimals = number_decimals_selection;
+                                    state.cache.invalidate_all();
+                                    let _ = state.set_status(crate::fl!(
+                                        "tui-number-format-set-status",
+                                        "format" => &state.number_format,
+                                        "decimals" => &state.number_max_decimals.to_string()
+                                    ));
+                                    status_timer = STATUS_TIMER_DURATION;
+                                    number_format_picker_visible = false;
+                                }
+                                KeyCode::Esc => {
+                                    number_format_picker_visible = false;
+                                }
+                                _ => {}
+                            }
+                            continue;
+                        }
+
                         // Handle save prompt input first
                         if save_prompt_active {
                     match key.code {
@@ -248,9 +317,7 @@ pub fn run(
                 if locale_picker_visible {
                     match key.code {
                         KeyCode::Up => {
-                            if locale_selection > 0 {
-                                locale_selection -= 1;
-                            }
+                            locale_selection = locale_selection.saturating_sub(1);
                             if locale_selection < locale_scroll_offset {
                                 locale_scroll_offset = locale_selection;
                             }
@@ -330,6 +397,7 @@ pub fn run(
                             help_visible = false;
                             locale_picker_visible = true;
                             format_picker_visible = false;
+                            number_format_picker_visible = false;
                             let current = i18n::get_locale().to_string();
                             locale_selection = i18n::AVAILABLE_LOCALES
                                 .iter()
@@ -342,6 +410,7 @@ pub fn run(
                             help_visible = false;
                             locale_picker_visible = false;
                             format_picker_visible = true;
+                            number_format_picker_visible = false;
                             let time_opts = ["iso", "long", "short", "time", "12h"];
                             let date_opts = ["iso", "long", "short"];
                             format_selection_time = time_opts
@@ -361,6 +430,7 @@ pub fn run(
                             help_visible = false;
                             locale_picker_visible = false;
                             format_picker_visible = true;
+                            number_format_picker_visible = false;
                             let time_opts = ["iso", "long", "short", "time", "12h"];
                             let date_opts = ["iso", "long", "short"];
                             format_selection_time = time_opts
@@ -374,6 +444,21 @@ pub fn run(
                             format_focus_time = false;
                             format_time_offset = format_selection_time.saturating_sub(2);
                             format_date_offset = format_selection_date.saturating_sub(2);
+                            continue;
+                        }
+                        KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                            help_visible = false;
+                            locale_picker_visible = false;
+                            format_picker_visible = false;
+                            number_format_picker_visible = true;
+                            let format_opts = ["pretty", "precision"];
+                            number_format_selection = format_opts
+                                .iter()
+                                .position(|o| *o == state.number_format)
+                                .unwrap_or(0);
+                            number_decimals_selection = state.number_max_decimals.min(15);
+                            number_format_focus = true;
+                            number_decimals_offset = number_decimals_selection.saturating_sub(2);
                             continue;
                         }
                         _ => {}
@@ -396,6 +481,11 @@ pub fn run(
 
                 if format_picker_visible && matches!(key.code, KeyCode::Esc) {
                     format_picker_visible = false;
+                    continue;
+                }
+
+                if number_format_picker_visible && matches!(key.code, KeyCode::Esc) {
+                    number_format_picker_visible = false;
                     continue;
                 }
 

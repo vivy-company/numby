@@ -5,11 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.numby.EvaluationResult
 import com.numby.NumbyApplication
 import com.numby.NumbyWrapper
+import com.numby.getNumberFormat
+import com.numby.getNumberMaxDecimals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -34,6 +37,18 @@ class CalculatorViewModel : ViewModel() {
         // Load config to get saved currency rates
         NumbyApplication.getInstance().getConfigPath()?.let { path ->
             numby.loadConfig(path)
+        }
+
+        val dataStore = NumbyApplication.getInstance().settingsDataStore
+        viewModelScope.launch {
+            dataStore
+                .getNumberFormat()
+                .combine(dataStore.getNumberMaxDecimals()) { format, decimals ->
+                    format to decimals
+                }
+                .collect { (format, decimals) ->
+                    numby.setNumberFormat(format, decimals)
+                }
         }
 
         // Debounce input changes for evaluation

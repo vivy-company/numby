@@ -38,3 +38,58 @@ pub fn prettify_number(num: f64) -> String {
         format!("{:.2}", num) // For smaller, 2 decimals
     }
 }
+
+/// Default maximum decimals for precision formatting.
+pub const DEFAULT_MAX_DECIMALS: usize = 12;
+
+/// Maximum decimals cap to keep outputs reasonable for f64.
+pub const MAX_DECIMALS_CAP: usize = 15;
+
+/// Normalize a number format string.
+/// Returns Some("pretty") or Some("precision") if supported.
+pub fn normalize_number_format(mode: &str) -> Option<&'static str> {
+    if mode.eq_ignore_ascii_case("pretty") {
+        Some("pretty")
+    } else if mode.eq_ignore_ascii_case("precision") {
+        Some("precision")
+    } else {
+        None
+    }
+}
+
+/// Clamp max decimals to a safe upper bound.
+pub fn clamp_max_decimals(max_decimals: usize) -> usize {
+    max_decimals.min(MAX_DECIMALS_CAP)
+}
+
+/// Format a number using the given mode and max decimals.
+pub fn format_number(num: f64, mode: &str, max_decimals: usize) -> String {
+    if normalize_number_format(mode) == Some("precision") {
+        format_precision(num, max_decimals)
+    } else {
+        prettify_number(num)
+    }
+}
+
+fn format_precision(num: f64, max_decimals: usize) -> String {
+    if !num.is_finite() {
+        return num.to_string();
+    }
+    let decimals = clamp_max_decimals(max_decimals);
+    if decimals == 0 {
+        return format!("{:.0}", num);
+    }
+    let mut s = format!("{:.1$}", num, decimals);
+    if s.contains('.') {
+        while s.ends_with('0') {
+            s.pop();
+        }
+        if s.ends_with('.') {
+            s.pop();
+        }
+    }
+    if s == "-0" {
+        return "0".to_string();
+    }
+    s
+}
