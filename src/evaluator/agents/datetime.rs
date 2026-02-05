@@ -1,7 +1,9 @@
 use chrono::offset::FixedOffset;
-use chrono::{DateTime, Datelike, Duration, Local, Months, NaiveDate, NaiveDateTime, TimeZone, Utc, Weekday};
-use chrono_tz::Tz;
 use chrono::Offset;
+use chrono::{
+    DateTime, Datelike, Duration, Local, Months, NaiveDate, NaiveDateTime, TimeZone, Utc, Weekday,
+};
+use chrono_tz::Tz;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -57,9 +59,10 @@ impl Agent for DateTimeAgent {
         if let Some(caps) = DAYS_BETWEEN_RE.captures(&lower) {
             let left = caps.name("left")?.as_str().trim();
             let right = caps.name("right")?.as_str().trim();
-            if let (Some(d1), Some(d2)) =
-                (parse_any_datetime(left, config), parse_any_datetime(right, config))
-            {
+            if let (Some(d1), Some(d2)) = (
+                parse_any_datetime(left, config),
+                parse_any_datetime(right, config),
+            ) {
                 let delta = d2 - d1;
                 let days = delta.num_seconds() as f64 / 86_400.0;
                 return Some((
@@ -261,16 +264,17 @@ fn handle_relative(
         };
         let adjusted = apply_offset(base, signed_num, unit)?;
         let fmt = current_time_format(state);
-        let output =
-            if dir.contains("today") || dir.contains("tomorrow") || dir.contains("before tomorrow")
-                || unit.starts_with("day") && !lower.contains("hour")
-            {
-                let dfmt = current_date_format(state);
-                format_date(adjusted.date(), dfmt)
-            } else {
-                let fixed = utc_to_fixed(adjusted, tz, config);
-                render_datetime_pair(fixed, tz.is_none(), fmt)
-            };
+        let output = if dir.contains("today")
+            || dir.contains("tomorrow")
+            || dir.contains("before tomorrow")
+            || unit.starts_with("day") && !lower.contains("hour")
+        {
+            let dfmt = current_date_format(state);
+            format_date(adjusted.date(), dfmt)
+        } else {
+            let fixed = utc_to_fixed(adjusted, tz, config);
+            render_datetime_pair(fixed, tz.is_none(), fmt)
+        };
         return Some((output, false, None, None));
     }
     None
@@ -298,7 +302,11 @@ fn handle_date_arith(
             let adjusted = apply_offset(naive, sign * num, unit)?;
             let with_tz = utc_to_fixed(adjusted, None, config);
             let fmt = current_time_format(state);
-            if unit.starts_with("day") || unit.starts_with("week") || unit.starts_with("month") || unit.starts_with("year") {
+            if unit.starts_with("day")
+                || unit.starts_with("week")
+                || unit.starts_with("month")
+                || unit.starts_with("year")
+            {
                 let dfmt = current_date_format(state);
                 return Some((format_date(with_tz.date_naive(), dfmt), false, None, None));
             } else {
@@ -543,7 +551,11 @@ fn now_offset_seconds(tz_opt: Option<&str>, config: &Config) -> i32 {
     }
 }
 
-fn utc_to_fixed(naive: NaiveDateTime, tz_opt: Option<&str>, config: &Config) -> DateTime<FixedOffset> {
+fn utc_to_fixed(
+    naive: NaiveDateTime,
+    tz_opt: Option<&str>,
+    config: &Config,
+) -> DateTime<FixedOffset> {
     if let Some(tz) = resolve_tz(tz_opt, config) {
         fixed_from_tz(&tz, naive)
     } else {
@@ -554,9 +566,7 @@ fn utc_to_fixed(naive: NaiveDateTime, tz_opt: Option<&str>, config: &Config) -> 
 }
 
 fn fixed_from_tz(tz: &Tz, naive: NaiveDateTime) -> DateTime<FixedOffset> {
-    let offset = tz
-        .offset_from_utc_datetime(&naive)
-        .fix();
+    let offset = tz.offset_from_utc_datetime(&naive).fix();
     DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc).with_timezone(&offset)
 }
 
@@ -569,7 +579,11 @@ mod tests {
     fn test_days_between() {
         let cfg = Config::default();
         let agent = DateTimeAgent;
-        let res = agent.process("days between 2025-01-01 and 2025-01-31", &mut AppState::builder(&cfg).build(), &cfg);
+        let res = agent.process(
+            "days between 2025-01-01 and 2025-01-31",
+            &mut AppState::builder(&cfg).build(),
+            &cfg,
+        );
         assert!(res.is_some());
         let (out, add_hist, raw, unit) = res.unwrap();
         assert!(out.contains("30"));
@@ -618,7 +632,11 @@ mod tests {
         use chrono::NaiveDate;
         let cfg = Config::default();
         let agent = DateTimeAgent;
-        let res = agent.process("5 days from today", &mut AppState::builder(&cfg).build(), &cfg);
+        let res = agent.process(
+            "5 days from today",
+            &mut AppState::builder(&cfg).build(),
+            &cfg,
+        );
         let (out, _, _, _) = res.expect("should parse relative days");
         let parsed = NaiveDate::parse_from_str(&out, "%Y-%m-%d").expect("formatted date");
         let expected = chrono::Local::now().date_naive() + chrono::Duration::days(5);
@@ -630,7 +648,11 @@ mod tests {
         use chrono::NaiveDate;
         let cfg = Config::default();
         let agent = DateTimeAgent;
-        let res = agent.process("2024-01-31 + 1 month", &mut AppState::builder(&cfg).build(), &cfg);
+        let res = agent.process(
+            "2024-01-31 + 1 month",
+            &mut AppState::builder(&cfg).build(),
+            &cfg,
+        );
         let (out, _, _, _) = res.expect("should parse month add");
         let parsed = NaiveDate::parse_from_str(&out, "%Y-%m-%d").expect("formatted date");
         assert_eq!(parsed, NaiveDate::from_ymd_opt(2024, 2, 29).unwrap());
@@ -640,8 +662,11 @@ mod tests {
     fn test_hours_from_now_in_utc() {
         let cfg = Config::default();
         let agent = DateTimeAgent;
-        let res =
-            agent.process("3 hours from now in UTC", &mut AppState::builder(&cfg).build(), &cfg);
+        let res = agent.process(
+            "3 hours from now in UTC",
+            &mut AppState::builder(&cfg).build(),
+            &cfg,
+        );
         let (out, _, _, _) = res.expect("should parse hours from now");
         // Compact format: "Nov 29, 13:20"
         assert!(out.contains(","));
@@ -652,8 +677,7 @@ mod tests {
     fn test_time_in_tokyo() {
         let cfg = Config::default();
         let agent = DateTimeAgent;
-        let res =
-            agent.process("time in Tokyo", &mut AppState::builder(&cfg).build(), &cfg);
+        let res = agent.process("time in Tokyo", &mut AppState::builder(&cfg).build(), &cfg);
         let (out, _, _, _) = res.expect("time in tokyo should work");
         assert!(!out.contains("Local "));
         // offset should match Asia/Tokyo
@@ -669,11 +693,16 @@ mod tests {
     fn test_from_tomorrow_relative() {
         let cfg = Config::default();
         let agent = DateTimeAgent;
-        let res =
-            agent.process("5 weeks from tomorrow", &mut AppState::builder(&cfg).build(), &cfg);
+        let res = agent.process(
+            "5 weeks from tomorrow",
+            &mut AppState::builder(&cfg).build(),
+            &cfg,
+        );
         let (out, _, _, _) = res.expect("should parse from tomorrow");
         // Output could be date or datetime; check contains tomorrow+5weeks date
-        let expected_date = chrono::Local::now().date_naive() + chrono::Duration::days(1) + chrono::Duration::weeks(5);
+        let expected_date = chrono::Local::now().date_naive()
+            + chrono::Duration::days(1)
+            + chrono::Duration::weeks(5);
         assert!(out.contains(&expected_date.format("%Y-%m-%d").to_string()));
     }
 
@@ -692,8 +721,11 @@ mod tests {
     fn test_now_in_europe_berlin() {
         let cfg = Config::default();
         let agent = DateTimeAgent;
-        let res =
-            agent.process("now in Europe/Berlin", &mut AppState::builder(&cfg).build(), &cfg);
+        let res = agent.process(
+            "now in Europe/Berlin",
+            &mut AppState::builder(&cfg).build(),
+            &cfg,
+        );
         let (out, _, _, _) = res.expect("should parse tz with slash and casing");
         assert!(!out.contains("Local"));
         // Compact format: "Nov 29, 13:20"

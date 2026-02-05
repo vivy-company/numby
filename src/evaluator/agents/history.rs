@@ -29,11 +29,8 @@ impl Agent for HistoryAgent {
         match trimmed {
             "sum" | "total" => {
                 let sum = history_guard.iter().map(|h| h.value).sum::<f64>();
-                let formatted_sum = format_number(
-                    sum,
-                    state.number_format.as_str(),
-                    state.number_max_decimals,
-                );
+                let formatted_sum =
+                    format_number(sum, state.number_format.as_str(), state.number_max_decimals);
                 let formatted = if let Some(ref u) = unit {
                     format!("{} {}", formatted_sum, u)
                 } else {
@@ -47,11 +44,8 @@ impl Agent for HistoryAgent {
                 } else {
                     let avg = history_guard.iter().map(|h| h.value).sum::<f64>()
                         / history_guard.len() as f64;
-                    let formatted_avg = format_number(
-                        avg,
-                        state.number_format.as_str(),
-                        state.number_max_decimals,
-                    );
+                    let formatted_avg =
+                        format_number(avg, state.number_format.as_str(), state.number_max_decimals);
                     let formatted = if let Some(ref u) = unit {
                         format!("{} {}", formatted_avg, u)
                     } else {

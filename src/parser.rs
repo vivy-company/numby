@@ -33,8 +33,9 @@ lazy_static! {
         Regex::new(r"(\d+(?:\.\d+)?)\s*giga\b").expect("Invalid regex pattern for giga scale");
     static ref TERA_RE: Regex =
         Regex::new(r"(\d+(?:\.\d+)?)\s*tera\b").expect("Invalid regex pattern for tera scale");
-    static ref PERCENT_OP_RE: Regex = Regex::new(r"(-?\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)%")
-        .expect("Invalid regex pattern for percent-operation expression");
+    static ref PERCENT_OP_RE: Regex =
+        Regex::new(r"(-?\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)%")
+            .expect("Invalid regex pattern for percent-operation expression");
     static ref PERCENT_OF_RE: Regex = Regex::new(r"(\d+(?:\.\d+)?)%\s*of\s*(-?\d+(?:\.\d+)?)")
         .expect("Invalid regex pattern for percent-of expression");
     static ref FUNC_RE: Regex =
@@ -225,11 +226,7 @@ pub fn parse_percentage_op(
                     "/" => base / percent_decimal,
                     _ => return None,
                 };
-                return Some(format_number(
-                    result,
-                    number_format,
-                    number_max_decimals,
-                ));
+                return Some(format_number(result, number_format, number_max_decimals));
             }
         }
     }

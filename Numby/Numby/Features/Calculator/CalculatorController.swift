@@ -270,6 +270,7 @@ class CalculatorInstance: ObservableObject {
         NotificationCenter.default.publisher(for: NSNotification.Name("ConfigurationDidChange"))
             .sink { [weak self] _ in
                 self?.applyNumberFormat()
+                self?.evaluateAllLines()
             }
             .store(in: &cancellables)
     }

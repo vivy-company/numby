@@ -153,142 +153,130 @@ pub fn run(
             }
         }
 
-                // Handle input events (16ms = ~60fps for smooth updates)
-                if event::poll(std::time::Duration::from_millis(16))? {
-                    if let Event::Key(key) = event::read()? {
-                        if format_picker_visible {
-                            const TIME_OPTS: [&str; 5] = ["iso", "long", "short", "time", "12h"];
-                            const DATE_OPTS: [&str; 3] = ["iso", "long", "short"];
-                            const VISIBLE: usize = 6;
-                            match key.code {
-                                KeyCode::Up => {
-                                    if format_focus_time {
-                                        if format_selection_time > 0 {
-                                            format_selection_time -= 1;
-                                            if format_selection_time < format_time_offset {
-                                                format_time_offset = format_selection_time;
-                                            }
-                                        }
-                                    } else if format_selection_date > 0 {
-                                        format_selection_date -= 1;
-                                        if format_selection_date < format_date_offset {
-                                            format_date_offset = format_selection_date;
-                                        }
+        // Handle input events (16ms = ~60fps for smooth updates)
+        if event::poll(std::time::Duration::from_millis(16))? {
+            if let Event::Key(key) = event::read()? {
+                if format_picker_visible {
+                    const TIME_OPTS: [&str; 5] = ["iso", "long", "short", "time", "12h"];
+                    const DATE_OPTS: [&str; 3] = ["iso", "long", "short"];
+                    const VISIBLE: usize = 6;
+                    match key.code {
+                        KeyCode::Up => {
+                            if format_focus_time {
+                                if format_selection_time > 0 {
+                                    format_selection_time -= 1;
+                                    if format_selection_time < format_time_offset {
+                                        format_time_offset = format_selection_time;
                                     }
                                 }
-                                KeyCode::Down => {
-                                    if format_focus_time {
-                                        let max = TIME_OPTS.len() - 1;
-                                        if format_selection_time < max {
-                                            format_selection_time += 1;
-                                            if format_selection_time
-                                                >= format_time_offset + VISIBLE
-                                            {
-                                                format_time_offset =
-                                                    format_selection_time + 1 - VISIBLE;
-                                            }
-                                        }
-                                    } else {
-                                        let max = DATE_OPTS.len() - 1;
-                                        if format_selection_date < max {
-                                            format_selection_date += 1;
-                                            if format_selection_date
-                                                >= format_date_offset + VISIBLE
-                                            {
-                                                format_date_offset =
-                                                    format_selection_date + 1 - VISIBLE;
-                                            }
-                                        }
-                                    }
+                            } else if format_selection_date > 0 {
+                                format_selection_date -= 1;
+                                if format_selection_date < format_date_offset {
+                                    format_date_offset = format_selection_date;
                                 }
-                                KeyCode::Left => {
-                                    format_focus_time = true;
-                                }
-                                KeyCode::Right => {
-                                    format_focus_time = false;
-                                }
-                                KeyCode::Enter => {
-                                    state.time_format =
-                                        TIME_OPTS[format_selection_time].to_string();
-                                    state.date_format =
-                                        DATE_OPTS[format_selection_date].to_string();
-                                    let _ = state.set_status(crate::fl!(
-                                        "tui-format-set-status",
-                                        "time" => &state.time_format,
-                                        "date" => &state.date_format
-                                    ));
-                                    status_timer = STATUS_TIMER_DURATION;
-                                    format_picker_visible = false;
-                                }
-                                KeyCode::Esc => {
-                                    format_picker_visible = false;
-                                }
-                                _ => {}
                             }
-                            continue;
                         }
-
-                        if number_format_picker_visible {
-                            const FORMAT_OPTS: [&str; 2] = ["pretty", "precision"];
-                            const DECIMALS_MAX: usize = 15;
-                            const VISIBLE: usize = 6;
-                            match key.code {
-                                KeyCode::Up => {
-                                    if number_format_focus {
-                                        number_format_selection =
-                                            number_format_selection.saturating_sub(1);
-                                    } else if number_decimals_selection > 0 {
-                                        number_decimals_selection -= 1;
-                                        if number_decimals_selection < number_decimals_offset {
-                                            number_decimals_offset = number_decimals_selection;
-                                        }
+                        KeyCode::Down => {
+                            if format_focus_time {
+                                let max = TIME_OPTS.len() - 1;
+                                if format_selection_time < max {
+                                    format_selection_time += 1;
+                                    if format_selection_time >= format_time_offset + VISIBLE {
+                                        format_time_offset = format_selection_time + 1 - VISIBLE;
                                     }
                                 }
-                                KeyCode::Down => {
-                                    if number_format_focus {
-                                        let max = FORMAT_OPTS.len() - 1;
-                                        if number_format_selection < max {
-                                            number_format_selection += 1;
-                                        }
-                                    } else if number_decimals_selection < DECIMALS_MAX {
-                                        number_decimals_selection += 1;
-                                        if number_decimals_selection
-                                            >= number_decimals_offset + VISIBLE
-                                        {
-                                            number_decimals_offset =
-                                                number_decimals_selection + 1 - VISIBLE;
-                                        }
+                            } else {
+                                let max = DATE_OPTS.len() - 1;
+                                if format_selection_date < max {
+                                    format_selection_date += 1;
+                                    if format_selection_date >= format_date_offset + VISIBLE {
+                                        format_date_offset = format_selection_date + 1 - VISIBLE;
                                     }
                                 }
-                                KeyCode::Left => {
-                                    number_format_focus = true;
-                                }
-                                KeyCode::Right => {
-                                    number_format_focus = false;
-                                }
-                                KeyCode::Enter => {
-                                    state.number_format =
-                                        FORMAT_OPTS[number_format_selection].to_string();
-                                    state.number_max_decimals = number_decimals_selection;
-                                    state.cache.invalidate_all();
-                                    let _ = state.set_status(crate::fl!(
-                                        "tui-number-format-set-status",
-                                        "format" => &state.number_format,
-                                        "decimals" => &state.number_max_decimals.to_string()
-                                    ));
-                                    status_timer = STATUS_TIMER_DURATION;
-                                    number_format_picker_visible = false;
-                                }
-                                KeyCode::Esc => {
-                                    number_format_picker_visible = false;
-                                }
-                                _ => {}
                             }
-                            continue;
                         }
+                        KeyCode::Left => {
+                            format_focus_time = true;
+                        }
+                        KeyCode::Right => {
+                            format_focus_time = false;
+                        }
+                        KeyCode::Enter => {
+                            state.time_format = TIME_OPTS[format_selection_time].to_string();
+                            state.date_format = DATE_OPTS[format_selection_date].to_string();
+                            let _ = state.set_status(crate::fl!(
+                                "tui-format-set-status",
+                                "time" => &state.time_format,
+                                "date" => &state.date_format
+                            ));
+                            status_timer = STATUS_TIMER_DURATION;
+                            format_picker_visible = false;
+                        }
+                        KeyCode::Esc => {
+                            format_picker_visible = false;
+                        }
+                        _ => {}
+                    }
+                    continue;
+                }
 
-                        // Handle save prompt input first
-                        if save_prompt_active {
+                if number_format_picker_visible {
+                    const FORMAT_OPTS: [&str; 2] = ["pretty", "precision"];
+                    const DECIMALS_MAX: usize = 15;
+                    const VISIBLE: usize = 6;
+                    match key.code {
+                        KeyCode::Up => {
+                            if number_format_focus {
+                                number_format_selection = number_format_selection.saturating_sub(1);
+                            } else if number_decimals_selection > 0 {
+                                number_decimals_selection -= 1;
+                                if number_decimals_selection < number_decimals_offset {
+                                    number_decimals_offset = number_decimals_selection;
+                                }
+                            }
+                        }
+                        KeyCode::Down => {
+                            if number_format_focus {
+                                let max = FORMAT_OPTS.len() - 1;
+                                if number_format_selection < max {
+                                    number_format_selection += 1;
+                                }
+                            } else if number_decimals_selection < DECIMALS_MAX {
+                                number_decimals_selection += 1;
+                                if number_decimals_selection >= number_decimals_offset + VISIBLE {
+                                    number_decimals_offset =
+                                        number_decimals_selection + 1 - VISIBLE;
+                                }
+                            }
+                        }
+                        KeyCode::Left => {
+                            number_format_focus = true;
+                        }
+                        KeyCode::Right => {
+                            number_format_focus = false;
+                        }
+                        KeyCode::Enter => {
+                            state.number_format = FORMAT_OPTS[number_format_selection].to_string();
+                            state.number_max_decimals = number_decimals_selection;
+                            state.cache.invalidate_all();
+                            let _ = state.set_status(crate::fl!(
+                                "tui-number-format-set-status",
+                                "format" => &state.number_format,
+                                "decimals" => &state.number_max_decimals.to_string()
+                            ));
+                            status_timer = STATUS_TIMER_DURATION;
+                            number_format_picker_visible = false;
+                        }
+                        KeyCode::Esc => {
+                            number_format_picker_visible = false;
+                        }
+                        _ => {}
+                    }
+                    continue;
+                }
+
+                // Handle save prompt input first
+                if save_prompt_active {
                     match key.code {
                         KeyCode::Esc => {
                             save_prompt_active = false;

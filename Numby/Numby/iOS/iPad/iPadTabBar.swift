@@ -142,9 +142,23 @@ class iPadTabButton: UIControl {
 
     private let closeButton: UIButton = {
         let btn = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 9, weight: .bold)
-        btn.setImage(UIImage(systemName: "xmark", withConfiguration: config), for: .normal)
+        let symbolConfig = UIImage.SymbolConfiguration(pointSize: 9, weight: .bold)
+        if #available(iOS 15.0, *) {
+            var buttonConfig = UIButton.Configuration.plain()
+            buttonConfig.image = UIImage(systemName: "xmark", withConfiguration: symbolConfig)
+            buttonConfig.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0)
+            buttonConfig.background.backgroundColor = .clear
+            buttonConfig.background.cornerRadius = 9
+            btn.configuration = buttonConfig
+        } else {
+            btn.setImage(UIImage(systemName: "xmark", withConfiguration: symbolConfig), for: .normal)
+        }
         btn.translatesAutoresizingMaskIntoConstraints = false
+        btn.layer.cornerRadius = 9
+        btn.clipsToBounds = true
+#if os(visionOS)
+        btn.hoverStyle = UIHoverStyle(shape: .capsule)
+#endif
         return btn
     }()
 

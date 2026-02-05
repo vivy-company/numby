@@ -3,8 +3,8 @@
 //! This module fetches live currency exchange rates from free APIs
 //! and checks for stale rates.
 
-use anyhow::{Context, Result};
 use crate::fl;
+use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -110,9 +110,8 @@ fn fetch_from_url(url: &str) -> Result<(HashMap<String, f64>, String)> {
         ));
     }
 
-    let api_response: CurrencyApiResponse = response
-        .into_json()
-        .context(fl!("currency-parse-json"))?;
+    let api_response: CurrencyApiResponse =
+        response.into_json().context(fl!("currency-parse-json"))?;
 
     // Convert to uppercase keys and invert rates (API gives USD->X, we store as rate to convert TO USD)
     let mut rates: HashMap<String, f64> = HashMap::new();

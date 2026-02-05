@@ -640,7 +640,11 @@ fn test_percentage_with_parentheses_of() {
 
     // 200 * (10% of 50) = 200 * 5 = 1000
     let (stdout, _) = run_command(&["run", "--", "200 * (10% of 50)"]);
-    assert!(stdout.contains("1.0k") || stdout.contains("1000"), "got {}", stdout);
+    assert!(
+        stdout.contains("1.0k") || stdout.contains("1000"),
+        "got {}",
+        stdout
+    );
 }
 
 #[test]
@@ -714,7 +718,11 @@ fn test_percentage_decimal_values() {
 
     // 33.33% of 300 = 99.99
     let (stdout, _) = run_command(&["run", "--", "33.33% of 300"]);
-    assert!(stdout.contains("99.99") || stdout.contains("100"), "got {}", stdout);
+    assert!(
+        stdout.contains("99.99") || stdout.contains("100"),
+        "got {}",
+        stdout
+    );
 
     // (2.5% of 1000) = 25
     let (stdout, _) = run_command(&["run", "--", "(2.5% of 1000)"]);
@@ -841,22 +849,38 @@ fn test_percentage_parens_multiplication() {
 
     // (50% of 100) * (50% of 100) = 50 * 50 = 2500
     let (stdout, _) = run_command(&["run", "--", "(50% of 100) * (50% of 100)"]);
-    assert!(stdout.contains("2.5k") || stdout.contains("2500"), "got {}", stdout);
+    assert!(
+        stdout.contains("2.5k") || stdout.contains("2500"),
+        "got {}",
+        stdout
+    );
 }
 
 #[test]
 fn test_percentage_large_numbers() {
     // 15% of 1000000 = 150000
     let (stdout, _) = run_command(&["run", "--", "15% of 1000000"]);
-    assert!(stdout.contains("150") || stdout.contains("150.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("150") || stdout.contains("150.0k"),
+        "got {}",
+        stdout
+    );
 
     // (5% of 1000000) = 50000
     let (stdout, _) = run_command(&["run", "--", "(5% of 1000000)"]);
-    assert!(stdout.contains("50") || stdout.contains("50.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("50") || stdout.contains("50.0k"),
+        "got {}",
+        stdout
+    );
 
     // 1000000 + 10% = 1100000
     let (stdout, _) = run_command(&["run", "--", "1000000 + 10%"]);
-    assert!(stdout.contains("1.1M") || stdout.contains("1100000"), "got {}", stdout);
+    assert!(
+        stdout.contains("1.1M") || stdout.contains("1100000"),
+        "got {}",
+        stdout
+    );
 }
 
 #[test]
@@ -867,7 +891,11 @@ fn test_percentage_small_numbers() {
 
     // 10% of 0.01 = 0.001
     let (stdout, _) = run_command(&["run", "--", "10% of 0.01"]);
-    assert!(stdout.contains("0.001") || stdout.contains("0.00"), "got {}", stdout);
+    assert!(
+        stdout.contains("0.001") || stdout.contains("0.00"),
+        "got {}",
+        stdout
+    );
 
     // (25% of 0.8) = 0.2
     let (stdout, _) = run_command(&["run", "--", "(25% of 0.8)"]);
@@ -878,7 +906,11 @@ fn test_percentage_small_numbers() {
 fn test_percentage_triple_nesting() {
     // (((100 + 50%) - 25%) + 10%) = ((150 - 25%) + 10%) = (112 + 10%) = 123.2 ≈ 124 (rounded)
     let (stdout, _) = run_command(&["run", "--", "(((100 + 50%) - 25%) + 10%)"]);
-    assert!(stdout.contains("123") || stdout.contains("124"), "got {}", stdout);
+    assert!(
+        stdout.contains("123") || stdout.contains("124"),
+        "got {}",
+        stdout
+    );
 
     // (10% of (20% of (50% of 1000))) = 10% of (20% of 500) = 10% of 100 = 10
     let (stdout, _) = run_command(&["run", "--", "(10% of (20% of (50% of 1000)))"]);
@@ -897,15 +929,27 @@ fn test_percentage_with_scales() {
 
     // (5% of 2M) = 100000 = 100k
     let (stdout, _) = run_command(&["run", "--", "(5% of 2M)"]);
-    assert!(stdout.contains("100") || stdout.contains("100.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("100") || stdout.contains("100.0k"),
+        "got {}",
+        stdout
+    );
 
     // 1k + 10% = 1100
     let (stdout, _) = run_command(&["run", "--", "1k + 10%"]);
-    assert!(stdout.contains("1.1k") || stdout.contains("1100"), "got {}", stdout);
+    assert!(
+        stdout.contains("1.1k") || stdout.contains("1100"),
+        "got {}",
+        stdout
+    );
 
     // (1M - 15%) = 850000 = 850k
     let (stdout, _) = run_command(&["run", "--", "(1M - 15%)"]);
-    assert!(stdout.contains("850") || stdout.contains("850.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("850") || stdout.contains("850.0k"),
+        "got {}",
+        stdout
+    );
 }
 
 #[test]
@@ -919,7 +963,11 @@ fn test_percentage_shopping_scenarios() {
     // Buy 3 items at $25 each, get 15% off total
     // 3 * 25 = 75, 75 - (15% of 75) = 63.75
     let (stdout, _) = run_command(&["run", "--", "3 * 25 - (15% of 75)"]);
-    assert!(stdout.contains("63.75") || stdout.contains("63.7"), "got {}", stdout);
+    assert!(
+        stdout.contains("63.75") || stdout.contains("63.7"),
+        "got {}",
+        stdout
+    );
 
     // Item costs $49.99, tax is 8.25%
     // 49.99 + (8.25% of 49.99) = 49.99 + 4.124 ≈ 54.11
@@ -942,32 +990,56 @@ fn test_percentage_finance_scenarios() {
     // Investment return: $10000 with 7% annual return
     // (10000 + 7%) = 10700
     let (stdout, _) = run_command(&["run", "--", "(10000 + 7%)"]);
-    assert!(stdout.contains("10.7k") || stdout.contains("10700"), "got {}", stdout);
+    assert!(
+        stdout.contains("10.7k") || stdout.contains("10700"),
+        "got {}",
+        stdout
+    );
 
     // Loan interest: $5000 loan, 12% interest
     // 5000 + (12% of 5000) = 5600
     let (stdout, _) = run_command(&["run", "--", "5000 + (12% of 5000)"]);
-    assert!(stdout.contains("5.6k") || stdout.contains("5600"), "got {}", stdout);
+    assert!(
+        stdout.contains("5.6k") || stdout.contains("5600"),
+        "got {}",
+        stdout
+    );
 
     // Down payment: 20% of $250000 home
     // (20% of 250000) = 50000
     let (stdout, _) = run_command(&["run", "--", "(20% of 250000)"]);
-    assert!(stdout.contains("50") || stdout.contains("50.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("50") || stdout.contains("50.0k"),
+        "got {}",
+        stdout
+    );
 
     // Commission: 3% on $500000 sale
     // (3% of 500000) = 15000
     let (stdout, _) = run_command(&["run", "--", "(3% of 500000)"]);
-    assert!(stdout.contains("15") || stdout.contains("15.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("15") || stdout.contains("15.0k"),
+        "got {}",
+        stdout
+    );
 
     // Savings goal: Need $10000, currently have $7500, what % achieved?
     // This is reverse calculation, but we can test: 75% of 10000 = 7500
     let (stdout, _) = run_command(&["run", "--", "75% of 10000"]);
-    assert!(stdout.contains("7.5k") || stdout.contains("7500"), "got {}", stdout);
+    assert!(
+        stdout.contains("7.5k") || stdout.contains("7500"),
+        "got {}",
+        stdout
+    );
 
     // Tax bracket: 22% on income above threshold
     // If excess income is $30000: (22% of 30000) = 6600
     let (stdout, _) = run_command(&["run", "--", "(22% of 30000)"]);
-    assert!(stdout.contains("6.6k") || stdout.contains("6600"), "got {}", stdout);
+    assert!(
+        stdout.contains("6.6k") || stdout.contains("6600"),
+        "got {}",
+        stdout
+    );
 }
 
 #[test]
@@ -975,11 +1047,19 @@ fn test_percentage_tip_scenarios() {
     // Restaurant bill $85.50, 18% tip
     // (18% of 85.50) = 15.39
     let (stdout, _) = run_command(&["run", "--", "(18% of 85.50)"]);
-    assert!(stdout.contains("15.39") || stdout.contains("15.4"), "got {}", stdout);
+    assert!(
+        stdout.contains("15.39") || stdout.contains("15.4"),
+        "got {}",
+        stdout
+    );
 
     // Total with 20% tip: 85.50 + (20% of 85.50) ≈ 102.6 (may round to 103)
     let (stdout, _) = run_command(&["run", "--", "85.50 + (20% of 85.50)"]);
-    assert!(stdout.contains("102") || stdout.contains("103"), "got {}", stdout);
+    assert!(
+        stdout.contains("102") || stdout.contains("103"),
+        "got {}",
+        stdout
+    );
 
     // Split bill 4 ways with 15% tip
     // (120 + 15%) / 4 = 138 / 4 = 34.5
@@ -997,17 +1077,29 @@ fn test_percentage_salary_scenarios() {
     // Annual salary $75000, 3% raise
     // (75000 + 3%) = 77250 (may display as 77.2k or 77.25k)
     let (stdout, _) = run_command(&["run", "--", "(75000 + 3%)"]);
-    assert!(stdout.contains("77.2") || stdout.contains("77250"), "got {}", stdout);
+    assert!(
+        stdout.contains("77.2") || stdout.contains("77250"),
+        "got {}",
+        stdout
+    );
 
     // Bonus: 10% of $60000 salary
     // (10% of 60000) = 6000
     let (stdout, _) = run_command(&["run", "--", "(10% of 60000)"]);
-    assert!(stdout.contains("6") || stdout.contains("6.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("6") || stdout.contains("6.0k"),
+        "got {}",
+        stdout
+    );
 
     // Take-home after 25% tax on $80000
     // (80000 - 25%) = 60000
     let (stdout, _) = run_command(&["run", "--", "(80000 - 25%)"]);
-    assert!(stdout.contains("60") || stdout.contains("60.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("60") || stdout.contains("60.0k"),
+        "got {}",
+        stdout
+    );
 
     // 401k contribution: 6% of $5000 monthly
     // (6% of 5000) = 300
@@ -1038,12 +1130,20 @@ fn test_percentage_fitness_scenarios() {
     // Calorie deficit: 2000 daily - 20%
     // (2000 - 20%) = 1600
     let (stdout, _) = run_command(&["run", "--", "(2000 - 20%)"]);
-    assert!(stdout.contains("1.6k") || stdout.contains("1600"), "got {}", stdout);
+    assert!(
+        stdout.contains("1.6k") || stdout.contains("1600"),
+        "got {}",
+        stdout
+    );
 
     // Protein goal: 30% of 2500 calories (then /4 for grams)
     // (30% of 2500) / 4 = 750 / 4 ≈ 187-188
     let (stdout, _) = run_command(&["run", "--", "(30% of 2500) / 4"]);
-    assert!(stdout.contains("187") || stdout.contains("188"), "got {}", stdout);
+    assert!(
+        stdout.contains("187") || stdout.contains("188"),
+        "got {}",
+        stdout
+    );
 
     // Weight loss: lost 15% of starting 200 lbs
     // (15% of 200) = 30
@@ -1062,7 +1162,11 @@ fn test_percentage_business_scenarios() {
     // Profit = 50000 - 35000 = 15000
     // We can test: 30% of 50000 = 15000 (30% margin)
     let (stdout, _) = run_command(&["run", "--", "(30% of 50000)"]);
-    assert!(stdout.contains("15") || stdout.contains("15.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("15") || stdout.contains("15.0k"),
+        "got {}",
+        stdout
+    );
 
     // Markup: cost $40, markup 60%
     // (40 + 60%) = 64
@@ -1072,17 +1176,29 @@ fn test_percentage_business_scenarios() {
     // Inventory shrinkage: 2% of $100000 inventory
     // (2% of 100000) = 2000
     let (stdout, _) = run_command(&["run", "--", "(2% of 100000)"]);
-    assert!(stdout.contains("2") || stdout.contains("2.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("2") || stdout.contains("2.0k"),
+        "got {}",
+        stdout
+    );
 
     // Customer retention: lost 5% of 10000 customers
     // 10000 - (5% of 10000) = 9500
     let (stdout, _) = run_command(&["run", "--", "10000 - (5% of 10000)"]);
-    assert!(stdout.contains("9.5k") || stdout.contains("9500"), "got {}", stdout);
+    assert!(
+        stdout.contains("9.5k") || stdout.contains("9500"),
+        "got {}",
+        stdout
+    );
 
     // Revenue growth: $1M last year + 12% growth
     // (1000000 + 12%) = 1120000 (may display as 1.1M rounded)
     let (stdout, _) = run_command(&["run", "--", "(1000000 + 12%)"]);
-    assert!(stdout.contains("1.1") || stdout.contains("1120000"), "got {}", stdout);
+    assert!(
+        stdout.contains("1.1") || stdout.contains("1120000"),
+        "got {}",
+        stdout
+    );
 }
 
 #[test]
@@ -1096,17 +1212,29 @@ fn test_percentage_education_scenarios() {
     // Scholarship: covers 75% of $40000 tuition
     // (75% of 40000) = 30000
     let (stdout, _) = run_command(&["run", "--", "(75% of 40000)"]);
-    assert!(stdout.contains("30") || stdout.contains("30.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("30") || stdout.contains("30.0k"),
+        "got {}",
+        stdout
+    );
 
     // Remaining tuition after scholarship
     // 40000 - (75% of 40000) = 10000
     let (stdout, _) = run_command(&["run", "--", "40000 - (75% of 40000)"]);
-    assert!(stdout.contains("10") || stdout.contains("10.0k"), "got {}", stdout);
+    assert!(
+        stdout.contains("10") || stdout.contains("10.0k"),
+        "got {}",
+        stdout
+    );
 
     // Curve: add 8% to everyone's score of 72
     // (72 + 8%) = 77.76
     let (stdout, _) = run_command(&["run", "--", "(72 + 8%)"]);
-    assert!(stdout.contains("77.76") || stdout.contains("77.7"), "got {}", stdout);
+    assert!(
+        stdout.contains("77.76") || stdout.contains("77.7"),
+        "got {}",
+        stdout
+    );
 }
 
 #[test]

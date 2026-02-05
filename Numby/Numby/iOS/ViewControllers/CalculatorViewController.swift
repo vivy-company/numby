@@ -668,6 +668,7 @@ class CalculatorViewController: UIViewController {
 
     @objc private func configDidChange() {
         applyNumberFormat()
+        scheduleEvaluation()
     }
 
     private func applyNumberFormat() {

@@ -93,9 +93,7 @@ fn main() -> Result<()> {
     let mut config = config::load_config();
 
     let cli_locale = detect_cli_locale_arg();
-    let initial_locale = cli_locale
-        .as_deref()
-        .or(config.locale.as_deref());
+    let initial_locale = cli_locale.as_deref().or(config.locale.as_deref());
     i18n::init_locale(initial_locale);
 
     let command = Args::command().about(crate::fl!("app-description-long"));
@@ -127,7 +125,10 @@ fn main() -> Result<()> {
                 config.currencies = rates;
             }
             Err(e) => {
-                eprintln!("{}", crate::fl!("main-currency-update-failed", "error" => &e.to_string()));
+                eprintln!(
+                    "{}",
+                    crate::fl!("main-currency-update-failed", "error" => &e.to_string())
+                );
                 eprintln!("{}", crate::fl!("main-currency-using-cache"));
             }
         }
@@ -169,7 +170,10 @@ fn main() -> Result<()> {
                 config.number_format = normalized.to_string();
             }
             None => {
-                let msg = format!("Invalid --number-format '{}'; using {}", fmt, config.number_format);
+                let msg = format!(
+                    "Invalid --number-format '{}'; using {}",
+                    fmt, config.number_format
+                );
                 if run_cli {
                     eprintln!("{}", msg);
                 } else {

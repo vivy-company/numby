@@ -381,7 +381,9 @@ fn is_operator_token(token: &str) -> bool {
 fn is_operator_word(word: &str, config: &Config) -> bool {
     config.operators.keys().any(|op| {
         op.eq_ignore_ascii_case(word)
-            || op.split_whitespace().any(|part| part.eq_ignore_ascii_case(word))
+            || op
+                .split_whitespace()
+                .any(|part| part.eq_ignore_ascii_case(word))
     })
 }
 
@@ -517,9 +519,11 @@ fn strip_inline_annotations(
             || config.angular_units.contains_key(&lower)
             || config.data_units.contains_key(&lower)
             || config.speed_units.contains_key(&lower);
-        let is_known_currency = config.currencies.contains_key(upper.as_str()) || is_currency_word(&lower);
-        let is_known_keyword =
-            is_history_keyword(&lower) || is_datetime_keyword(&lower) || is_inline_operator_keyword(&lower);
+        let is_known_currency =
+            config.currencies.contains_key(upper.as_str()) || is_currency_word(&lower);
+        let is_known_keyword = is_history_keyword(&lower)
+            || is_datetime_keyword(&lower)
+            || is_inline_operator_keyword(&lower);
         let is_known_variable = variables.contains_key(cleaned.as_str());
 
         let looks_like_code = cleaned.len() >= 2 && cleaned.chars().all(|c| c.is_ascii_uppercase());

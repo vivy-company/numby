@@ -15,6 +15,17 @@ fn build_allowed_roots(current_dir: &Path) -> Vec<PathBuf> {
     roots.push(canonicalize_or_same(current_dir));
     if let Some(home) = dirs::home_dir() {
         roots.push(canonicalize_or_same(&home));
+    } else if let Some(home) = std::env::var_os("HOME") {
+        roots.push(canonicalize_or_same(Path::new(&home)));
+    }
+    if let Some(config_dir) = dirs::config_dir() {
+        roots.push(canonicalize_or_same(&config_dir));
+    }
+    if let Some(data_dir) = dirs::data_dir() {
+        roots.push(canonicalize_or_same(&data_dir));
+    }
+    if let Some(cache_dir) = dirs::cache_dir() {
+        roots.push(canonicalize_or_same(&cache_dir));
     }
     roots.extend(extra_allowed_roots());
     roots

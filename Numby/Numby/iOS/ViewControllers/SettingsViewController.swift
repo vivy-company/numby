@@ -27,6 +27,33 @@ class SettingsViewController: UIViewController {
     private var showUpdateSuccess = false
     private let numbyWrapper = NumbyWrapper()
 
+    private enum AppearanceRow: Equatable {
+        case theme
+        case fontSize
+        case font
+        case syntaxHighlighting
+        case numberFormat
+        case maxDecimals
+        case maxDecimalsHint
+        case preview
+    }
+
+    private var appearanceRows: [AppearanceRow] {
+        var rows: [AppearanceRow] = [
+            .theme,
+            .fontSize,
+            .font,
+            .syntaxHighlighting,
+            .numberFormat
+        ]
+        if Configuration.shared.config.numberFormat == "precision" {
+            rows.append(.maxDecimals)
+            rows.append(.maxDecimalsHint)
+        }
+        rows.append(.preview)
+        return rows
+    }
+
     // MARK: - UI Components
 
     private lazy var tableView: UITableView = {
@@ -165,6 +192,11 @@ class SettingsViewController: UIViewController {
     }
 
     @objc private func configDidChange() {
+        let config = Configuration.shared.config
+        _ = numbyWrapper.setNumberFormat(
+            config.numberFormat,
+            maxDecimals: config.numberMaxDecimals
+        )
         tableView.reloadData()
     }
 
@@ -195,7 +227,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         case .language:
             return 1 // Locale picker
         case .appearance:
-            return 8 // Theme, Font Size, Font, Syntax Highlighting, Number Format, Max Decimals, Hint, Preview
+            return appearanceRows.count
         case .currency:
             return 4 // API date, Last update, Update button, API info
         case .about:
@@ -232,10 +264,17 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         case .language:
             if indexPath.row == 0 { openSystemSettings() }
         case .appearance:
-            if indexPath.row == 0 { showThemeSelector() }
-            else if indexPath.row == 1 { return } // Font size slider
-            else if indexPath.row == 2 { showFontSelector() }
-            else if indexPath.row == 4 { showNumberFormatSelector() }
+            let row = appearanceRows[indexPath.row]
+            switch row {
+            case .theme:
+                showThemeSelector()
+            case .font:
+                showFontSelector()
+            case .numberFormat:
+                showNumberFormatSelector()
+            case .fontSize, .syntaxHighlighting, .maxDecimals, .maxDecimalsHint, .preview:
+                break
+            }
         case .currency:
             if indexPath.row == 2 { updateCurrencyRates() }
         case .about:
@@ -262,9 +301,10 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
 
     private func appearanceCell(for indexPath: IndexPath) -> UITableViewCell {
         let config = Configuration.shared.config
+        let row = appearanceRows[indexPath.row]
 
-        switch indexPath.row {
-        case 0: // Theme
+        switch row {
+        case .theme:
             let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
             var cellConfig = cell.defaultContentConfiguration()
             cellConfig.image = UIImage(systemName: "paintbrush.fill")
@@ -274,7 +314,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             cell.accessoryType = .disclosureIndicator
             return cell
 
-        case 1: // Font Size Slider
+        case .fontSize:
             guard let cell = tableView.dequeueReusableCell(withIdentifier: "SliderCell", for: indexPath) as? SliderCell else {
                 return UITableViewCell()
             }
@@ -292,7 +332,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             )
             return cell
 
-        case 2: // Font
+        case .font:
             let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
             var cellConfig = cell.defaultContentConfiguration()
             cellConfig.image = UIImage(systemName: "textformat")
@@ -302,7 +342,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             cell.accessoryType = .disclosureIndicator
             return cell
 
-        case 3: // Syntax Highlighting Switch
+        case .syntaxHighlighting:
             guard let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as? SwitchCell else {
                 return UITableViewCell()
             }
@@ -318,7 +358,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             )
             return cell
 
-        case 4: // Number Format
+        case .numberFormat:
             let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
             var cellConfig = cell.defaultContentConfiguration()
             cellConfig.image = UIImage(systemName: "number")
@@ -331,7 +371,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             cell.accessoryType = .disclosureIndicator
             return cell
 
-        case 5: // Max Decimals Slider
+        case .maxDecimals:
             guard let cell = tableView.dequeueReusableCell(withIdentifier: "SliderCell", for: indexPath) as? SliderCell else {
                 return UITableViewCell()
             }
@@ -352,7 +392,7 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             )
             return cell
 
-        case 6: // Max Decimals Hint
+        case .maxDecimalsHint:
             let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
             var cellConfig = cell.defaultContentConfiguration()
             cellConfig.text = NSLocalizedString("settings.number.maxDecimalsHint", comment: "")
@@ -362,20 +402,18 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             cell.selectionStyle = .none
             return cell
 
-        case 7: // Preview
+        case .preview:
             let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
             var cellConfig = cell.defaultContentConfiguration()
             cellConfig.image = UIImage(systemName: "eye")
             cellConfig.text = NSLocalizedString("settings.number.preview", comment: "")
-            let preview = numbyWrapper.evaluate("1234567.89").formatted ?? "—"
+            let previewExpression = config.numberFormat == "precision" ? "1/3" : "1234567.89"
+            let preview = numbyWrapper.evaluate(previewExpression).formatted ?? "—"
             cellConfig.secondaryText = preview
             cell.contentConfiguration = cellConfig
             cell.accessoryType = .none
             cell.selectionStyle = .none
             return cell
-
-        default:
-            return UITableViewCell()
         }
     }
 
@@ -579,8 +617,9 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         ))
 
         if let popover = alert.popoverPresentationController,
+           let rowIndex = appearanceRows.firstIndex(of: .numberFormat),
            let cell = tableView.cellForRow(
-            at: IndexPath(row: 4, section: Section.appearance.rawValue)
+            at: IndexPath(row: rowIndex, section: Section.appearance.rawValue)
            ) {
             popover.sourceView = cell
             popover.sourceRect = cell.bounds
@@ -622,31 +661,36 @@ class SliderCell: UITableViewCell {
         valueLabel.font = .systemFont(ofSize: 17)
         valueLabel.textColor = .secondaryLabel
         valueLabel.textAlignment = .right
+        valueLabel.setContentHuggingPriority(.required, for: .horizontal)
+        valueLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         slider.addTarget(self, action: #selector(sliderChanged), for: .valueChanged)
         slider.minimumTrackTintColor = .systemBlue
         slider.maximumTrackTintColor = .systemGray4
+        slider.translatesAutoresizingMaskIntoConstraints = false
 
         let topStack = UIStackView(arrangedSubviews: [iconView, titleLabel, valueLabel])
         topStack.axis = .horizontal
         topStack.spacing = 12
         topStack.alignment = .center
+        topStack.translatesAutoresizingMaskIntoConstraints = false
 
-        let mainStack = UIStackView(arrangedSubviews: [topStack, slider])
-        mainStack.axis = .vertical
-        mainStack.spacing = 8
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-
-        contentView.addSubview(mainStack)
+        contentView.addSubview(topStack)
+        contentView.addSubview(slider)
 
         NSLayoutConstraint.activate([
             iconView.widthAnchor.constraint(equalToConstant: 28),
             iconView.heightAnchor.constraint(equalToConstant: 28),
 
-            mainStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 11),
-            mainStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            mainStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            mainStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -11)
+            topStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 11),
+            topStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            topStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+
+            slider.topAnchor.constraint(equalTo: topStack.bottomAnchor, constant: 8),
+            slider.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            slider.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            slider.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -11)
         ])
     }
 

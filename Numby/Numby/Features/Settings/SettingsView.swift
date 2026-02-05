@@ -132,24 +132,26 @@ struct SettingsView: View {
                     )
                 }
 
-                Stepper(
-                    "\(localizedNumberMaxDecimals): \(configManager.config.numberMaxDecimals)",
-                    value: $configManager.config.numberMaxDecimals,
-                    in: 0...15,
-                    step: 1
-                )
-                .onChange(of: configManager.config.numberMaxDecimals) { newValue in
-                    configManager.config.numberMaxDecimals = newValue
-                    configManager.save()
-                    _ = numbyWrapper.setNumberFormat(
-                        configManager.config.numberFormat,
-                        maxDecimals: newValue
+                if configManager.config.numberFormat == "precision" {
+                    Stepper(
+                        "\(localizedNumberMaxDecimals): \(configManager.config.numberMaxDecimals)",
+                        value: $configManager.config.numberMaxDecimals,
+                        in: 0...15,
+                        step: 1
                     )
-                }
+                    .onChange(of: configManager.config.numberMaxDecimals) { newValue in
+                        configManager.config.numberMaxDecimals = newValue
+                        configManager.save()
+                        _ = numbyWrapper.setNumberFormat(
+                            configManager.config.numberFormat,
+                            maxDecimals: newValue
+                        )
+                    }
 
-                Text(localizedNumberMaxDecimalsHint)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    Text(localizedNumberMaxDecimalsHint)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
 
 

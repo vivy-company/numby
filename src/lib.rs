@@ -368,7 +368,10 @@ pub unsafe extern "C" fn libnumby_load_config(ctx: *mut NumbyContext, path: *con
                     context.rates = config.currencies;
                     context.number_format = config.number_format;
                     context.number_max_decimals = config.number_max_decimals;
-                    set_config_override_path(validated_path);
+                    set_config_override_path(validated_path.clone());
+                    crate::config::set_config_path_override(
+                        validated_path.to_string_lossy().as_ref(),
+                    );
                     0
                 }
                 Err(_) => -1,
@@ -619,6 +622,7 @@ pub unsafe extern "C" fn libnumby_update_currency_rates(ctx: *mut NumbyContext) 
     };
 
     set_config_override_path(saved_path.clone());
+    crate::config::set_config_path_override(saved_path.to_string_lossy().as_ref());
 
     // Update context with new rates
     let context = &mut *ctx;
@@ -683,9 +687,11 @@ pub unsafe extern "C" fn libnumby_set_currency_rates_json(
 
     // Update config file with both API date and current fetch timestamp
     let config_path = get_config_override_path().unwrap_or_else(crate::config::get_config_path);
-    if crate::config::update_currency_rates_at_path(&config_path, rates.clone(), api_date).is_err() {
+    if crate::config::update_currency_rates_at_path(&config_path, rates.clone(), api_date).is_err()
+    {
         return -1;
     }
+    crate::config::set_config_path_override(config_path.to_string_lossy().as_ref());
 
     // Update context
     let context = &mut *ctx;

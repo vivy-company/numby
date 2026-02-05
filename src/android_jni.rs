@@ -66,7 +66,9 @@ pub extern "system" fn Java_com_numby_NumbyWrapper_evaluate<'local>(
 
     // Default error result
     let create_error_result = |env: &mut JNIEnv<'local>, error: &str| -> JObject<'local> {
-        let error_str = env.new_string(error).unwrap_or_else(|_| JObject::null().into());
+        let error_str = env
+            .new_string(error)
+            .unwrap_or_else(|_| JObject::null().into());
         env.new_object(
             &result_class,
             "(DLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
@@ -279,8 +281,7 @@ pub extern "system" fn Java_com_numby_NumbyWrapper_setNumberFormat(
 
     let context = unsafe { &mut *(ctx as *mut AppState) };
     context.number_format = normalized.to_string();
-    context.number_max_decimals =
-        crate::prettify::clamp_max_decimals(max_decimals as usize);
+    context.number_max_decimals = crate::prettify::clamp_max_decimals(max_decimals as usize);
     0
 }
 

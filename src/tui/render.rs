@@ -234,8 +234,7 @@ fn render_help_overlay(f: &mut Frame, size: Rect) {
     let mid = entries.len().div_ceil(2);
     let (left, right) = entries.split_at(mid);
 
-    let key =
-        |k: &str| Span::styled(k.to_string(), Style::default().fg(Color::LightCyan).bold());
+    let key = |k: &str| Span::styled(k.to_string(), Style::default().fg(Color::LightCyan).bold());
     let row_line = |(k, v): (&String, &String)| {
         Line::from(vec![
             key(k),
@@ -343,11 +342,9 @@ fn render_locale_overlay(
     f.render_widget(Paragraph::new(lines).style(bg_style), regions[1]);
 
     // Controls footer
-    let footer = Paragraph::new(Line::from(vec![Span::raw(
-        fl!("tui-locale-footer"),
-    )]))
-    .style(bg_style)
-    .alignment(Alignment::Center);
+    let footer = Paragraph::new(Line::from(vec![Span::raw(fl!("tui-locale-footer"))]))
+        .style(bg_style)
+        .alignment(Alignment::Center);
     f.render_widget(footer, regions[2]);
 }
 
@@ -470,11 +467,9 @@ fn render_format_overlay(
     f.render_widget(Paragraph::new(date_lines).style(bg_style), columns[1]);
 
     // Controls footer at bottom of overlay
-    let controls = Paragraph::new(Line::from(vec![Span::raw(
-        fl!("tui-format-footer"),
-    )]))
-    .style(bg_style)
-    .alignment(Alignment::Left);
+    let controls = Paragraph::new(Line::from(vec![Span::raw(fl!("tui-format-footer"))]))
+        .style(bg_style)
+        .alignment(Alignment::Left);
     let footer_area = Rect {
         x: area.x,
         y: area.y + area.height.saturating_sub(1),
@@ -527,11 +522,7 @@ fn render_number_format_overlay(
         Style::default().fg(Color::LightCyan).bold(),
     )]));
     let format_visible = columns[0].height as usize - 1;
-    for (i, opt) in options_format
-        .iter()
-        .enumerate()
-        .take(format_visible)
-    {
+    for (i, opt) in options_format.iter().enumerate().take(format_visible) {
         let is_selected = i == format_idx;
         let marker = if is_selected { "●" } else { "○" };
         let preview = crate::prettify::format_number(preview_value, opt, decimals_idx);
@@ -585,11 +576,9 @@ fn render_number_format_overlay(
     f.render_widget(Paragraph::new(format_lines).style(bg_style), columns[0]);
     f.render_widget(Paragraph::new(decimals_lines).style(bg_style), columns[1]);
 
-    let controls = Paragraph::new(Line::from(vec![Span::raw(
-        fl!("tui-number-format-footer"),
-    )]))
-    .style(bg_style)
-    .alignment(Alignment::Left);
+    let controls = Paragraph::new(Line::from(vec![Span::raw(fl!("tui-number-format-footer"))]))
+        .style(bg_style)
+        .alignment(Alignment::Left);
     let footer_area = Rect {
         x: area.x,
         y: area.y + area.height.saturating_sub(1),
@@ -608,7 +597,10 @@ fn render_save_prompt(f: &mut Frame, size: Rect, prompt: &str) {
     };
 
     let filename_span = if prompt.is_empty() {
-        Span::styled(fl!("tui-save-default-filename"), Style::default().fg(Color::White))
+        Span::styled(
+            fl!("tui-save-default-filename"),
+            Style::default().fg(Color::White),
+        )
     } else {
         Span::styled(prompt.to_string(), Style::default().fg(Color::White))
     };
@@ -621,10 +613,7 @@ fn render_save_prompt(f: &mut Frame, size: Rect, prompt: &str) {
         Span::raw(" "),
         filename_span,
         Span::raw("  "),
-        Span::styled(
-            fl!("tui-save-hint"),
-            Style::default().fg(Color::Gray),
-        ),
+        Span::styled(fl!("tui-save-hint"), Style::default().fg(Color::Gray)),
     ]);
 
     let paragraph = Paragraph::new(content).style(Style::default().bg(Color::Rgb(48, 52, 63)));

@@ -1,16 +1,16 @@
+mod datetime;
 mod history;
 mod math;
 mod percentage;
 mod unit;
 mod variable;
-mod datetime;
 
+pub use datetime::DateTimeAgent;
 pub use history::HistoryAgent;
 pub use math::MathAgent;
 pub use percentage::PercentageAgent;
 pub use unit::UnitAgent;
 pub use variable::VariableAgent;
-pub use datetime::DateTimeAgent;
 
 /// Agent priority constants. Lower priority values run first.
 /// The order is designed to process high-specificity agents before fallback math evaluation.

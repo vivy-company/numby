@@ -8,7 +8,9 @@ use crate::conversions::{
 };
 use crate::evaluator::{EvaluatorError, Result};
 use crate::models::{HistoryEntry, Rates, TempUnits, Units};
-use crate::parser::{apply_function_parsing, apply_replacements, parse_percentage_op, preprocess_percentage_parens};
+use crate::parser::{
+    apply_function_parsing, apply_replacements, parse_percentage_op, preprocess_percentage_parens,
+};
 use crate::prettify::format_number;
 
 #[derive(Debug, Clone)]
@@ -423,14 +425,14 @@ fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalR
     }
 
     if let Some(caps) = MULT_DIV_RE.captures(expr) {
-        let left_val: f64 = caps[1].parse().map_err(|_| {
-            EvaluatorError::ParseError(crate::fl!("unit-algebra-parse-left"))
-        })?;
+        let left_val: f64 = caps[1]
+            .parse()
+            .map_err(|_| EvaluatorError::ParseError(crate::fl!("unit-algebra-parse-left")))?;
         let left_unit = caps[2].to_string();
         let op = &caps[3];
-        let right_val: f64 = caps[4].parse().map_err(|_| {
-            EvaluatorError::ParseError(crate::fl!("unit-algebra-parse-right"))
-        })?;
+        let right_val: f64 = caps[4]
+            .parse()
+            .map_err(|_| EvaluatorError::ParseError(crate::fl!("unit-algebra-parse-right")))?;
         let right_unit = caps.get(5).map(|m| m.as_str().to_string());
 
         // Perform the operation
@@ -438,9 +440,9 @@ fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalR
             "*" => left_val * right_val,
             "/" => left_val / right_val,
             _ => {
-                return Err(EvaluatorError::InvalidExpression(
-                    crate::fl!("unit-algebra-unsupported-op"),
-                ))
+                return Err(EvaluatorError::InvalidExpression(crate::fl!(
+                    "unit-algebra-unsupported-op"
+                )))
             }
         };
 
@@ -483,9 +485,9 @@ fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalR
 
         Ok(EvalResult { value, unit })
     } else {
-        Err(EvaluatorError::InvalidExpression(
-            crate::fl!("unit-algebra-not-expression"),
-        ))
+        Err(EvaluatorError::InvalidExpression(crate::fl!(
+            "unit-algebra-not-expression"
+        )))
     }
 }
 

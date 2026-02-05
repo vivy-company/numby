@@ -117,10 +117,13 @@ impl Agent for VariableAgent {
                                 line_vars.insert(line_idx, var.to_string());
                             }
                             Err(e) => {
-                                eprintln!("{}", crate::fl!(
-                                    "variable-tracking-update-failed",
-                                    "error" => &e.to_string()
-                                ));
+                                eprintln!(
+                                    "{}",
+                                    crate::fl!(
+                                        "variable-tracking-update-failed",
+                                        "error" => &e.to_string()
+                                    )
+                                );
                             }
                         }
 

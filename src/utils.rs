@@ -17,11 +17,12 @@ pub fn highlight_word_owned(
         .contains_key(clean_word)
     {
         Span::styled(word.to_string(), Style::default().fg(Color::Blue).bold())
-    } else if config
-        .operators
-        .keys()
-        .any(|op| op.eq_ignore_ascii_case(clean_word) || op.split_whitespace().any(|p| p.eq_ignore_ascii_case(clean_word)))
-        || config.functions.contains_key(clean_word)
+    } else if config.operators.keys().any(|op| {
+        op.eq_ignore_ascii_case(clean_word)
+            || op
+                .split_whitespace()
+                .any(|p| p.eq_ignore_ascii_case(clean_word))
+    }) || config.functions.contains_key(clean_word)
         || config.scales.contains_key(clean_word)
     {
         Span::styled(word.to_string(), Style::default().fg(Color::Green).bold())
@@ -36,8 +37,7 @@ pub fn highlight_word_owned(
         || config.speed_units.contains_key(&lower)
     {
         Span::styled(word.to_string(), Style::default().fg(Color::Yellow).bold())
-    } else if config.currencies.contains_key(&clean_word.to_uppercase())
-        || is_currency_word(&lower)
+    } else if config.currencies.contains_key(&clean_word.to_uppercase()) || is_currency_word(&lower)
     {
         Span::styled(word.to_string(), Style::default().fg(Color::Magenta).bold())
     } else if is_datetime_keyword(&lower) || is_timezone_keyword(&lower, config) {
@@ -102,8 +102,8 @@ fn is_datetime_keyword(word: &str) -> bool {
 fn is_timezone_keyword(word: &str, config: &crate::config::Config) -> bool {
     // Common abbreviations plus ability to parse IANA names
     let abbrs = [
-        "utc", "gmt", "est", "edt", "cst", "cdt", "mst", "mdt", "pst", "pdt", "bst", "cet",
-        "cest", "eet", "eest", "ist", "jst", "kst", "aest", "aedt", "acst", "acdt", "awst",
+        "utc", "gmt", "est", "edt", "cst", "cdt", "mst", "mdt", "pst", "pdt", "bst", "cet", "cest",
+        "eet", "eest", "ist", "jst", "kst", "aest", "aedt", "acst", "acdt", "awst",
     ];
     if abbrs.contains(&word) {
         return true;
