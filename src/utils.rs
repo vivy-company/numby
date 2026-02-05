@@ -1,119 +1,5 @@
 use arboard::Clipboard;
-use ratatui::style::{Color, Style, Stylize};
-use ratatui::text::Span;
 use ropey::Rope;
-
-#[allow(clippy::too_many_arguments)]
-pub fn highlight_word_owned(
-    word: &str,
-    variables: &crate::models::VarMap,
-    config: &crate::config::Config,
-) -> Span<'static> {
-    let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric());
-    let lower = clean_word.to_lowercase();
-    if variables
-        .read()
-        .expect("Failed to acquire read lock on variables")
-        .contains_key(clean_word)
-    {
-        Span::styled(word.to_string(), Style::default().fg(Color::Blue).bold())
-    } else if config.operators.keys().any(|op| {
-        op.eq_ignore_ascii_case(clean_word)
-            || op
-                .split_whitespace()
-                .any(|p| p.eq_ignore_ascii_case(clean_word))
-    }) || config.functions.contains_key(clean_word)
-        || config.scales.contains_key(clean_word)
-    {
-        Span::styled(word.to_string(), Style::default().fg(Color::Green).bold())
-    } else if config.length_units.contains_key(&lower)
-        || config.time_units.contains_key(&lower)
-        || config.temperature_units.contains_key(&lower)
-        || config.area_units.contains_key(&lower)
-        || config.volume_units.contains_key(&lower)
-        || config.weight_units.contains_key(&lower)
-        || config.angular_units.contains_key(&lower)
-        || config.data_units.contains_key(&lower)
-        || config.speed_units.contains_key(&lower)
-    {
-        Span::styled(word.to_string(), Style::default().fg(Color::Yellow).bold())
-    } else if config.currencies.contains_key(&clean_word.to_uppercase()) || is_currency_word(&lower)
-    {
-        Span::styled(word.to_string(), Style::default().fg(Color::Magenta).bold())
-    } else if is_datetime_keyword(&lower) || is_timezone_keyword(&lower, config) {
-        Span::styled(word.to_string(), Style::default().fg(Color::Cyan).bold())
-    } else {
-        Span::styled(word.to_string(), Style::default().fg(Color::Gray))
-    }
-}
-
-fn is_currency_word(word: &str) -> bool {
-    matches!(
-        word,
-        "dollar"
-            | "dollars"
-            | "euro"
-            | "euros"
-            | "pound"
-            | "pounds"
-            | "yen"
-            | "yuan"
-            | "rmb"
-            | "rupee"
-            | "rupees"
-            | "ruble"
-            | "rubles"
-            | "won"
-            | "franc"
-            | "francs"
-            | "peso"
-            | "pesos"
-            | "krona"
-            | "krone"
-            | "lira"
-            | "bitcoin"
-            | "btc"
-            | "ethereum"
-            | "eth"
-    )
-}
-
-fn is_datetime_keyword(word: &str) -> bool {
-    matches!(
-        word,
-        "time"
-            | "now"
-            | "today"
-            | "tomorrow"
-            | "yesterday"
-            | "ago"
-            | "before"
-            | "after"
-            | "next"
-            | "last"
-            | "this"
-            | "between"
-            | "from"
-            | "in"
-            | "to"
-    )
-}
-
-fn is_timezone_keyword(word: &str, config: &crate::config::Config) -> bool {
-    // Common abbreviations plus ability to parse IANA names
-    let abbrs = [
-        "utc", "gmt", "est", "edt", "cst", "cdt", "mst", "mdt", "pst", "pdt", "bst", "cet", "cest",
-        "eet", "eest", "ist", "jst", "kst", "aest", "aedt", "acst", "acdt", "awst",
-    ];
-    if abbrs.contains(&word) {
-        return true;
-    }
-    if config.city_aliases.contains_key(word) {
-        return true;
-    }
-    // Quick heuristic: looks like IANA tz with slash
-    word.contains('/')
-}
 
 pub fn copy_to_clipboard(text: &str) {
     match Clipboard::new() {
@@ -156,22 +42,43 @@ pub struct LineGroup {
     pub expr: String,
 }
 
-fn strip_line_comments_for_continuation(line: &str) -> &str {
-    let mut end = line.len();
-    if let Some(pos) = line.find("//") {
+fn strip_inline_block_comments(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut rest = line;
+
+    loop {
+        if let Some(start) = rest.find("/*") {
+            out.push_str(&rest[..start]);
+            let after_start = &rest[start + 2..];
+            if let Some(end) = after_start.find("*/") {
+                rest = &after_start[end + 2..];
+                continue;
+            }
+            return out;
+        }
+
+        out.push_str(rest);
+        break;
+    }
+
+    out
+}
+
+fn strip_line_comments_for_continuation(line: &str) -> String {
+    let without_block = strip_inline_block_comments(line);
+    let mut end = without_block.len();
+    if let Some(pos) = without_block.find("//") {
         end = end.min(pos);
     }
-    if let Some(pos) = line.find('#') {
+    if let Some(pos) = without_block.find('#') {
         end = end.min(pos);
     }
-    if let Some(pos) = line.find("/*") {
-        end = end.min(pos);
-    }
-    &line[..end]
+    without_block[..end].to_string()
 }
 
 fn line_starts_with_operator(line: &str) -> bool {
-    let trimmed = strip_line_comments_for_continuation(line).trim_start();
+    let trimmed = strip_line_comments_for_continuation(line);
+    let trimmed = trimmed.trim_start();
     matches!(
         trimmed.chars().next(),
         Some('+') | Some('-') | Some('*') | Some('/') | Some('%') | Some('^')
@@ -179,7 +86,8 @@ fn line_starts_with_operator(line: &str) -> bool {
 }
 
 fn line_ends_with_operator(line: &str) -> bool {
-    let trimmed = strip_line_comments_for_continuation(line).trim_end();
+    let trimmed = strip_line_comments_for_continuation(line);
+    let trimmed = trimmed.trim_end();
     if trimmed.is_empty() {
         return false;
     }
@@ -190,8 +98,8 @@ fn line_ends_with_operator(line: &str) -> bool {
 }
 
 fn is_comment_or_empty(line: &str) -> bool {
-    let trimmed = line.trim();
-    trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with('#')
+    let stripped = strip_line_comments_for_continuation(line);
+    stripped.trim().is_empty()
 }
 
 pub fn group_multiline_expressions(lines: &[String]) -> Vec<LineGroup> {
@@ -203,7 +111,7 @@ pub fn group_multiline_expressions(lines: &[String]) -> Vec<LineGroup> {
     for (idx, line) in lines.iter().enumerate() {
         if is_comment_or_empty(line) {
             if let Some(start) = current_start {
-                let expr = current_parts.join(" ");
+                let expr = current_parts.join("\n");
                 groups.push(LineGroup {
                     start,
                     end: idx.saturating_sub(1),
@@ -226,7 +134,7 @@ pub fn group_multiline_expressions(lines: &[String]) -> Vec<LineGroup> {
 
         if current_start.is_none() || !is_continuation {
             if let Some(start) = current_start {
-                let expr = current_parts.join(" ");
+                let expr = current_parts.join("\n");
                 groups.push(LineGroup {
                     start,
                     end: idx.saturating_sub(1),
@@ -242,7 +150,7 @@ pub fn group_multiline_expressions(lines: &[String]) -> Vec<LineGroup> {
     }
 
     if let Some(start) = current_start {
-        let expr = current_parts.join(" ");
+        let expr = current_parts.join("\n");
         groups.push(LineGroup {
             start,
             end: lines.len().saturating_sub(1),

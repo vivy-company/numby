@@ -26,6 +26,32 @@ typedef struct AppState AppState;
 
 typedef struct AppState NumbyContext;
 
+/**
+ * Syntax highlighting span returned by libnumby_highlight_spans.
+ */
+typedef struct NumbyHighlightSpan {
+  uint32_t start;
+  uint32_t len;
+  uint8_t kind;
+  uint8_t _pad[3];
+} NumbyHighlightSpan;
+
+// Highlight kind values
+#define NUMBY_HIGHLIGHT_TEXT 0
+#define NUMBY_HIGHLIGHT_NUMBER 1
+#define NUMBY_HIGHLIGHT_OPERATOR 2
+#define NUMBY_HIGHLIGHT_KEYWORD 3
+#define NUMBY_HIGHLIGHT_FUNCTION 4
+#define NUMBY_HIGHLIGHT_CONSTANT 5
+#define NUMBY_HIGHLIGHT_VARIABLE 6
+#define NUMBY_HIGHLIGHT_VARIABLE_USAGE 7
+#define NUMBY_HIGHLIGHT_ASSIGNMENT 8
+#define NUMBY_HIGHLIGHT_CURRENCY 9
+#define NUMBY_HIGHLIGHT_UNIT 10
+#define NUMBY_HIGHLIGHT_COMMENT 11
+#define NUMBY_HIGHLIGHT_SCALE 12
+#define NUMBY_HIGHLIGHT_DATETIME 13
+
 NumbyContext *libnumby_context_new(void);
 
 double libnumby_evaluate(NumbyContext *ctx,
@@ -71,6 +97,19 @@ char *libnumby_get_locale_code(int32_t index);
 char *libnumby_get_locale_name(int32_t index);
 
 void libnumby_free_string(char *s);
+
+/**
+ * Returns a heap-allocated array of highlight spans for the input string.
+ * Caller must free the returned pointer with libnumby_free_highlight_spans.
+ */
+NumbyHighlightSpan *libnumby_highlight_spans(NumbyContext *ctx,
+                                             const char *input,
+                                             uint32_t *out_len);
+
+/**
+ * Frees highlight spans returned by libnumby_highlight_spans.
+ */
+void libnumby_free_highlight_spans(NumbyHighlightSpan *spans, uint32_t len);
 
 int32_t libnumby_clear_history(NumbyContext *ctx);
 

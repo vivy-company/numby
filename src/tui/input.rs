@@ -376,11 +376,12 @@ fn format_buffer_as_markdown_list(
         if trimmed.is_empty() {
             continue;
         }
+        let display_expr = trimmed.replace('\n', " ");
         let result = registry
             .evaluate_for_display(trimmed, state)
             .map(|(r, _)| r)
             .unwrap_or_else(|| crate::fl!("error-evaluating-expression"));
-        rows.push((trimmed.to_string(), result));
+        rows.push((display_expr, result));
     }
 
     if rows.is_empty() {

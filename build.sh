@@ -11,7 +11,7 @@ NC='\033[0m'
 
 # Paths
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MACOS_APP_LIB="Numby/Numby/libnumby.a"
+MACOS_APP_LIB="Numby/macos/libnumby.a"
 MACOS_APP_RESOURCES="Numby/Numby/Resources"
 IOS_DEVICE_LIB="Numby/iOS/libnumby-ios.a"
 IOS_SIM_LIB="Numby/iOS/libnumby-ios-sim.a"
@@ -45,6 +45,7 @@ build_macos() {
     unset RUSTFLAGS
     unset MACOSX_DEPLOYMENT_TARGET
 
+    mkdir -p "$(dirname "$MACOS_APP_LIB")"
     cp target/aarch64-apple-darwin/release-lib/libnumby.a "$MACOS_APP_LIB"
 
     LIB_SIZE=$(ls -lh "$MACOS_APP_LIB" | awk '{print $5}')
@@ -63,7 +64,9 @@ build_ios() {
 
     # iOS simulator (arm64 only)
     echo "  Building for iOS simulator (arm64)..."
+    export IPHONEOS_DEPLOYMENT_TARGET=17.0
     cargo build --profile release-lib --lib --target aarch64-apple-ios-sim --no-default-features
+    unset IPHONEOS_DEPLOYMENT_TARGET
 
     # Create iOS device library
     mkdir -p "$(dirname "$IOS_DEVICE_LIB")"
@@ -91,8 +94,10 @@ build_visionos() {
 
     # visionOS simulator (arm64)
     echo "  Building for visionOS simulator (arm64)..."
+    export XROS_DEPLOYMENT_TARGET=1.0
     cargo +nightly build --profile release-lib --lib --target aarch64-apple-visionos-sim \
         -Zbuild-std=std,panic_abort --no-default-features --features visionos
+    unset XROS_DEPLOYMENT_TARGET
 
     # Create visionOS device library
     mkdir -p "$(dirname "$VISIONOS_DEVICE_LIB")"

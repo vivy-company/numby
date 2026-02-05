@@ -304,7 +304,7 @@ class CalculatorInstance: ObservableObject {
         for (idx, line) in lines.enumerated() {
             if isCommentOrEmpty(line) {
                 if let start = currentStart {
-                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: " ")))
+                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: "\n")))
                     currentStart = nil
                     currentParts.removeAll()
                 }
@@ -318,7 +318,7 @@ class CalculatorInstance: ObservableObject {
 
             if currentStart == nil || !isContinuation {
                 if let start = currentStart {
-                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: " ")))
+                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: "\n")))
                     currentParts.removeAll()
                 }
                 currentStart = idx
@@ -329,7 +329,7 @@ class CalculatorInstance: ObservableObject {
         }
 
         if let start = currentStart {
-            groups.append((start: start, end: max(0, lines.count - 1), expr: currentParts.joined(separator: " ")))
+            groups.append((start: start, end: max(0, lines.count - 1), expr: currentParts.joined(separator: "\n")))
         }
 
         return groups

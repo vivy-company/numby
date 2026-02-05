@@ -29,6 +29,23 @@ class CalculatorViewController: UIViewController {
     private let historySnapshotInterval: TimeInterval = 120
     private let autosaveKey = "numby.autosave.phone"
 
+    private enum HighlightKind: UInt8 {
+        case text = 0
+        case number = 1
+        case `operator` = 2
+        case keyword = 3
+        case function = 4
+        case constant = 5
+        case variable = 6
+        case variableUsage = 7
+        case assignment = 8
+        case currency = 9
+        case unit = 10
+        case comment = 11
+        case scale = 12
+        case datetime = 13
+    }
+
     // Reference to tab container (iPad only)
     weak var tabContainer: iPadTabContainerViewController?
 
@@ -491,7 +508,7 @@ class CalculatorViewController: UIViewController {
         for (idx, line) in lines.enumerated() {
             if isCommentOrEmpty(line) {
                 if let start = currentStart {
-                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: " ")))
+                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: "\n")))
                     currentStart = nil
                     currentParts.removeAll()
                 }
@@ -505,7 +522,7 @@ class CalculatorViewController: UIViewController {
 
             if currentStart == nil || !isContinuation {
                 if let start = currentStart {
-                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: " ")))
+                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: "\n")))
                     currentParts.removeAll()
                 }
                 currentStart = idx
@@ -516,7 +533,7 @@ class CalculatorViewController: UIViewController {
         }
 
         if let start = currentStart {
-            groups.append((start: start, end: max(0, lines.count - 1), expr: currentParts.joined(separator: " ")))
+            groups.append((start: start, end: max(0, lines.count - 1), expr: currentParts.joined(separator: "\n")))
         }
 
         return groups
@@ -559,7 +576,7 @@ class CalculatorViewController: UIViewController {
 
     private func applySyntaxHighlighting() {
         guard Configuration.shared.config.syntaxHighlighting else { return }
-        guard let storage = textView.textStorage as? NSTextStorage else { return }
+        let storage = textView.textStorage
 
         let text = storage.string
 
@@ -581,50 +598,16 @@ class CalculatorViewController: UIViewController {
         storage.addAttribute(.foregroundColor, value: theme.textColor, range: fullRange)
         storage.addAttribute(.font, value: font, range: fullRange)
         storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
-
-        // Numbers
-        applyPattern("\\b\\d+(\\.\\d+)?\\b", color: theme.syntaxColor(for: .numbers), to: storage, text: text)
-        // Operators (symbols)
-        applyPattern("[+\\-*/()^%]", color: theme.syntaxColor(for: .operators), to: storage, text: text)
-        // Word operators
-        applyPattern("\\b(plus|minus|times|multiplied by|divided by|divide by|subtract|and|with)\\b", color: theme.syntaxColor(for: .operators), to: storage, text: text, options: .caseInsensitive)
-        // Currency (including crypto)
-        applyPattern("\\b(USD|EUR|JPY|GBP|CNY|CHF|AUD|CAD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|HRK|RUB|TRY|BRL|MXN|ARS|CLP|COP|PEN|INR|IDR|MYR|PHP|THB|VND|KRW|TWD|HKD|SGD|ZAR|EGP|NGN|KES|GHS|XOF|XAF|MAD|TND|AED|SAR|QAR|KWD|BHD|OMR|ILS|JOD|LBP|IQD|IRR|AFN|PKR|BDT|NPR|LKR|MMK|KHR|LAK|MNT|KZT|UZS|TJS|KGS|TMT|GEL|AZN|AMD|BYN|MDL|UAH|RSD|MKD|ALL|BAM|ISK|BTC|ETH|BNB)\\b", color: theme.syntaxColor(for: .currency), to: storage, text: text, options: .caseInsensitive)
-        // Units (extended)
-        applyPattern("\\b(km|mi|m|cm|mm|ft|in|yd|kg|g|mg|lb|oz|ton|L|mL|gal|qt|pt|cup|tbsp|tsp|°C|°F|K|ms|s|min|h|day|week|month|year|Hz|kHz|MHz|GHz|b|B|KB|MB|GB|TB|W|kW|MW|V|A|mA|Ω|J|cal|kcal|Pa|bar|atm|psi|mph|kmh|kph|meter|meters|centimeter|centimeters|millimeter|millimeters|kilometer|kilometers|foot|feet|inch|inches|yard|yards|mile|miles|sec|second|seconds|minute|minutes|hour|hours|days|weeks|months|years|kelvin|kelvins|celsius|fahrenheit|liter|liters|milliliter|milliliters|pint|pints|quart|quarts|gallon|gallons|teaspoon|teaspoons|tablespoon|tablespoons|gram|grams|kilogram|kilograms|tonne|tonnes|carat|carats|pound|pounds|stone|stones|ounce|ounces|bit|bits|byte|bytes|knot|knots|radian|radians|degree|degrees)\\b", color: theme.syntaxColor(for: .units), to: storage, text: text, options: .caseInsensitive)
-        // Scales
-        applyPattern("\\b(k|kilo|thousand|M|mega|million|G|giga|billion|T|tera)\\b", color: theme.syntaxColor(for: .units), to: storage, text: text, options: .caseInsensitive)
-        // Keywords
-        applyPattern("\\b(in|to|as|of|per|from)\\b", color: theme.syntaxColor(for: .keywords), to: storage, text: text, options: .caseInsensitive)
-        // DateTime keywords
-        applyPattern("\\b(time|now|today|tomorrow|yesterday|ago|before|after|next|last|this|between)\\b", color: theme.syntaxColor(for: .keywords), to: storage, text: text, options: .caseInsensitive)
-        // Functions
-        applyPattern("\\b(sin|cos|tan|asin|acos|atan|arcsin|arccos|arctan|sinh|cosh|tanh|sqrt|cbrt|ln|log|log10|log2|exp|abs|ceil|floor|round|min|max|pow|mod|gcd|lcm|factorial|rand|random)\\b", color: theme.syntaxColor(for: .functions), to: storage, text: text, options: .caseInsensitive)
-        // Constants
-        applyPattern("\\b(pi|e|phi|tau|true|false)\\b", color: theme.syntaxColor(for: .constants), to: storage, text: text, options: .caseInsensitive)
-        // Variables (assignment)
-        if let regex = getCachedRegex(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*=", options: []) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range(at: 1) {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variables), range: range)
-                }
-            }
+        let spans = numbyWrapper.highlightSpans(for: text)
+        for span in spans {
+            let start = Int(span.start)
+            let length = Int(span.len)
+            guard start >= 0, length > 0 else { continue }
+            guard start + length <= storage.length else { continue }
+            let range = NSRange(location: start, length: length)
+            let color = colorForHighlightKind(span.kind, theme: theme)
+            storage.addAttribute(.foregroundColor, value: color, range: range)
         }
-        // Variable usage
-        if let regex = getCachedRegex(pattern: "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b", options: []) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    let currentColor = storage.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? UIColor
-                    if currentColor == theme.textColor {
-                        storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variableUsage), range: range)
-                    }
-                }
-            }
-        }
-        // Assignment equals
-        applyPattern("\\s(=)\\s", color: theme.syntaxColor(for: .assignment), to: storage, text: text, captureGroup: 1)
-        // Comments (last - overrides all)
-        applyPattern("(//|#).*$|/\\*.*?\\*/", color: theme.syntaxColor(for: .comments), to: storage, text: text, options: [.anchorsMatchLines, .dotMatchesLineSeparators])
 
         storage.endEditing()
 
@@ -632,31 +615,37 @@ class CalculatorViewController: UIViewController {
         textView.selectedRange = savedSelectedRange
     }
 
-    // MARK: - Regex Caching
-
-    private static var cachedRegexPatterns: [String: NSRegularExpression] = [:]
-
-    private func getCachedRegex(pattern: String, options: NSRegularExpression.Options = []) -> NSRegularExpression? {
-        let key = "\(pattern)_\(options.rawValue)"
-
-        if let cached = Self.cachedRegexPatterns[key] {
-            return cached
-        }
-
-        if let regex = try? NSRegularExpression(pattern: pattern, options: options) {
-            Self.cachedRegexPatterns[key] = regex
-            return regex
-        }
-        return nil
-    }
-
-    private func applyPattern(_ pattern: String, color: UIColor, to storage: NSTextStorage, text: String, options: NSRegularExpression.Options = [], captureGroup: Int = 0) {
-        guard let regex = getCachedRegex(pattern: pattern, options: options) else { return }
-        let range = NSRange(location: 0, length: text.utf16.count)
-        regex.enumerateMatches(in: text, range: range) { match, _, _ in
-            if let r = match?.range(at: captureGroup), r.location != NSNotFound {
-                storage.addAttribute(.foregroundColor, value: color, range: r)
-            }
+    private func colorForHighlightKind(_ kindValue: UInt8, theme: Theme) -> UIColor {
+        let kind = HighlightKind(rawValue: kindValue) ?? .text
+        switch kind {
+        case .text:
+            return theme.syntaxColor(for: .text)
+        case .number:
+            return theme.syntaxColor(for: .numbers)
+        case .operator:
+            return theme.syntaxColor(for: .operators)
+        case .keyword:
+            return theme.syntaxColor(for: .keywords)
+        case .function:
+            return theme.syntaxColor(for: .functions)
+        case .constant:
+            return theme.syntaxColor(for: .constants)
+        case .variable:
+            return theme.syntaxColor(for: .variables)
+        case .variableUsage:
+            return theme.syntaxColor(for: .variableUsage)
+        case .assignment:
+            return theme.syntaxColor(for: .assignment)
+        case .currency:
+            return theme.syntaxColor(for: .currency)
+        case .unit:
+            return theme.syntaxColor(for: .units)
+        case .comment:
+            return theme.syntaxColor(for: .comments)
+        case .scale:
+            return theme.syntaxColor(for: .units)
+        case .datetime:
+            return theme.syntaxColor(for: .keywords)
         }
     }
 

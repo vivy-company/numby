@@ -36,6 +36,7 @@ struct CalculatorSurfaceView: View {
 
                             InputTextView(
                                 text: $instance.inputText,
+                                numby: instance.numby,
                                 backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
                                 textColor: Theme.current.syntaxColor(for: .text),
                                 fontSize: configManager.config.fontSize,
@@ -76,6 +77,7 @@ struct CalculatorSurfaceView: View {
 
                 // Share button overlay with menu
                 ShareMenuButton(
+                    backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
                     showCopiedFeedback: showCopiedFeedback,
                     onCopyAsText: copyAsText,
                     onCopyAsImage: copyAsImage,
@@ -184,6 +186,7 @@ struct CalculatorSurfaceView: View {
 // MARK: - Share Menu Button (NSViewRepresentable for full size control)
 
 struct ShareMenuButton: NSViewRepresentable {
+    let backgroundColor: NSColor
     let showCopiedFeedback: Bool
     let onCopyAsText: () -> Void
     let onCopyAsImage: () -> Void
@@ -195,7 +198,7 @@ struct ShareMenuButton: NSViewRepresentable {
         button.isBordered = false
         button.wantsLayer = true
         button.layer?.cornerRadius = 6
-        button.layer?.backgroundColor = Theme.current.backgroundColor.withAlphaComponent(0.95).cgColor
+        button.layer?.backgroundColor = backgroundColor.withAlphaComponent(0.95).cgColor
 
         updateButtonImage(button, showCheckmark: showCopiedFeedback)
 
@@ -206,7 +209,7 @@ struct ShareMenuButton: NSViewRepresentable {
     }
 
     func updateNSView(_ button: NSButton, context: Context) {
-        button.layer?.backgroundColor = Theme.current.backgroundColor.withAlphaComponent(0.95).cgColor
+        button.layer?.backgroundColor = backgroundColor.withAlphaComponent(0.95).cgColor
         updateButtonImage(button, showCheckmark: showCopiedFeedback)
         context.coordinator.parent = self
     }
@@ -439,6 +442,7 @@ struct ResultsTextView: NSViewRepresentable {
 
 struct InputTextView: NSViewRepresentable {
     @Binding var text: String
+    let numby: NumbyWrapper
     let backgroundColor: NSColor
     let textColor: NSColor
     let fontSize: Double
@@ -470,7 +474,7 @@ struct InputTextView: NSViewRepresentable {
         textView.delegate = context.coordinator
         textView.textContainerInset = NSSize(width: 16, height: 16)
         textView.allowsUndo = true
-        textView.undoManager = context.environment.undoManager
+        // NSTextView manages its own undo manager; it will integrate with SwiftUI automatically.
 
         // Match SwiftUI text line spacing exactly
         let paragraph = NSMutableParagraphStyle()
@@ -527,6 +531,23 @@ struct InputTextView: NSViewRepresentable {
         Coordinator(self)
     }
 
+    private enum HighlightKind: UInt8 {
+        case text = 0
+        case number = 1
+        case `operator` = 2
+        case keyword = 3
+        case function = 4
+        case constant = 5
+        case variable = 6
+        case variableUsage = 7
+        case assignment = 8
+        case currency = 9
+        case unit = 10
+        case comment = 11
+        case scale = 12
+        case datetime = 13
+    }
+
     private func applySyntaxHighlighting(to textView: NSTextView) {
         guard syntaxHighlighting else { return }
 
@@ -547,152 +568,48 @@ struct InputTextView: NSViewRepresentable {
 
         let text = storage.string
         let theme = Theme.current
-
-        // Highlight numbers
-        let numberPattern = "\\b\\d+(\\.\\d+)?\\b"
-        if let regex = try? NSRegularExpression(pattern: numberPattern) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .numbers), range: range)
-                }
-            }
+        let spans = numby.highlightSpans(for: text)
+        for span in spans {
+            let start = Int(span.start)
+            let length = Int(span.len)
+            guard start >= 0, length > 0 else { continue }
+            guard start + length <= storage.length else { continue }
+            let range = NSRange(location: start, length: length)
+            let color = colorForHighlightKind(span.kind, theme: theme)
+            storage.addAttribute(.foregroundColor, value: color, range: range)
         }
-
-        // Highlight operators (symbols)
-        let operatorPattern = "[+\\-*/()^%]"
-        if let regex = try? NSRegularExpression(pattern: operatorPattern) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .operators), range: range)
-                }
-            }
-        }
-
-        // Highlight word operators
-        let wordOperatorPattern = "\\b(plus|minus|times|multiplied by|divided by|divide by|subtract|and|with)\\b"
-        if let regex = try? NSRegularExpression(pattern: wordOperatorPattern, options: .caseInsensitive) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .operators), range: range)
-                }
-            }
-        }
-
-        // Highlight currency units (including crypto)
-        let currencyPattern = "\\b(USD|EUR|JPY|GBP|CNY|CHF|AUD|CAD|NZD|SEK|NOK|DKK|PLN|CZK|HUF|RON|BGN|HRK|RUB|TRY|BRL|MXN|ARS|CLP|COP|PEN|INR|IDR|MYR|PHP|THB|VND|KRW|TWD|HKD|SGD|ZAR|EGP|NGN|KES|GHS|XOF|XAF|MAD|TND|AED|SAR|QAR|KWD|BHD|OMR|ILS|JOD|LBP|IQD|IRR|AFN|PKR|BDT|NPR|LKR|MMK|KHR|LAK|MNT|KZT|UZS|TJS|KGS|TMT|GEL|AZN|AMD|BYN|MDL|UAH|RSD|MKD|ALL|BAM|ISK|BTC|ETH|BNB)\\b"
-        if let regex = try? NSRegularExpression(pattern: currencyPattern, options: .caseInsensitive) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .currency), range: range)
-                }
-            }
-        }
-
-        // Highlight measurement units (extended)
-        let unitPattern = "\\b(km|mi|m|cm|mm|ft|in|yd|kg|g|mg|lb|oz|ton|L|mL|gal|qt|pt|cup|tbsp|tsp|°C|°F|K|ms|s|min|h|day|week|month|year|Hz|kHz|MHz|GHz|b|B|KB|MB|GB|TB|W|kW|MW|V|A|mA|Ω|J|cal|kcal|Pa|bar|atm|psi|mph|kmh|kph|meter|meters|centimeter|centimeters|millimeter|millimeters|kilometer|kilometers|foot|feet|inch|inches|yard|yards|mile|miles|sec|second|seconds|minute|minutes|hour|hours|days|weeks|months|years|kelvin|kelvins|celsius|fahrenheit|liter|liters|milliliter|milliliters|pint|pints|quart|quarts|gallon|gallons|teaspoon|teaspoons|tablespoon|tablespoons|gram|grams|kilogram|kilograms|tonne|tonnes|carat|carats|pound|pounds|stone|stones|ounce|ounces|bit|bits|byte|bytes|knot|knots|radian|radians|degree|degrees)\\b"
-        if let regex = try? NSRegularExpression(pattern: unitPattern, options: .caseInsensitive) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .units), range: range)
-                }
-            }
-        }
-
-        // Highlight scales
-        let scalePattern = "\\b(k|kilo|thousand|M|mega|million|G|giga|billion|T|tera)\\b"
-        if let regex = try? NSRegularExpression(pattern: scalePattern, options: .caseInsensitive) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .units), range: range)
-                }
-            }
-        }
-
-        // Highlight keywords
-        let keywordPattern = "\\b(in|to|as|of|per|from)\\b"
-        if let regex = try? NSRegularExpression(pattern: keywordPattern, options: .caseInsensitive) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .keywords), range: range)
-                }
-            }
-        }
-
-        // Highlight datetime keywords
-        let datetimePattern = "\\b(time|now|today|tomorrow|yesterday|ago|before|after|next|last|this|between)\\b"
-        if let regex = try? NSRegularExpression(pattern: datetimePattern, options: .caseInsensitive) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .keywords), range: range)
-                }
-            }
-        }
-
-        // Highlight functions
-        let functionPattern = "\\b(sin|cos|tan|asin|acos|atan|arcsin|arccos|arctan|sinh|cosh|tanh|sqrt|cbrt|ln|log|log10|log2|exp|abs|ceil|floor|round|min|max|pow|mod|gcd|lcm|factorial|rand|random)\\b"
-        if let regex = try? NSRegularExpression(pattern: functionPattern, options: .caseInsensitive) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .functions), range: range)
-                }
-            }
-        }
-
-        // Highlight constants
-        let constantPattern = "\\b(pi|e|phi|tau|true|false)\\b"
-        if let regex = try? NSRegularExpression(pattern: constantPattern, options: .caseInsensitive) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .constants), range: range)
-                }
-            }
-        }
-
-        // Highlight variables (assignment pattern: word = )
-        let variablePattern = "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*="
-        if let regex = try? NSRegularExpression(pattern: variablePattern) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range(at: 1) {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variables), range: range)
-                }
-            }
-        }
-
-        // Highlight variable usage (words that are not numbers or keywords)
-        let varUsagePattern = "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b"
-        if let regex = try? NSRegularExpression(pattern: varUsagePattern) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    // Only color if it's not already colored by other patterns
-                    let currentColor = storage.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? NSColor
-                    if currentColor == theme.syntaxColor(for: .text) {
-                        storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .variableUsage), range: range)
-                    }
-                }
-            }
-        }
-
-        // Highlight equals sign in assignments
-        let assignmentPattern = "\\s(=)\\s"
-        if let regex = try? NSRegularExpression(pattern: assignmentPattern) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range(at: 1) {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .assignment), range: range)
-                }
-            }
-        }
-
-        // Highlight comments (both // and # styles) - MUST BE LAST to override other colors
-        let commentPattern = "(//|#).*$|/\\*.*?\\*/"
-        if let regex = try? NSRegularExpression(
-            pattern: commentPattern,
-            options: [.anchorsMatchLines, .dotMatchesLineSeparators]
-        ) {
-            regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-                if let range = match?.range {
-                    storage.addAttribute(.foregroundColor, value: theme.syntaxColor(for: .comments), range: range)
-                }
-            }
+    }
+    private func colorForHighlightKind(_ kindValue: UInt8, theme: Theme) -> NSColor {
+        let kind = HighlightKind(rawValue: kindValue) ?? .text
+        switch kind {
+        case .text:
+            return theme.syntaxColor(for: .text)
+        case .number:
+            return theme.syntaxColor(for: .numbers)
+        case .operator:
+            return theme.syntaxColor(for: .operators)
+        case .keyword:
+            return theme.syntaxColor(for: .keywords)
+        case .function:
+            return theme.syntaxColor(for: .functions)
+        case .constant:
+            return theme.syntaxColor(for: .constants)
+        case .variable:
+            return theme.syntaxColor(for: .variables)
+        case .variableUsage:
+            return theme.syntaxColor(for: .variableUsage)
+        case .assignment:
+            return theme.syntaxColor(for: .assignment)
+        case .currency:
+            return theme.syntaxColor(for: .currency)
+        case .unit:
+            return theme.syntaxColor(for: .units)
+        case .comment:
+            return theme.syntaxColor(for: .comments)
+        case .scale:
+            return theme.syntaxColor(for: .units)
+        case .datetime:
+            return theme.syntaxColor(for: .keywords)
         }
     }
 

@@ -75,6 +75,7 @@ class SettingsViewController: UIViewController {
         setupUI()
         setupNavigationBar()
         updateTheme()
+        registerForTraitChangesIfAvailable()
         loadCurrencyUpdateTime()
 
         NotificationCenter.default.addObserver(
@@ -89,14 +90,6 @@ class SettingsViewController: UIViewController {
             name: NSNotification.Name("ConfigurationDidChange"),
             object: nil
         )
-    }
-
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-
-        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
-            updateTheme()
-        }
     }
 
     deinit {
@@ -209,6 +202,14 @@ class SettingsViewController: UIViewController {
         tableView.separatorColor = .separator
         tableView.indicatorStyle = .default
         tableView.reloadData()
+    }
+
+    private func registerForTraitChangesIfAvailable() {
+        if #available(iOS 17.0, visionOS 1.0, *) {
+            registerForTraitChanges([UITraitUserInterfaceStyle.self]) { [weak self] (_: SettingsViewController, _: UITraitCollection) in
+                self?.updateTheme()
+            }
+        }
     }
 }
 

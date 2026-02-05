@@ -32,7 +32,8 @@ pub fn evaluate_expression(
                 None
             }
         };
-        rows.push((trimmed.to_string(), result));
+        let display_expr = trimmed.replace('\n', " ");
+        rows.push((display_expr, result));
     }
 
     if rows.is_empty() {

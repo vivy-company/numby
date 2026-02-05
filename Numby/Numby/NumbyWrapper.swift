@@ -20,6 +20,19 @@ class NumbyWrapper: ObservableObject {
         setup()
     }
 
+    func highlightSpans(for text: String) -> [NumbyHighlightSpan] {
+        guard let context else { return [] }
+        var count: UInt32 = 0
+        let spansPtr = text.withCString { cStr in
+            libnumby_highlight_spans(context, cStr, &count)
+        }
+        guard let spansPtr, count > 0 else { return [] }
+        let buffer = UnsafeBufferPointer(start: spansPtr, count: Int(count))
+        let spans = Array(buffer)
+        libnumby_free_highlight_spans(spansPtr, count)
+        return spans
+    }
+
     private func setup() {
         let configPath = loadOrSeedConfigPath()
         if let configPath {

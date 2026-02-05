@@ -17,6 +17,7 @@ pub mod config;
 pub mod conversions;
 pub mod currency_fetcher;
 pub mod evaluator;
+pub mod highlight;
 pub mod i18n;
 pub mod models;
 pub mod parser;
@@ -175,6 +176,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 static CONFIG_OVERRIDE_PATH: Lazy<Mutex<Option<PathBuf>>> = Lazy::new(|| Mutex::new(None));
+static CONFIG_CACHE: Lazy<Mutex<Option<crate::config::Config>>> = Lazy::new(|| Mutex::new(None));
 
 fn set_config_override_path(path: PathBuf) {
     if let Ok(mut guard) = CONFIG_OVERRIDE_PATH.lock() {
@@ -189,11 +191,44 @@ fn get_config_override_path() -> Option<PathBuf> {
         .and_then(|guard| guard.clone())
 }
 
+fn set_config_cache(config: crate::config::Config) {
+    if let Ok(mut guard) = CONFIG_CACHE.lock() {
+        *guard = Some(config);
+    }
+}
+
+fn clear_config_cache() {
+    if let Ok(mut guard) = CONFIG_CACHE.lock() {
+        *guard = None;
+    }
+}
+
+fn get_cached_config() -> crate::config::Config {
+    if let Ok(guard) = CONFIG_CACHE.lock() {
+        if let Some(cfg) = guard.as_ref() {
+            return cfg.clone();
+        }
+    }
+    let cfg = crate::config::load_config();
+    if let Ok(mut guard) = CONFIG_CACHE.lock() {
+        *guard = Some(cfg.clone());
+    }
+    cfg
+}
+
 type NumbyContext = crate::models::AppState; // Use AppState as context
+
+#[repr(C)]
+pub struct NumbyHighlightSpan {
+    pub start: u32,
+    pub len: u32,
+    pub kind: u8,
+    pub _pad: [u8; 3],
+}
 
 #[no_mangle]
 pub extern "C" fn libnumby_context_new() -> *mut NumbyContext {
-    let config = crate::config::Config::default();
+    let config = get_cached_config();
     Box::into_raw(Box::new(crate::models::AppState::builder(&config).build()))
 }
 
@@ -355,6 +390,7 @@ pub unsafe extern "C" fn libnumby_load_config(ctx: *mut NumbyContext, path: *con
             match serde_json::from_str::<crate::config::Config>(&contents) {
                 Ok(config) => {
                     let context = &mut *ctx;
+                    set_config_cache(config.clone());
                     // Update context with new config values
                     context.length_units = config.length_units;
                     context.time_units = config.time_units;
@@ -506,6 +542,71 @@ pub unsafe extern "C" fn libnumby_free_string(s: *mut c_char) {
     }
 }
 
+/// Returns a heap-allocated array of highlight spans.
+/// Caller must free using libnumby_free_highlight_spans.
+///
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_highlight_spans(
+    ctx: *mut NumbyContext,
+    input: *const c_char,
+    out_len: *mut u32,
+) -> *mut NumbyHighlightSpan {
+    if out_len.is_null() {
+        return std::ptr::null_mut();
+    }
+    *out_len = 0;
+
+    if ctx.is_null() || input.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    let input_str = match CStr::from_ptr(input).to_str() {
+        Ok(s) => s,
+        Err(_) => return std::ptr::null_mut(),
+    };
+
+    if crate::security::validate_input_size(input_str).is_err() {
+        return std::ptr::null_mut();
+    }
+
+    let context = &mut *ctx;
+    let config = get_cached_config();
+    let spans = crate::highlight::highlight_spans(input_str, context, &config);
+
+    let mut out: Vec<NumbyHighlightSpan> = Vec::with_capacity(spans.len());
+    for span in spans {
+        out.push(NumbyHighlightSpan {
+            start: span.start,
+            len: span.len,
+            kind: span.kind as u8,
+            _pad: [0; 3],
+        });
+    }
+
+    let mut boxed = out.into_boxed_slice();
+    let ptr = boxed.as_mut_ptr();
+    let len = boxed.len() as u32;
+    std::mem::forget(boxed);
+    *out_len = len;
+    ptr
+}
+
+/// Frees highlight spans returned by libnumby_highlight_spans.
+///
+/// # Safety
+///
+/// This function takes ownership of the raw pointer and frees it.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_free_highlight_spans(ptr: *mut NumbyHighlightSpan, len: u32) {
+    if ptr.is_null() || len == 0 {
+        return;
+    }
+    let _ = Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr, len as usize));
+}
+
 /// # Safety
 ///
 /// This function dereferences raw pointers and must be called with valid pointers.
@@ -623,6 +724,7 @@ pub unsafe extern "C" fn libnumby_update_currency_rates(ctx: *mut NumbyContext) 
 
     set_config_override_path(saved_path.clone());
     crate::config::set_config_path_override(saved_path.to_string_lossy().as_ref());
+    clear_config_cache();
 
     // Update context with new rates
     let context = &mut *ctx;
@@ -692,6 +794,7 @@ pub unsafe extern "C" fn libnumby_set_currency_rates_json(
         return -1;
     }
     crate::config::set_config_path_override(config_path.to_string_lossy().as_ref());
+    clear_config_cache();
 
     // Update context
     let context = &mut *ctx;

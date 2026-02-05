@@ -43,6 +43,7 @@ class HistoryViewController: UIViewController {
         setupUI()
         loadHistory()
         updateTheme()
+        registerForTraitChangesIfAvailable()
 
         NotificationCenter.default.addObserver(
             self,
@@ -56,15 +57,6 @@ class HistoryViewController: UIViewController {
             name: NSNotification.Name("ThemeDidChange"),
             object: nil
         )
-    }
-
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-
-        // Respond to system dark mode changes
-        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
-            updateTheme()
-        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -140,6 +132,14 @@ class HistoryViewController: UIViewController {
 
         view.backgroundColor = .systemBackground
         tableView.backgroundColor = .systemGroupedBackground
+    }
+
+    private func registerForTraitChangesIfAvailable() {
+        if #available(iOS 17.0, visionOS 1.0, *) {
+            registerForTraitChanges([UITraitUserInterfaceStyle.self]) { [weak self] (_: HistoryViewController, _: UITraitCollection) in
+                self?.updateTheme()
+            }
+        }
     }
 }
 

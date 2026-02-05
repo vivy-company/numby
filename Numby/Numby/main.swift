@@ -39,7 +39,9 @@ if let savedLocale = Configuration.shared.config.locale {
 
 let app = NSApplication.shared
 let delegate = AppDelegate()
-app.delegate = delegate
+MainActor.assumeIsolated {
+    app.delegate = delegate
+}
 
 _ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
 #endif

@@ -3,6 +3,7 @@ mod config;
 mod conversions;
 mod currency_fetcher;
 mod evaluator;
+mod highlight;
 mod i18n;
 mod models;
 mod parser;
