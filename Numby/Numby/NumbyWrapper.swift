@@ -14,6 +14,8 @@ class NumbyWrapper: ObservableObject {
     @Published var lastResult: String = ""
     var context: NumbyContext?
     private var resolvedConfigPath: String?
+    private var appliedNumberFormat: String?
+    private var appliedMaxDecimals: Int?
 
     init() {
         context = libnumby_context_new()
@@ -443,8 +445,20 @@ class NumbyWrapper: ObservableObject {
     /// Set number format and max decimals
     func setNumberFormat(_ format: String, maxDecimals: Int) -> Bool {
         guard let ctx = context else { return false }
-        return format.withCString { cFormat in
+        let success = format.withCString { cFormat in
             libnumby_set_number_format(ctx, cFormat, Int32(maxDecimals)) == 0
+        }
+        if success {
+            appliedNumberFormat = format
+            appliedMaxDecimals = maxDecimals
+        }
+        return success
+    }
+
+    private func syncNumberFormatIfNeeded() {
+        let config = Configuration.shared.config
+        if appliedNumberFormat != config.numberFormat || appliedMaxDecimals != config.numberMaxDecimals {
+            _ = setNumberFormat(config.numberFormat, maxDecimals: config.numberMaxDecimals)
         }
     }
 
@@ -473,6 +487,7 @@ class NumbyWrapper: ObservableObject {
 
     func evaluate(_ input: String) -> (value: Double, formatted: String?, unit: String?, error: String?) {
         guard let ctx = context else { return (0.0, nil, nil, "No context") }
+        syncNumberFormatIfNeeded()
 
         var outFormatted: UnsafeMutablePointer<CChar>?
         var outUnit: UnsafeMutablePointer<CChar>?

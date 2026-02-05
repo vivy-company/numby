@@ -393,7 +393,7 @@ fn highlight_code_segment(
                     spans.push(HighlightSpan::new(
                         token.start,
                         token.end,
-                        HighlightKind::Comment,
+                        HighlightKind::Text,
                     ));
                     continue;
                 }
@@ -758,22 +758,22 @@ mod tests {
         let input = "14.50 CAD internet + 16 USD spotify";
         let spans = highlight_spans(input, &state, &config);
 
-        let mut internet_comment = false;
-        let mut spotify_comment = false;
+        let mut internet_text = false;
+        let mut spotify_text = false;
         for span in spans {
             let start = span.start as usize;
             let end = start + span.len as usize;
             let text = &input[start..end];
-            if text == "internet" && span.kind == HighlightKind::Comment {
-                internet_comment = true;
+            if text == "internet" && span.kind == HighlightKind::Text {
+                internet_text = true;
             }
-            if text == "spotify" && span.kind == HighlightKind::Comment {
-                spotify_comment = true;
+            if text == "spotify" && span.kind == HighlightKind::Text {
+                spotify_text = true;
             }
         }
 
-        assert!(internet_comment);
-        assert!(spotify_comment);
+        assert!(internet_text);
+        assert!(spotify_text);
     }
 
     #[test]
