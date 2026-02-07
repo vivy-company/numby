@@ -186,7 +186,10 @@ pub fn sanitize_terminal_string(s: &str) -> String {
 }
 
 /// Maximum allowed expression length in characters.
-pub const MAX_EXPR_LENGTH: usize = 10_000;
+pub const MAX_EXPR_LENGTH: usize = 200_000;
+// Highlighting is non-evaluative; allow larger inputs to avoid disabling syntax colors
+// on real-world documents while still keeping a reasonable cap.
+pub const MAX_HIGHLIGHT_LENGTH: usize = 200_000;
 
 /// Validate input size to prevent excessive memory usage.
 ///
@@ -207,7 +210,7 @@ pub const MAX_EXPR_LENGTH: usize = 10_000;
 /// assert!(validate_input_size("2 + 2").is_ok());
 ///
 /// // Extremely long input fails
-/// let huge = "x".repeat(20_000);
+/// let huge = "x".repeat(250_000);
 /// assert!(validate_input_size(&huge).is_err());
 /// ```
 pub fn validate_input_size(input: &str) -> Result<(), String> {
@@ -216,6 +219,18 @@ pub fn validate_input_size(input: &str) -> Result<(), String> {
             "input-too-long",
             "actual" => &input.len().to_string(),
             "max" => &MAX_EXPR_LENGTH.to_string()
+        ));
+    }
+    Ok(())
+}
+
+/// Returns error if input exceeds [`MAX_HIGHLIGHT_LENGTH`].
+pub fn validate_highlight_input_size(input: &str) -> Result<(), String> {
+    if input.len() > MAX_HIGHLIGHT_LENGTH {
+        return Err(crate::fl!(
+            "input-too-long",
+            "actual" => &input.len().to_string(),
+            "max" => &MAX_HIGHLIGHT_LENGTH.to_string()
         ));
     }
     Ok(())

@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "フォントサイズ";
 "settings.appearance.font" = "フォント";
 "settings.appearance.syntaxHighlighting" = "構文の強調表示";
+"settings.appearance.activeLineHighlight" = "アクティブ行の強調表示";
+"settings.appearance.activeLineIntensity" = "強調の強さ";
+"settings.appearance.activeLineIntensityHint" = "強調表示の強さを調整します。";
+
+/* Settings - Number Section */
+"settings.number.section" = "数値";
 "settings.number.format" = "数値形式";
 "settings.number.maxDecimals" = "最大小数桁";
 "settings.number.format.pretty" = "簡易";

@@ -93,7 +93,7 @@ pub fn render_ui(f: &mut Frame, mut ctx: RenderContext) {
             width: size.width,
             height: 1,
         };
-        let bg_block = Block::default().style(Style::default().bg(Color::Black));
+        let bg_block = Block::default().style(Style::default().bg(Color::Rgb(30, 32, 40)));
         f.render_widget(bg_block, highlight_rect);
     }
 
@@ -655,7 +655,7 @@ fn render_results_panel(f: &mut Frame, rect: Rect, ctx: &RenderContext) {
     let mut right_text = Text::default();
 
     let all_lines: Vec<String> = ctx.input.lines().map(|l| l.to_string()).collect();
-    let groups = crate::utils::group_multiline_expressions(&all_lines);
+    let groups = crate::line_groups::group_multiline_expressions(&all_lines);
     let mut line_results: Vec<Option<String>> = vec![None; all_lines.len()];
 
     // Create cache key that includes variables state

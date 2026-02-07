@@ -19,6 +19,7 @@ pub mod currency_fetcher;
 pub mod evaluator;
 pub mod highlight;
 pub mod i18n;
+pub mod line_groups;
 pub mod models;
 pub mod parser;
 pub mod prettify;
@@ -568,7 +569,7 @@ pub unsafe extern "C" fn libnumby_highlight_spans(
         Err(_) => return std::ptr::null_mut(),
     };
 
-    if crate::security::validate_input_size(input_str).is_err() {
+    if crate::security::validate_highlight_input_size(input_str).is_err() {
         return std::ptr::null_mut();
     }
 
@@ -592,6 +593,107 @@ pub unsafe extern "C" fn libnumby_highlight_spans(
     std::mem::forget(boxed);
     *out_len = len;
     ptr
+}
+
+/// Returns the start/end line indices for the multiline group containing the cursor.
+///
+/// Cursor is provided as a UTF-16 code unit offset (matching Cocoa text views).
+///
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_group_bounds_for_cursor(
+    input: *const c_char,
+    cursor_utf16: i32,
+    out_start: *mut i32,
+    out_end: *mut i32,
+) -> i32 {
+    if input.is_null() || out_start.is_null() || out_end.is_null() || cursor_utf16 < 0 {
+        return -1;
+    }
+
+    let input_str = match CStr::from_ptr(input).to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+
+    if crate::security::validate_highlight_input_size(input_str).is_err() {
+        return -1;
+    }
+
+    let cursor = cursor_utf16 as usize;
+    let mut line_index: usize = 0;
+    for (idx, unit) in input_str.encode_utf16().enumerate() {
+        if idx >= cursor {
+            break;
+        }
+        if unit == b'\n' as u16 {
+            line_index += 1;
+        }
+    }
+
+    let lines: Vec<String> = input_str.split('\n').map(|line| line.to_string()).collect();
+    let (start, end) = crate::line_groups::group_bounds_for_line(&lines, line_index);
+    *out_start = start as i32;
+    *out_end = end as i32;
+    0
+}
+
+/// Returns the multiline group expression containing the cursor.
+///
+/// Cursor is provided as a UTF-16 code unit offset (matching Cocoa text views).
+/// Returns a C string that must be freed with libnumby_free_string. Outputs start/end line indices.
+///
+/// # Safety
+///
+/// This function dereferences raw pointers and must be called with valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_group_expr_for_cursor(
+    input: *const c_char,
+    cursor_utf16: i32,
+    out_start: *mut i32,
+    out_end: *mut i32,
+) -> *mut c_char {
+    if input.is_null() || out_start.is_null() || out_end.is_null() || cursor_utf16 < 0 {
+        return std::ptr::null_mut();
+    }
+
+    let input_str = match CStr::from_ptr(input).to_str() {
+        Ok(s) => s,
+        Err(_) => return std::ptr::null_mut(),
+    };
+
+    if crate::security::validate_highlight_input_size(input_str).is_err() {
+        return std::ptr::null_mut();
+    }
+
+    let cursor = cursor_utf16 as usize;
+    let mut line_index: usize = 0;
+    for (idx, unit) in input_str.encode_utf16().enumerate() {
+        if idx >= cursor {
+            break;
+        }
+        if unit == b'\n' as u16 {
+            line_index += 1;
+        }
+    }
+
+    let lines: Vec<String> = input_str.split('\n').map(|line| line.to_string()).collect();
+    let groups = crate::line_groups::group_multiline_expressions(&lines);
+    for group in groups {
+        if line_index >= group.start && line_index <= group.end {
+            *out_start = group.start as i32;
+            *out_end = group.end as i32;
+            return CString::new(group.expr)
+                .map(|s| s.into_raw())
+                .unwrap_or(std::ptr::null_mut());
+        }
+    }
+
+    *out_start = line_index as i32;
+    *out_end = line_index as i32;
+    std::ptr::null_mut()
 }
 
 /// Frees highlight spans returned by libnumby_highlight_spans.

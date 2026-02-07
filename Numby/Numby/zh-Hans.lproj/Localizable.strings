@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "字体大小";
 "settings.appearance.font" = "字体";
 "settings.appearance.syntaxHighlighting" = "语法高亮";
+"settings.appearance.activeLineHighlight" = "活动行高亮";
+"settings.appearance.activeLineIntensity" = "高亮强度";
+"settings.appearance.activeLineIntensityHint" = "调节高亮强度。";
+
+/* Settings - Number Section */
+"settings.number.section" = "数字";
 "settings.number.format" = "数字格式";
 "settings.number.maxDecimals" = "最大小数位";
 "settings.number.format.pretty" = "简洁";

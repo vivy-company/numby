@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "Taille de police";
 "settings.appearance.font" = "Police";
 "settings.appearance.syntaxHighlighting" = "Coloration syntaxique";
+"settings.appearance.activeLineHighlight" = "Surlignage de la ligne active";
+"settings.appearance.activeLineIntensity" = "Intensité du surlignage";
+"settings.appearance.activeLineIntensityHint" = "Ajuste l'intensité du surlignage.";
+
+/* Settings - Number Section */
+"settings.number.section" = "Nombres";
 "settings.number.format" = "Format des nombres";
 "settings.number.maxDecimals" = "Décimales max";
 "settings.number.format.pretty" = "Compact";

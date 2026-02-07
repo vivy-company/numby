@@ -8,6 +8,7 @@ class SettingsViewController: UIViewController {
     private enum Section: Int, CaseIterable {
         case language
         case appearance
+        case numbers
         case currency
         case about
 
@@ -15,6 +16,7 @@ class SettingsViewController: UIViewController {
             switch self {
             case .language: return NSLocalizedString("settings.language.section", comment: "")
             case .appearance: return NSLocalizedString("settings.appearance.section", comment: "")
+            case .numbers: return NSLocalizedString("settings.number.section", comment: "")
             case .currency: return NSLocalizedString("settings.currency.section", comment: "")
             case .about: return NSLocalizedString("settings.about.section", comment: "")
             }
@@ -26,12 +28,19 @@ class SettingsViewController: UIViewController {
     private var isUpdatingCurrency = false
     private var showUpdateSuccess = false
     private let numbyWrapper = NumbyWrapper()
+    private var lastConfigSnapshot = Configuration.shared.config
 
     private enum AppearanceRow: Equatable {
         case theme
         case fontSize
         case font
         case syntaxHighlighting
+        case activeLineHighlight
+        case activeLineIntensity
+        case activeLineIntensityHint
+    }
+
+    private enum NumberRow: Equatable {
         case numberFormat
         case maxDecimals
         case maxDecimalsHint
@@ -44,6 +53,17 @@ class SettingsViewController: UIViewController {
             .fontSize,
             .font,
             .syntaxHighlighting,
+            .activeLineHighlight,
+        ]
+        if Configuration.shared.config.activeLineHighlight {
+            rows.append(.activeLineIntensity)
+            rows.append(.activeLineIntensityHint)
+        }
+        return rows
+    }
+
+    private var numberRows: [NumberRow] {
+        var rows: [NumberRow] = [
             .numberFormat
         ]
         if Configuration.shared.config.numberFormat == "precision" {
@@ -77,6 +97,7 @@ class SettingsViewController: UIViewController {
         updateTheme()
         registerForTraitChangesIfAvailable()
         loadCurrencyUpdateTime()
+        lastConfigSnapshot = Configuration.shared.config
 
         NotificationCenter.default.addObserver(
             self,
@@ -136,7 +157,9 @@ class SettingsViewController: UIViewController {
 
     private func updateCurrencyRates() {
         isUpdatingCurrency = true
-        tableView.reloadSections(IndexSet(integer: Section.currency.rawValue), with: .automatic)
+        UIView.performWithoutAnimation {
+            tableView.reloadSections(IndexSet(integer: Section.currency.rawValue), with: .none)
+        }
 
         // Use native URLSession for all platforms (works on visionOS)
         numbyWrapper.updateCurrencyRatesNative { [weak self] success in
@@ -150,7 +173,9 @@ class SettingsViewController: UIViewController {
                     // Hide success indicator after 3 seconds
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         self.showUpdateSuccess = false
-                        self.tableView.reloadSections(IndexSet(integer: Section.currency.rawValue), with: .automatic)
+                        UIView.performWithoutAnimation {
+                            self.tableView.reloadSections(IndexSet(integer: Section.currency.rawValue), with: .none)
+                        }
                     }
 
                     self.lastCurrencyUpdate = Date()
@@ -168,7 +193,9 @@ class SettingsViewController: UIViewController {
                     self.present(alert, animated: true)
                 }
 
-                self.tableView.reloadSections(IndexSet(integer: Section.currency.rawValue), with: .automatic)
+                UIView.performWithoutAnimation {
+                    self.tableView.reloadSections(IndexSet(integer: Section.currency.rawValue), with: .none)
+                }
             }
         }
     }
@@ -181,16 +208,51 @@ class SettingsViewController: UIViewController {
 
     @objc private func themeDidChange() {
         updateTheme()
-        tableView.reloadData()
     }
 
     @objc private func configDidChange() {
         let config = Configuration.shared.config
-        _ = numbyWrapper.setNumberFormat(
-            config.numberFormat,
-            maxDecimals: config.numberMaxDecimals
-        )
-        tableView.reloadData()
+        let previous = lastConfigSnapshot
+        lastConfigSnapshot = config
+
+        if config.numberFormat != previous.numberFormat || config.numberMaxDecimals != previous.numberMaxDecimals {
+            _ = numbyWrapper.setNumberFormat(
+                config.numberFormat,
+                maxDecimals: config.numberMaxDecimals
+            )
+        }
+
+        var sectionsToReload = IndexSet()
+        var rowsToReload: [IndexPath] = []
+
+        if config.numberFormat != previous.numberFormat {
+            sectionsToReload.insert(Section.numbers.rawValue)
+        } else if config.numberMaxDecimals != previous.numberMaxDecimals {
+            if let previewIndex = numberRows.firstIndex(of: .preview) {
+                rowsToReload.append(IndexPath(row: previewIndex, section: Section.numbers.rawValue))
+            }
+        }
+
+        if config.activeLineHighlight != previous.activeLineHighlight {
+            sectionsToReload.insert(Section.appearance.rawValue)
+        } else if config.activeLineHighlightIntensity != previous.activeLineHighlightIntensity {
+            if let intensityIndex = appearanceRows.firstIndex(of: .activeLineIntensity) {
+                rowsToReload.append(IndexPath(row: intensityIndex, section: Section.appearance.rawValue))
+            }
+        }
+
+        if !sectionsToReload.isEmpty {
+            UIView.performWithoutAnimation {
+                tableView.reloadSections(sectionsToReload, with: .none)
+            }
+            return
+        }
+
+        if !rowsToReload.isEmpty {
+            UIView.performWithoutAnimation {
+                tableView.reloadRows(at: rowsToReload, with: .none)
+            }
+        }
     }
 
     private func updateTheme() {
@@ -201,7 +263,6 @@ class SettingsViewController: UIViewController {
         tableView.backgroundColor = .systemGroupedBackground
         tableView.separatorColor = .separator
         tableView.indicatorStyle = .default
-        tableView.reloadData()
     }
 
     private func registerForTraitChangesIfAvailable() {
@@ -229,6 +290,8 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             return 1 // Locale picker
         case .appearance:
             return appearanceRows.count
+        case .numbers:
+            return numberRows.count
         case .currency:
             return 4 // API date, Last update, Update button, API info
         case .about:
@@ -250,6 +313,8 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             return languageCell(for: indexPath)
         case .appearance:
             return appearanceCell(for: indexPath)
+        case .numbers:
+            return numberCell(for: indexPath)
         case .currency:
             return currencyCell(for: indexPath)
         case .about:
@@ -271,9 +336,15 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
                 showThemeSelector()
             case .font:
                 showFontSelector()
+            case .fontSize, .syntaxHighlighting, .activeLineHighlight, .activeLineIntensity, .activeLineIntensityHint:
+                break
+            }
+        case .numbers:
+            let row = numberRows[indexPath.row]
+            switch row {
             case .numberFormat:
                 showNumberFormatSelector()
-            case .fontSize, .syntaxHighlighting, .maxDecimals, .maxDecimalsHint, .preview:
+            case .maxDecimals, .maxDecimalsHint, .preview:
                 break
             }
         case .currency:
@@ -327,6 +398,8 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
                 icon: "textformat.size",
                 onChange: { value in
                     Configuration.shared.config.fontSize = Double(value)
+                },
+                onCommit: { _ in
                     Configuration.shared.save()
                     NotificationCenter.default.post(name: NSNotification.Name("ThemeDidChange"), object: nil)
                 }
@@ -359,6 +432,61 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             )
             return cell
 
+        case .activeLineHighlight:
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "SwitchCell", for: indexPath) as? SwitchCell else {
+                return UITableViewCell()
+            }
+            cell.configure(
+                title: NSLocalizedString("settings.appearance.activeLineHighlight", comment: ""),
+                isOn: config.activeLineHighlight,
+                icon: "line.horizontal.3",
+                onChange: { isOn in
+                    Configuration.shared.config.activeLineHighlight = isOn
+                    Configuration.shared.save()
+                    UIView.performWithoutAnimation {
+                        self.tableView.reloadSections(IndexSet(integer: Section.appearance.rawValue), with: .none)
+                    }
+                }
+            )
+            return cell
+
+        case .activeLineIntensity:
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "SliderCell", for: indexPath) as? SliderCell else {
+                return UITableViewCell()
+            }
+            cell.configure(
+                title: NSLocalizedString("settings.appearance.activeLineIntensity", comment: ""),
+                value: Float(config.activeLineHighlightIntensity * 100),
+                min: 2,
+                max: 20,
+                icon: "circle.lefthalf.filled",
+                onChange: { value in
+                    Configuration.shared.config.activeLineHighlightIntensity = Double(value) / 100.0
+                    NotificationCenter.default.post(name: NSNotification.Name("ActiveLineHighlightDidChange"), object: nil)
+                },
+                onCommit: { _ in
+                    Configuration.shared.save()
+                }
+            )
+            return cell
+
+        case .activeLineIntensityHint:
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
+            var cellConfig = cell.defaultContentConfiguration()
+            cellConfig.text = NSLocalizedString("settings.appearance.activeLineIntensityHint", comment: "")
+            cellConfig.textProperties.color = .secondaryLabel
+            cell.contentConfiguration = cellConfig
+            cell.accessoryType = .none
+            cell.selectionStyle = .none
+            return cell
+        }
+    }
+
+    private func numberCell(for indexPath: IndexPath) -> UITableViewCell {
+        let config = Configuration.shared.config
+        let row = numberRows[indexPath.row]
+
+        switch row {
         case .numberFormat:
             let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
             var cellConfig = cell.defaultContentConfiguration()
@@ -384,11 +512,14 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
                 icon: "number.circle",
                 onChange: { value in
                     Configuration.shared.config.numberMaxDecimals = Int(value)
-                    Configuration.shared.save()
                     _ = self.numbyWrapper.setNumberFormat(
                         Configuration.shared.config.numberFormat,
                         maxDecimals: Configuration.shared.config.numberMaxDecimals
                     )
+                    self.updateNumberPreviewCell()
+                },
+                onCommit: { _ in
+                    Configuration.shared.save()
                 }
             )
             return cell
@@ -416,6 +547,21 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             cell.selectionStyle = .none
             return cell
         }
+    }
+
+    private func updateNumberPreviewCell() {
+        guard let previewIndex = numberRows.firstIndex(of: .preview) else { return }
+        let indexPath = IndexPath(row: previewIndex, section: Section.numbers.rawValue)
+        guard let cell = tableView.cellForRow(at: indexPath) else { return }
+        var cellConfig = cell.defaultContentConfiguration()
+        cellConfig.image = UIImage(systemName: "eye")
+        cellConfig.text = NSLocalizedString("settings.number.preview", comment: "")
+        let previewExpression = Configuration.shared.config.numberFormat == "precision" ? "1/3" : "1234567.89"
+        let preview = numbyWrapper.evaluate(previewExpression).formatted ?? "—"
+        cellConfig.secondaryText = preview
+        cell.contentConfiguration = cellConfig
+        cell.accessoryType = .none
+        cell.selectionStyle = .none
     }
 
 
@@ -527,7 +673,11 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         ) { [weak self] selectedThemeName in
             if let theme = Theme.allThemes.first(where: { $0.name == selectedThemeName }) {
                 Theme.current = theme
-                self?.tableView.reloadData()
+                if let self {
+                    UIView.performWithoutAnimation {
+                        self.tableView.reloadSections(IndexSet(integer: Section.appearance.rawValue), with: .none)
+                    }
+                }
                 NotificationCenter.default.post(name: NSNotification.Name("ThemeDidChange"), object: nil)
             }
         }
@@ -576,7 +726,11 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
             Configuration.shared.config.fontName = selectedFont
             Configuration.shared.save()
             NotificationCenter.default.post(name: NSNotification.Name("ThemeDidChange"), object: nil)
-            self?.tableView.reloadData()
+            if let self {
+                UIView.performWithoutAnimation {
+                    self.tableView.reloadSections(IndexSet(integer: Section.appearance.rawValue), with: .none)
+                }
+            }
         }
 
         let nav = UINavigationController(rootViewController: picker)
@@ -603,7 +757,6 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
                 format,
                 maxDecimals: Configuration.shared.config.numberMaxDecimals
             )
-            self?.tableView.reloadData()
         }
 
         alert.addAction(UIAlertAction(title: prettyTitle, style: .default) { _ in
@@ -618,9 +771,9 @@ extension SettingsViewController: UITableViewDelegate, UITableViewDataSource {
         ))
 
         if let popover = alert.popoverPresentationController,
-           let rowIndex = appearanceRows.firstIndex(of: .numberFormat),
+           let rowIndex = numberRows.firstIndex(of: .numberFormat),
            let cell = tableView.cellForRow(
-            at: IndexPath(row: rowIndex, section: Section.appearance.rawValue)
+            at: IndexPath(row: rowIndex, section: Section.numbers.rawValue)
            ) {
             popover.sourceView = cell
             popover.sourceRect = cell.bounds
@@ -641,6 +794,7 @@ class SliderCell: UITableViewCell {
     private let valueLabel = UILabel()
     private let slider = UISlider()
     private var onChange: ((Float) -> Void)?
+    private var onCommit: ((Float) -> Void)?
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -667,6 +821,7 @@ class SliderCell: UITableViewCell {
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         slider.addTarget(self, action: #selector(sliderChanged), for: .valueChanged)
+        slider.addTarget(self, action: #selector(sliderEditingEnded), for: [.touchUpInside, .touchUpOutside, .touchCancel])
         slider.minimumTrackTintColor = .systemBlue
         slider.maximumTrackTintColor = .systemGray4
         slider.translatesAutoresizingMaskIntoConstraints = false
@@ -695,12 +850,21 @@ class SliderCell: UITableViewCell {
         ])
     }
 
-    func configure(title: String, value: Float, min: Float, max: Float, icon: String? = nil, onChange: @escaping (Float) -> Void) {
+    func configure(
+        title: String,
+        value: Float,
+        min: Float,
+        max: Float,
+        icon: String? = nil,
+        onChange: @escaping (Float) -> Void,
+        onCommit: ((Float) -> Void)? = nil
+    ) {
         titleLabel.text = title
         slider.minimumValue = min
         slider.maximumValue = max
         slider.value = value
         self.onChange = onChange
+        self.onCommit = onCommit
 
         if let icon = icon {
             iconView.image = UIImage(systemName: icon)
@@ -715,6 +879,10 @@ class SliderCell: UITableViewCell {
     @objc private func sliderChanged() {
         updateValueLabel()
         onChange?(slider.value)
+    }
+
+    @objc private func sliderEditingEnded() {
+        onCommit?(slider.value)
     }
 
     private func updateValueLabel() {

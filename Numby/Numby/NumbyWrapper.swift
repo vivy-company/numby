@@ -35,6 +35,29 @@ class NumbyWrapper: ObservableObject {
         return spans
     }
 
+    func groupBounds(for text: String, cursorUTF16: Int) -> (start: Int, end: Int)? {
+        var start: Int32 = 0
+        var end: Int32 = 0
+        let result = text.withCString { cStr in
+            libnumby_group_bounds_for_cursor(cStr, Int32(cursorUTF16), &start, &end)
+        }
+        guard result == 0 else { return nil }
+        return (start: Int(start), end: Int(end))
+    }
+
+    func groupExpression(for text: String, cursorUTF16: Int) -> (expr: String, start: Int, end: Int)? {
+        var start: Int32 = 0
+        var end: Int32 = 0
+        guard let exprPtr = text.withCString({
+            libnumby_group_expr_for_cursor($0, Int32(cursorUTF16), &start, &end)
+        }) else {
+            return nil
+        }
+        defer { libnumby_free_string(exprPtr) }
+        let expr = String(cString: exprPtr)
+        return (expr: expr, start: Int(start), end: Int(end))
+    }
+
     private func setup() {
         let configPath = loadOrSeedConfigPath()
         if let configPath {

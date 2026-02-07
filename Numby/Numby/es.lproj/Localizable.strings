@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "Tamaño de fuente";
 "settings.appearance.font" = "Fuente";
 "settings.appearance.syntaxHighlighting" = "Resaltado de sintaxis";
+"settings.appearance.activeLineHighlight" = "Resaltado de línea activa";
+"settings.appearance.activeLineIntensity" = "Intensidad del resaltado";
+"settings.appearance.activeLineIntensityHint" = "Ajusta la intensidad del resaltado.";
+
+/* Settings - Number Section */
+"settings.number.section" = "Números";
 "settings.number.format" = "Formato de números";
 "settings.number.maxDecimals" = "Máx. decimales";
 "settings.number.format.pretty" = "Compacto";

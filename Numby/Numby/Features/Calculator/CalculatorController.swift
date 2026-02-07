@@ -246,6 +246,12 @@ class CalculatorInstance: ObservableObject {
     /// Results for each line
     @Published var results: [String?] = []
 
+    /// Active line index
+    @Published var activeLine: Int = 0
+
+    /// Current input line count
+    @Published var lineCount: Int = 1
+
     /// Split ratio for input/results panels (default 0.5)
     @Published var splitRatio: Double = 0.5
 
@@ -280,90 +286,49 @@ class CalculatorInstance: ObservableObject {
     /// Evaluate all lines in input text
     func evaluateAllLines() {
         let lines = inputText.components(separatedBy: .newlines)
-        let groups = buildLineGroups(lines)
+        let lineStarts = lineStartUTF16Offsets(for: inputText)
         var newResults: [String?] = Array(repeating: nil, count: lines.count)
 
-        for group in groups {
-            let expr = group.expr.trimmingCharacters(in: .whitespaces)
-            guard !expr.isEmpty else { continue }
-            let result = numby.evaluate(expression: expr)
-            if group.end < newResults.count {
-                newResults[group.end] = result
+        var index = 0
+        while index < lines.count {
+            let cursor = index < lineStarts.count ? lineStarts[index] : inputText.utf16.count
+            if let group = numby.groupExpression(for: inputText, cursorUTF16: cursor) {
+                let start = max(0, min(group.start, lines.count - 1))
+                let end = max(start, min(group.end, lines.count - 1))
+
+                if start > index {
+                    index += 1
+                    continue
+                }
+
+                let expr = group.expr.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !expr.isEmpty {
+                    let result = numby.evaluate(expression: expr)
+                    if end < newResults.count {
+                        newResults[end] = result
+                    }
+                }
+
+                index = end + 1
+            } else {
+                index += 1
             }
         }
 
         results = newResults
     }
 
-    private func buildLineGroups(_ lines: [String]) -> [(start: Int, end: Int, expr: String)] {
-        var groups: [(start: Int, end: Int, expr: String)] = []
-        var currentStart: Int? = nil
-        var currentParts: [String] = []
-        var prevLine: String?
-
-        for (idx, line) in lines.enumerated() {
-            if isCommentOrEmpty(line) {
-                if let start = currentStart {
-                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: "\n")))
-                    currentStart = nil
-                    currentParts.removeAll()
-                }
-                prevLine = nil
-                continue
+    private func lineStartUTF16Offsets(for text: String) -> [Int] {
+        var offsets: [Int] = [0]
+        offsets.reserveCapacity(max(1, text.filter { $0 == "\n" }.count + 1))
+        var index = 0
+        for unit in text.utf16 {
+            if unit == 10 {
+                offsets.append(index + 1)
             }
-
-            let startsWithOp = lineStartsWithOperator(line)
-            let prevEndsWithOp = prevLine.map { lineEndsWithOperator($0) } ?? false
-            let isContinuation = startsWithOp || prevEndsWithOp
-
-            if currentStart == nil || !isContinuation {
-                if let start = currentStart {
-                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: "\n")))
-                    currentParts.removeAll()
-                }
-                currentStart = idx
-            }
-
-            currentParts.append(line.trimmingCharacters(in: .whitespaces))
-            prevLine = line
+            index += 1
         }
-
-        if let start = currentStart {
-            groups.append((start: start, end: max(0, lines.count - 1), expr: currentParts.joined(separator: "\n")))
-        }
-
-        return groups
-    }
-
-    private func isCommentOrEmpty(_ line: String) -> Bool {
-        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty || trimmed.hasPrefix("//") || trimmed.hasPrefix("#")
-    }
-
-    private func lineStartsWithOperator(_ line: String) -> Bool {
-        let trimmed = stripLineCommentsForContinuation(line).trimmingCharacters(in: .whitespaces)
-        guard let first = trimmed.first else { return false }
-        return "+-*/%^".contains(first)
-    }
-
-    private func lineEndsWithOperator(_ line: String) -> Bool {
-        let trimmed = stripLineCommentsForContinuation(line).trimmingCharacters(in: .whitespaces)
-        guard let last = trimmed.last else { return false }
-        return "+-*/%^(".contains(last)
-    }
-
-    private func stripLineCommentsForContinuation(_ line: String) -> String {
-        var end = line.endIndex
-        if let range = line.range(of: "//") {
-            end = min(end, range.lowerBound)
-        }
-        if let range = line.range(of: "#") {
-            end = min(end, range.lowerBound)
-        }
-        if let range = line.range(of: "/*") {
-            end = min(end, range.lowerBound)
-        }
-        return String(line[..<end])
+        return offsets
     }
 
     private func applyNumberFormat() {

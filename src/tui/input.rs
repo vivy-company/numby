@@ -324,7 +324,7 @@ pub fn handle_normal_mode(
                         }
                         let lines: Vec<String> = input.lines().map(|l| l.to_string()).collect();
                         let mut evaluated = false;
-                        for group in crate::utils::group_multiline_expressions(&lines) {
+                        for group in crate::line_groups::group_multiline_expressions(&lines) {
                             if line_idx >= group.start && line_idx <= group.end {
                                 if line_idx == group.end {
                                     let expr = group.expr.trim();
@@ -371,7 +371,7 @@ fn format_buffer_as_markdown_list(
 ) -> String {
     let mut rows: Vec<(String, String)> = Vec::new();
     let lines: Vec<String> = input.lines().map(|l| l.to_string()).collect();
-    for group in crate::utils::group_multiline_expressions(&lines) {
+    for group in crate::line_groups::group_multiline_expressions(&lines) {
         let trimmed = group.expr.trim();
         if trimmed.is_empty() {
             continue;

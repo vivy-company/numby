@@ -9,6 +9,8 @@
 import SwiftUI
 import Combine
 
+private let calculatorLineSpacing: CGFloat = 8
+
 /// View for a single calculator instance with split input/results panels
 struct CalculatorSurfaceView: View {
     @ObservedObject var instance: CalculatorInstance
@@ -22,49 +24,71 @@ struct CalculatorSurfaceView: View {
     @FocusState private var isViewFocused: Bool
 
     @State private var showCopiedFeedback = false
+    @State private var activeGroupStart: Int = 0
+    @State private var activeGroupEnd: Int = 0
+    @State private var inputContentHeight: CGFloat = 0
+
+    private var activeLineHighlightColor: NSColor? {
+        guard configManager.config.activeLineHighlight else { return nil }
+        let base = configManager.config.backgroundColor ?? NSColor.textBackgroundColor
+        let intensity = min(max(configManager.config.activeLineHighlightIntensity, 0.0), 0.3)
+        let overlay: NSColor = base.isDark ? .white : .black
+        return base.blended(with: overlay, fraction: CGFloat(intensity))
+    }
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
                 ZStack(alignment: .bottomTrailing) {
                 ScrollView {
-                    HStack(spacing: 0) {
-                        // Left panel - Input (80%)
-                        ZStack {
-                            Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
-                                .ignoresSafeArea()
+                    ZStack(alignment: .topLeading) {
+                        Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
+                            .ignoresSafeArea()
 
+                        HStack(spacing: 0) {
+                            // Left panel - Input (80%)
                             InputTextView(
                                 text: $instance.inputText,
+                                cursorPosition: $instance.cursorPosition,
+                                activeLine: $instance.activeLine,
+                                lineCount: $instance.lineCount,
+                                activeGroupStart: $activeGroupStart,
+                                activeGroupEnd: $activeGroupEnd,
+                                contentHeight: $inputContentHeight,
                                 numby: instance.numby,
                                 backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
                                 textColor: Theme.current.syntaxColor(for: .text),
                                 fontSize: configManager.config.fontSize,
                                 fontName: configManager.config.fontName ?? "SFMono-Regular",
                                 syntaxHighlighting: configManager.config.syntaxHighlighting,
+                                activeLineHighlightColor: activeLineHighlightColor,
+                                activeLineHighlightEnabled: configManager.config.activeLineHighlight,
+                                minHeight: geometry.size.height,
                                 updateTrigger: updateTrigger
                             )
-                        }
-                        .frame(width: geometry.size.width * 0.8)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                            .frame(width: geometry.size.width * 0.8)
 
-                        // Right panel - Results (20%)
-                        ZStack(alignment: .topTrailing) {
-                            Color(configManager.config.backgroundColor ?? NSColor.textBackgroundColor)
-                                .ignoresSafeArea()
-
+                            // Right panel - Results (20%)
                             ResultsTextView(
                                 results: instance.results,
                                 textColor: Theme.current.syntaxColor(for: .results),
                                 backgroundColor: configManager.config.backgroundColor ?? NSColor.textBackgroundColor,
                                 fontSize: configManager.config.fontSize,
-                                fontName: configManager.config.fontName ?? "SFMono-Regular"
+                                fontName: configManager.config.fontName ?? "SFMono-Regular",
+                                activeLine: instance.activeLine,
+                                lineCount: instance.lineCount,
+                                activeLineHighlightColor: activeLineHighlightColor,
+                                activeLineHighlightEnabled: configManager.config.activeLineHighlight,
+                                activeGroupStart: activeGroupStart,
+                                activeGroupEnd: activeGroupEnd,
+                                minHeight: max(geometry.size.height, inputContentHeight)
                             )
-                            .padding(.top, 16)
-                            .padding(.trailing, 16)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                            .frame(width: geometry.size.width * 0.20)
                         }
-                        .frame(width: geometry.size.width * 0.20)
+                        .frame(minHeight: geometry.size.height)
                     }
-                    .frame(minHeight: geometry.size.height)
                 }
                 .focusable()
                 .focused($isViewFocused)
@@ -272,19 +296,122 @@ struct ShareMenuButton: NSViewRepresentable {
 
 // MARK: - Custom NSTextView with fixed cursor width
 
-class CustomNSTextView: NSTextView {
+class ActiveLineTextView: NSTextView {
+    var activeLineIndex: Int = 0 { didSet { needsDisplay = true } }
+    var activeLineHighlightColor: NSColor? { didSet { needsDisplay = true } }
+    var isActiveLineHighlightEnabled: Bool = false { didSet { needsDisplay = true } }
+    var activeLineStart: Int = 0 { didSet { needsDisplay = true } }
+    var activeLineEnd: Int = 0 { didSet { needsDisplay = true } }
+    var minimumContentHeight: CGFloat = 1 {
+        didSet {
+            if oldValue != minimumContentHeight {
+                invalidateIntrinsicContentSize()
+            }
+        }
+    }
+
+    override var intrinsicContentSize: NSSize {
+        guard let layoutManager = layoutManager, let textContainer = textContainer else {
+            return super.intrinsicContentSize
+        }
+        let used = layoutManager.usedRect(for: textContainer)
+        var height = ceil(used.height + textContainerInset.height * 2)
+        let extra = layoutManager.extraLineFragmentRect
+        if extra.height > 0 {
+            height += ceil(extra.height)
+        }
+        let minHeight = max(1, minimumContentHeight)
+        return NSSize(width: NSView.noIntrinsicMetric, height: max(height, minHeight))
+    }
+
+    override func didChangeText() {
+        super.didChangeText()
+        invalidateIntrinsicContentSize()
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        if isActiveLineHighlightEnabled, let color = activeLineHighlightColor {
+            drawActiveLineBackground(color)
+        }
+        super.draw(dirtyRect)
+    }
+
+    private func drawActiveLineBackground(_ color: NSColor) {
+        guard let layoutManager = layoutManager,
+              let textStorage = textStorage else {
+            return
+        }
+
+        let text = textStorage.string as NSString
+        let startLine = min(activeLineStart, activeLineEnd)
+        let endLine = max(activeLineStart, activeLineEnd)
+        guard startLine >= 0, endLine >= 0 else { return }
+
+        let font = self.font ?? .monospacedSystemFont(ofSize: 14, weight: .regular)
+        let lineHeight = layoutManager.defaultLineHeight(for: font) + calculatorLineSpacing
+
+        for lineIndex in startLine...endLine {
+            guard let lineRange = lineRange(for: lineIndex, in: text) else { continue }
+            let glyphRange = layoutManager.glyphRange(forCharacterRange: lineRange, actualCharacterRange: nil)
+
+            if glyphRange.length == 0 {
+                if lineRange.location == text.length {
+                    let extraRect = layoutManager.extraLineFragmentRect
+                    if !extraRect.isEmpty {
+                        var highlightRect = extraRect
+                        let origin = textContainerOrigin
+                        highlightRect.origin.y += origin.y
+                        highlightRect.origin.x = 0
+                        highlightRect.size.width = bounds.width
+                        highlightRect.size.height = max(highlightRect.height, lineHeight)
+                        color.setFill()
+                        highlightRect.fill()
+                    }
+                }
+                continue
+            }
+
+            layoutManager.enumerateLineFragments(forGlyphRange: glyphRange) { rect, _, _, fragmentGlyphRange, _ in
+                var highlightRect = layoutManager.lineFragmentUsedRect(
+                    forGlyphAt: fragmentGlyphRange.location,
+                    effectiveRange: nil
+                )
+                if highlightRect.height == 0 { highlightRect = rect }
+                highlightRect.size.height = max(highlightRect.height, lineHeight)
+                let origin = self.textContainerOrigin
+                highlightRect.origin.y += origin.y
+                highlightRect.origin.x = 0
+                highlightRect.size.width = self.bounds.width
+                color.setFill()
+                highlightRect.fill()
+            }
+        }
+    }
+
+    private func lineRange(for lineIndex: Int, in text: NSString) -> NSRange? {
+        guard lineIndex >= 0 else { return nil }
+        var currentLine = 0
+        var searchIndex = 0
+        while searchIndex <= text.length {
+            let range = text.lineRange(for: NSRange(location: searchIndex, length: 0))
+            if currentLine == lineIndex {
+                return range
+            }
+            if range.length == 0 {
+                break
+            }
+            searchIndex = range.upperBound
+            currentLine += 1
+        }
+        return nil
+    }
+}
+
+class CustomNSTextView: ActiveLineTextView {
     override func drawInsertionPoint(in rect: NSRect, color: NSColor, turnedOn flag: Bool) {
         var customRect = rect
         customRect.size.width = 2
         super.drawInsertionPoint(in: customRect, color: color, turnedOn: flag)
-    }
-
-    override func setNeedsDisplay(_ rect: NSRect, avoidAdditionalLayout flag: Bool) {
-        var customRect = rect
-        if customRect.size.width > 2 {
-            customRect.size.width = 2
-        }
-        super.setNeedsDisplay(customRect, avoidAdditionalLayout: flag)
     }
 
     // Remove focus ring
@@ -377,9 +504,16 @@ struct ResultsTextView: NSViewRepresentable {
     let backgroundColor: NSColor
     let fontSize: Double
     let fontName: String
+    let activeLine: Int
+    let lineCount: Int
+    let activeLineHighlightColor: NSColor?
+    let activeLineHighlightEnabled: Bool
+    let activeGroupStart: Int
+    let activeGroupEnd: Int
+    let minHeight: CGFloat
 
-    func makeNSView(context: Context) -> NSTextView {
-        let textView = NSTextView()
+    func makeNSView(context: Context) -> ActiveLineTextView {
+        let textView = ActiveLineTextView()
         textView.isEditable = false
         textView.isSelectable = true
         textView.isVerticallyResizable = true
@@ -394,47 +528,84 @@ struct ResultsTextView: NSViewRepresentable {
         textView.alignment = .right
 
         textView.wantsLayer = true
-        textView.layer?.backgroundColor = backgroundColor.cgColor
+        textView.layer?.backgroundColor = NSColor.clear.cgColor
         textView.drawsBackground = false
         textView.isRichText = false
-        textView.textContainerInset = NSSize(width: 0, height: 0)
+        textView.textContainerInset = NSSize(width: 16, height: 16)
+        textView.minimumContentHeight = minHeight
 
         // Match input text view paragraph style exactly
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineHeightMultiple = 1.0
         paragraph.paragraphSpacing = 0
-        paragraph.lineSpacing = 8
+        paragraph.lineSpacing = 0
+        let baseLineHeight = textView.layoutManager?.defaultLineHeight(for: font) ?? font.ascender - font.descender
+        let lineHeight = baseLineHeight + calculatorLineSpacing
+        paragraph.minimumLineHeight = lineHeight
+        paragraph.maximumLineHeight = lineHeight
         paragraph.alignment = .right
+        let baselineOffset = (lineHeight - baseLineHeight) / 2
         textView.defaultParagraphStyle = paragraph
+        textView.typingAttributes = [
+            .font: font,
+            .paragraphStyle: paragraph,
+            .baselineOffset: baselineOffset
+        ]
 
         return textView
     }
 
-    func updateNSView(_ textView: NSTextView, context: Context) {
+    func updateNSView(_ textView: ActiveLineTextView, context: Context) {
         let font = NSFont(name: fontName, size: fontSize) ?? .monospacedSystemFont(ofSize: fontSize, weight: .regular)
         textView.font = font
         textView.textColor = textColor
         textView.wantsLayer = true
-        textView.layer?.backgroundColor = backgroundColor.cgColor
+        textView.layer?.backgroundColor = NSColor.clear.cgColor
+        textView.activeLineIndex = activeLine
+        textView.activeLineStart = activeGroupStart
+        textView.activeLineEnd = activeGroupEnd
+        textView.activeLineHighlightColor = activeLineHighlightColor
+        textView.isActiveLineHighlightEnabled = activeLineHighlightEnabled
+        textView.textContainerInset = NSSize(width: 16, height: 16)
+        textView.minimumContentHeight = minHeight
 
         // Update paragraph style
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineHeightMultiple = 1.0
         paragraph.paragraphSpacing = 0
-        paragraph.lineSpacing = 8
+        paragraph.lineSpacing = 0
+        let baseLineHeight = textView.layoutManager?.defaultLineHeight(for: font) ?? font.ascender - font.descender
+        let lineHeight = baseLineHeight + calculatorLineSpacing
+        paragraph.minimumLineHeight = lineHeight
+        paragraph.maximumLineHeight = lineHeight
         paragraph.alignment = .right
+        let baselineOffset = (lineHeight - baseLineHeight) / 2
         textView.defaultParagraphStyle = paragraph
 
-        // Build results text
-        let resultsText = results.map { $0 ?? "" }.joined(separator: "\n")
-        textView.string = resultsText
-
-        // Apply text attributes
-        let storage = textView.textStorage!
-        let fullRange = NSRange(location: 0, length: storage.length)
-        storage.addAttribute(.foregroundColor, value: textColor, range: fullRange)
-        storage.addAttribute(.font, value: font, range: fullRange)
-        storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
+        // Build results text (pad to input line count for sync)
+        let desiredCount = max(lineCount, results.count)
+        var paddedResults = results.map { $0 ?? "" }
+        if paddedResults.count < desiredCount {
+            paddedResults.append(contentsOf: Array(repeating: "", count: desiredCount - paddedResults.count))
+        }
+        let resultsText = paddedResults.joined(separator: "\n")
+        if let storage = textView.textStorage {
+            let textChanged = storage.string != resultsText
+            if textChanged {
+                let attributed = NSMutableAttributedString(string: resultsText)
+                attributed.addAttribute(.foregroundColor, value: textColor, range: NSRange(location: 0, length: attributed.length))
+                attributed.addAttribute(.font, value: font, range: NSRange(location: 0, length: attributed.length))
+                attributed.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: attributed.length))
+                attributed.addAttribute(.baselineOffset, value: baselineOffset, range: NSRange(location: 0, length: attributed.length))
+                storage.setAttributedString(attributed)
+            } else {
+                let fullRange = NSRange(location: 0, length: storage.length)
+                storage.addAttribute(.foregroundColor, value: textColor, range: fullRange)
+                storage.addAttribute(.font, value: font, range: fullRange)
+                storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
+                storage.addAttribute(.baselineOffset, value: baselineOffset, range: fullRange)
+            }
+        }
     }
 }
 
@@ -442,12 +613,21 @@ struct ResultsTextView: NSViewRepresentable {
 
 struct InputTextView: NSViewRepresentable {
     @Binding var text: String
+    @Binding var cursorPosition: Int
+    @Binding var activeLine: Int
+    @Binding var lineCount: Int
+    @Binding var activeGroupStart: Int
+    @Binding var activeGroupEnd: Int
+    @Binding var contentHeight: CGFloat
     let numby: NumbyWrapper
     let backgroundColor: NSColor
     let textColor: NSColor
     let fontSize: Double
     let fontName: String
     let syntaxHighlighting: Bool
+    let activeLineHighlightColor: NSColor?
+    let activeLineHighlightEnabled: Bool
+    let minHeight: CGFloat
     let updateTrigger: Int
 
     func makeNSView(context: Context) -> CustomNSTextView {
@@ -465,7 +645,7 @@ struct InputTextView: NSViewRepresentable {
 
         // Use layer-based background instead of drawsBackground
         textView.wantsLayer = true
-        textView.layer?.backgroundColor = backgroundColor.cgColor
+        textView.layer?.backgroundColor = NSColor.clear.cgColor
         textView.drawsBackground = false
         textView.isRichText = false
         textView.isAutomaticQuoteSubstitutionEnabled = false
@@ -473,6 +653,7 @@ struct InputTextView: NSViewRepresentable {
         textView.isAutomaticSpellingCorrectionEnabled = false
         textView.delegate = context.coordinator
         textView.textContainerInset = NSSize(width: 16, height: 16)
+        textView.minimumContentHeight = minHeight
         textView.allowsUndo = true
         // NSTextView manages its own undo manager; it will integrate with SwiftUI automatically.
 
@@ -480,45 +661,79 @@ struct InputTextView: NSViewRepresentable {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineHeightMultiple = 1.0
         paragraph.paragraphSpacing = 0
-        paragraph.lineSpacing = 8
+        paragraph.lineSpacing = 0
+        let baseLineHeight = textView.layoutManager?.defaultLineHeight(for: font) ?? font.ascender - font.descender
+        let lineHeight = baseLineHeight + calculatorLineSpacing
+        paragraph.minimumLineHeight = lineHeight
+        paragraph.maximumLineHeight = lineHeight
+        let baselineOffset = (lineHeight - baseLineHeight) / 2
         textView.defaultParagraphStyle = paragraph
         textView.typingAttributes = [
             .font: font,
-            .paragraphStyle: paragraph
+            .paragraphStyle: paragraph,
+            .baselineOffset: baselineOffset
         ]
+
+        textView.activeLineIndex = activeLine
+        textView.activeLineStart = activeGroupStart
+        textView.activeLineEnd = activeGroupEnd
+        textView.activeLineHighlightColor = activeLineHighlightColor
+        textView.isActiveLineHighlightEnabled = activeLineHighlightEnabled
 
         return textView
     }
 
     func updateNSView(_ textView: CustomNSTextView, context: Context) {
+        context.coordinator.isUpdatingView = true
+        defer { context.coordinator.isUpdatingView = false }
+
         // Update font
         let font = NSFont(name: fontName, size: fontSize) ?? .monospacedSystemFont(ofSize: fontSize, weight: .regular)
-        if textView.font != font {
+        let fontChanged = textView.font != font
+        if fontChanged {
             textView.font = font
 
             // Update paragraph style when font changes
             let paragraph = NSMutableParagraphStyle()
             paragraph.lineHeightMultiple = 1.0
             paragraph.paragraphSpacing = 0
-            paragraph.lineSpacing = 8
+            paragraph.lineSpacing = 0
+            let baseLineHeight = textView.layoutManager?.defaultLineHeight(for: font) ?? font.ascender - font.descender
+            let lineHeight = baseLineHeight + calculatorLineSpacing
+            paragraph.minimumLineHeight = lineHeight
+            paragraph.maximumLineHeight = lineHeight
+            let baselineOffset = (lineHeight - baseLineHeight) / 2
             textView.defaultParagraphStyle = paragraph
             textView.typingAttributes = [
                 .font: font,
-                .paragraphStyle: paragraph
+                .paragraphStyle: paragraph,
+                .baselineOffset: baselineOffset
             ]
         }
 
         // Update colors using layer-based approach
+        let colorChanged = textView.textColor != textColor
         textView.textColor = textColor
         textView.wantsLayer = true
-        textView.layer?.backgroundColor = backgroundColor.cgColor
+        textView.layer?.backgroundColor = NSColor.clear.cgColor
         textView.drawsBackground = false
+        textView.activeLineIndex = activeLine
+        textView.activeLineHighlightColor = activeLineHighlightColor
+        textView.isActiveLineHighlightEnabled = activeLineHighlightEnabled
+        textView.minimumContentHeight = minHeight
 
+        let textChanged = textView.string != text
         // Update text and reapply highlighting
-        if textView.string != text {
+        if textChanged {
             textView.string = text
+            context.coordinator.updateLineCountAsync(for: text)
         }
-        applySyntaxHighlighting(to: textView)
+        let forceHighlight = fontChanged
+            || colorChanged
+            || (context.coordinator.lastSyntaxHighlighting != syntaxHighlighting)
+        context.coordinator.applyHighlightIfNeeded(for: textView, force: forceHighlight)
+        context.coordinator.updateActiveLineRange(for: textView)
+        context.coordinator.updateContentHeight(for: textView)
     }
 
     static func dismantleNSView(_ textView: CustomNSTextView, coordinator: Coordinator) {
@@ -559,16 +774,50 @@ struct InputTextView: NSViewRepresentable {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineHeightMultiple = 1.0
         paragraph.paragraphSpacing = 0
-        paragraph.lineSpacing = 8
+        paragraph.lineSpacing = 0
+        let baseLineHeight = textView.layoutManager?.defaultLineHeight(for: font) ?? font.ascender - font.descender
+        let lineHeight = baseLineHeight + calculatorLineSpacing
+        paragraph.minimumLineHeight = lineHeight
+        paragraph.maximumLineHeight = lineHeight
 
         // Reset to theme text color and paragraph style
         storage.addAttribute(.foregroundColor, value: textColor, range: fullRange)
         storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
         storage.addAttribute(.font, value: font, range: fullRange)
+        let baselineOffset = (lineHeight - baseLineHeight) / 2
+        storage.addAttribute(.baselineOffset, value: baselineOffset, range: fullRange)
 
         let text = storage.string
         let theme = Theme.current
         let spans = numby.highlightSpans(for: text)
+        applyHighlightSpans(spans, to: textView, theme: theme)
+    }
+
+    private func applyHighlightSpans(
+        _ spans: [NumbyHighlightSpan],
+        to textView: NSTextView,
+        theme: Theme
+    ) {
+        guard let storage = textView.textStorage else { return }
+        let fullRange = NSRange(location: 0, length: storage.length)
+
+        let font = textView.font ?? NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineHeightMultiple = 1.0
+        paragraph.paragraphSpacing = 0
+        paragraph.lineSpacing = 0
+        let baseLineHeight = textView.layoutManager?.defaultLineHeight(for: font) ?? font.ascender - font.descender
+        let lineHeight = baseLineHeight + calculatorLineSpacing
+        paragraph.minimumLineHeight = lineHeight
+        paragraph.maximumLineHeight = lineHeight
+        let baselineOffset = (lineHeight - baseLineHeight) / 2
+
+        storage.beginEditing()
+        storage.addAttribute(.foregroundColor, value: textColor, range: fullRange)
+        storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
+        storage.addAttribute(.font, value: font, range: fullRange)
+        storage.addAttribute(.baselineOffset, value: baselineOffset, range: fullRange)
+
         for span in spans {
             let start = Int(span.start)
             let length = Int(span.len)
@@ -578,6 +827,28 @@ struct InputTextView: NSViewRepresentable {
             let color = colorForHighlightKind(span.kind, theme: theme)
             storage.addAttribute(.foregroundColor, value: color, range: range)
         }
+        storage.endEditing()
+    }
+
+    private func applyBaseAttributes(to textView: NSTextView) {
+        guard let storage = textView.textStorage else { return }
+        let fullRange = NSRange(location: 0, length: storage.length)
+        let font = textView.font ?? NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineHeightMultiple = 1.0
+        paragraph.paragraphSpacing = 0
+        paragraph.lineSpacing = 0
+        let baseLineHeight = textView.layoutManager?.defaultLineHeight(for: font) ?? font.ascender - font.descender
+        let lineHeight = baseLineHeight + calculatorLineSpacing
+        paragraph.minimumLineHeight = lineHeight
+        paragraph.maximumLineHeight = lineHeight
+        let baselineOffset = (lineHeight - baseLineHeight) / 2
+        storage.beginEditing()
+        storage.addAttribute(.foregroundColor, value: textColor, range: fullRange)
+        storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
+        storage.addAttribute(.font, value: font, range: fullRange)
+        storage.addAttribute(.baselineOffset, value: baselineOffset, range: fullRange)
+        storage.endEditing()
     }
     private func colorForHighlightKind(_ kindValue: UInt8, theme: Theme) -> NSColor {
         let kind = HighlightKind(rawValue: kindValue) ?? .text
@@ -616,6 +887,14 @@ struct InputTextView: NSViewRepresentable {
     class Coordinator: NSObject, NSTextViewDelegate {
         var parent: InputTextView
         private weak var textView: NSTextView?
+        var isUpdatingView: Bool = false
+        private var lastHighlightedText: String = ""
+        private var didApplyPlainAttributesForLargeText: Bool = false
+        private let highlightCharLimit: Int = 200000
+        private let syncHighlightCharLimit: Int = 8000
+        private let highlightQueue = DispatchQueue(label: "numby.highlight", qos: .userInitiated)
+        private var highlightToken: Int = 0
+        var lastSyntaxHighlighting: Bool?
 
         init(_ parent: InputTextView) {
             self.parent = parent
@@ -623,16 +902,175 @@ struct InputTextView: NSViewRepresentable {
 
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
+            guard !isUpdatingView else { return }
             self.textView = textView
             parent.text = textView.string
-            parent.applySyntaxHighlighting(to: textView)
+            parent.cursorPosition = textView.selectedRange().location
+            parent.activeLine = parent.lineIndex(for: textView.string, cursorPosition: textView.selectedRange().location)
+            parent.lineCount = parent.totalLineCount(for: textView.string)
+            if let activeView = textView as? ActiveLineTextView {
+                activeView.activeLineIndex = parent.activeLine
+            }
+            updateActiveLineRange(for: textView)
+            updateContentHeight(for: textView)
+            applyHighlightIfNeeded(for: textView, force: true)
+        }
+
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            guard !isUpdatingView else { return }
+            self.textView = textView
+            parent.cursorPosition = textView.selectedRange().location
+            parent.activeLine = parent.lineIndex(for: textView.string, cursorPosition: textView.selectedRange().location)
+            if let activeView = textView as? ActiveLineTextView {
+                activeView.activeLineIndex = parent.activeLine
+            }
+            updateActiveLineRange(for: textView)
+            updateContentHeight(for: textView)
+        }
+
+        func updateLineCountAsync(for text: String) {
+            let count = parent.totalLineCount(for: text)
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                if self.parent.lineCount != count {
+                    self.parent.lineCount = count
+                }
+            }
+        }
+
+        func applyHighlightIfNeeded(for textView: NSTextView, force: Bool) {
+            let text = textView.string
+            let syntaxEnabled = parent.syntaxHighlighting
+            if !force,
+               lastSyntaxHighlighting == syntaxEnabled,
+               lastHighlightedText == text {
+                return
+            }
+            lastHighlightedText = text
+            lastSyntaxHighlighting = syntaxEnabled
+
+            if !syntaxEnabled {
+                parent.applyBaseAttributes(to: textView)
+                return
+            }
+
+            if text.count > highlightCharLimit {
+                parent.applyBaseAttributes(to: textView)
+                didApplyPlainAttributesForLargeText = true
+                return
+            }
+
+            didApplyPlainAttributesForLargeText = false
+
+            if text.count <= syncHighlightCharLimit {
+                let theme = Theme.current
+                let spans = parent.numby.highlightSpans(for: text)
+                parent.applyHighlightSpans(spans, to: textView, theme: theme)
+                return
+            }
+
+            highlightToken &+= 1
+            let token = highlightToken
+            let theme = Theme.current
+            highlightQueue.async { [weak self, weak textView] in
+                guard let self = self else { return }
+                let spans = self.parent.numby.highlightSpans(for: text)
+                DispatchQueue.main.async {
+                    guard let textView = textView else { return }
+                    guard token == self.highlightToken else { return }
+                    guard textView.string == text else { return }
+                    self.parent.applyHighlightSpans(spans, to: textView, theme: theme)
+                }
+            }
         }
 
         deinit {
             // Clean up text view delegate to prevent dangling references
             textView?.delegate = nil
         }
+
+        func updateActiveLineRange(for textView: NSTextView) {
+            let cursor = textView.selectedRange().location
+            let group = parent
+                .numby
+                .groupBounds(for: textView.string, cursorUTF16: cursor)
+                ?? (start: parent.activeLine, end: parent.activeLine)
+            let start = max(0, group.start)
+            let end = max(start, group.end)
+
+            if let activeView = textView as? ActiveLineTextView {
+                activeView.activeLineStart = start
+                activeView.activeLineEnd = end
+            }
+
+            if isUpdatingView {
+                DispatchQueue.main.async { [weak self] in
+                    self?.parent.activeGroupStart = start
+                    self?.parent.activeGroupEnd = end
+                }
+            } else {
+                parent.activeGroupStart = start
+                parent.activeGroupEnd = end
+            }
+        }
+
+        func updateContentHeight(for textView: NSTextView) {
+            guard let layoutManager = textView.layoutManager,
+                  let textContainer = textView.textContainer else {
+                return
+            }
+            let used = layoutManager.usedRect(for: textContainer)
+            var height = ceil(used.height + textView.textContainerInset.height * 2)
+            let extra = layoutManager.extraLineFragmentRect
+            if extra.height > 0 {
+                height += ceil(extra.height)
+            }
+            if isUpdatingView {
+                DispatchQueue.main.async { [weak self] in
+                    self?.parent.contentHeight = height
+                }
+            } else {
+                parent.contentHeight = height
+            }
+        }
     }
+
+    private func lineIndex(for text: String, cursorPosition: Int) -> Int {
+        let utf16Count = text.utf16.count
+        let clamped = max(0, min(cursorPosition, utf16Count))
+        var lineIndex = 0
+        var idx = 0
+        for unit in text.utf16 {
+            if idx >= clamped { break }
+            if unit == 10 { lineIndex += 1 }
+            idx += 1
+        }
+        return lineIndex
+    }
+
+    private func totalLineCount(for text: String) -> Int {
+        max(1, text.filter { $0 == "\n" }.count + 1)
+    }
+
+    private func lineRange(for lineIndex: Int, in text: NSString) -> NSRange? {
+        guard lineIndex >= 0 else { return nil }
+        var currentLine = 0
+        var searchIndex = 0
+        while searchIndex <= text.length {
+            let range = text.lineRange(for: NSRange(location: searchIndex, length: 0))
+            if currentLine == lineIndex {
+                return range
+            }
+            if range.length == 0 {
+                break
+            }
+            searchIndex = range.upperBound
+            currentLine += 1
+        }
+        return nil
+    }
+
 }
 
 // MARK: - FocusedValue Support

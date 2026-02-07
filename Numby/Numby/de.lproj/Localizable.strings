@@ -8,6 +8,12 @@
 "settings.appearance.fontSize" = "Schriftgröße";
 "settings.appearance.font" = "Schriftart";
 "settings.appearance.syntaxHighlighting" = "Syntaxhervorhebung";
+"settings.appearance.activeLineHighlight" = "Hervorhebung der aktiven Zeile";
+"settings.appearance.activeLineIntensity" = "Intensität der Hervorhebung";
+"settings.appearance.activeLineIntensityHint" = "Steuert die Stärke der Hervorhebung.";
+
+/* Settings - Number Section */
+"settings.number.section" = "Zahlen";
 "settings.number.format" = "Zahlenformat";
 "settings.number.maxDecimals" = "Max. Dezimalstellen";
 "settings.number.format.pretty" = "Kompakt";

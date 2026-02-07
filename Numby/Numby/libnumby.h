@@ -111,6 +111,29 @@ NumbyHighlightSpan *libnumby_highlight_spans(NumbyContext *ctx,
  */
 void libnumby_free_highlight_spans(NumbyHighlightSpan *spans, uint32_t len);
 
+/**
+ * Returns the start/end line indices for the multiline group containing the cursor.
+ *
+ * Cursor offset is UTF-16 code units (matches Cocoa text views).
+ * Returns 0 on success, -1 on failure.
+ */
+int32_t libnumby_group_bounds_for_cursor(const char *input,
+                                         int32_t cursor_utf16,
+                                         int32_t *out_start,
+                                         int32_t *out_end);
+
+/**
+ * Returns the multiline group expression containing the cursor.
+ * Caller must free the returned string with libnumby_free_string.
+ *
+ * Cursor offset is UTF-16 code units (matches Cocoa text views).
+ * Returns NULL if no group exists.
+ */
+char *libnumby_group_expr_for_cursor(const char *input,
+                                     int32_t cursor_utf16,
+                                     int32_t *out_start,
+                                     int32_t *out_end);
+
 int32_t libnumby_clear_history(NumbyContext *ctx);
 
 /**

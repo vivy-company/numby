@@ -37,6 +37,10 @@ struct SettingsView: View {
     private var localizedFontSize: String { _ = localeVersion; return NSLocalizedString("settings.appearance.fontSize", comment: "") }
     private var localizedFont: String { _ = localeVersion; return NSLocalizedString("settings.appearance.font", comment: "") }
     private var localizedSyntaxHighlighting: String { _ = localeVersion; return NSLocalizedString("settings.appearance.syntaxHighlighting", comment: "") }
+    private var localizedActiveLineHighlight: String { _ = localeVersion; return NSLocalizedString("settings.appearance.activeLineHighlight", comment: "") }
+    private var localizedActiveLineIntensity: String { _ = localeVersion; return NSLocalizedString("settings.appearance.activeLineIntensity", comment: "") }
+    private var localizedActiveLineIntensityHint: String { _ = localeVersion; return NSLocalizedString("settings.appearance.activeLineIntensityHint", comment: "") }
+    private var localizedNumberSection: String { _ = localeVersion; return NSLocalizedString("settings.number.section", comment: "") }
     private var localizedNumberFormat: String { _ = localeVersion; return NSLocalizedString("settings.number.format", comment: "") }
     private var localizedNumberMaxDecimals: String { _ = localeVersion; return NSLocalizedString("settings.number.maxDecimals", comment: "") }
     private var localizedNumberMaxDecimalsHint: String { _ = localeVersion; return NSLocalizedString("settings.number.maxDecimalsHint", comment: "") }
@@ -118,6 +122,30 @@ struct SettingsView: View {
                 // Syntax highlighting toggle
                 Toggle(localizedSyntaxHighlighting, isOn: $configManager.config.syntaxHighlighting)
 
+                Toggle(localizedActiveLineHighlight, isOn: $configManager.config.activeLineHighlight)
+                    .onChange(of: configManager.config.activeLineHighlight) { _ in
+                        configManager.save()
+                    }
+
+                if configManager.config.activeLineHighlight {
+                    HStack {
+                        Text(localizedActiveLineIntensity)
+                        Slider(value: $configManager.config.activeLineHighlightIntensity, in: 0.02...0.2, step: 0.01)
+                            .onChange(of: configManager.config.activeLineHighlightIntensity) { _ in
+                                configManager.save()
+                            }
+                        Text("\(Int(configManager.config.activeLineHighlightIntensity * 100))%")
+                            .frame(width: 50)
+                    }
+
+                    Text(localizedActiveLineIntensityHint)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+            }
+
+            Section(localizedNumberSection) {
                 Picker(localizedNumberFormat, selection: $configManager.config.numberFormat) {
                     Text(localizedNumberPretty).tag("pretty")
                     Text(localizedNumberPrecision).tag("precision")

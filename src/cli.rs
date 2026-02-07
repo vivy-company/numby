@@ -17,7 +17,7 @@ pub fn evaluate_expression(
 
     // Collect evaluated groups
     let mut rows: Vec<(String, Option<String>)> = Vec::new();
-    for group in crate::utils::group_multiline_expressions(&lines) {
+    for group in crate::line_groups::group_multiline_expressions(&lines) {
         let trimmed = group.expr.trim();
         if trimmed.is_empty() {
             continue;

@@ -17,6 +17,9 @@ class CalculatorViewController: UIViewController {
 
     private var numbyWrapper = NumbyWrapper()
     private var results: [String] = []
+    private var activeLineIndex: Int = 0
+    private var activeLineGroupStart: Int = 0
+    private var activeLineGroupEnd: Int = 0
     #if !os(visionOS)
     private var accessoryButtons: [UIButton] = []
     #endif
@@ -64,8 +67,9 @@ class CalculatorViewController: UIViewController {
         numbyWrapper = tab.numbyWrapper
         textView.text = tab.text
         results = tab.results
-        applySyntaxHighlighting()
+        scheduleHighlighting(force: true)
         updateResultsOverlay()
+        updateActiveLine()
     }
 
     // MARK: - Split View State
@@ -80,11 +84,12 @@ class CalculatorViewController: UIViewController {
         numbyWrapper = instance.numbyWrapper
         textView.text = instance.inputText
         results = instance.results
-        applySyntaxHighlighting()
+        scheduleHighlighting(force: true)
         updateResultsOverlay()
         if instance.cursorPosition <= (textView.text?.count ?? 0) {
             textView.selectedRange = NSRange(location: instance.cursorPosition, length: 0)
         }
+        updateActiveLine()
     }
 
     func focus() {
@@ -93,11 +98,8 @@ class CalculatorViewController: UIViewController {
 
     // MARK: - UI Components
 
-    private lazy var textView: UITextView = {
-        let tv = UITextView()
-        // Force TextKit 1 compatibility mode - TextKit 2 (iOS 16+ default) has severe performance issues
-        // This trades a console warning for significantly better typing performance
-        let _ = tv.layoutManager
+    private lazy var textView: ActiveLineTextView = {
+        let tv = ActiveLineTextView()
         tv.isEditable = true
         tv.isScrollEnabled = true
         tv.alwaysBounceVertical = true
@@ -121,6 +123,8 @@ class CalculatorViewController: UIViewController {
     private lazy var resultsOverlay: ResultsOverlayView = {
         let overlay = ResultsOverlayView()
         overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.backgroundColor = .clear
+        overlay.isOpaque = false
         overlay.isUserInteractionEnabled = false
         return overlay
     }()
@@ -206,6 +210,8 @@ class CalculatorViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         updateTheme()
+        applyActiveLineAppearance()
+        updateActiveLine()
 
         title = "Numby"
 
@@ -218,6 +224,7 @@ class CalculatorViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(themeDidChange), name: NSNotification.Name("ThemeDidChange"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(configDidChange), name: NSNotification.Name("ConfigurationDidChange"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(activeLineHighlightDidChange), name: NSNotification.Name("ActiveLineHighlightDidChange"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(loadHistoryEntry(_:)), name: NSNotification.Name("LoadHistoryEntry"), object: nil)
 
         applyNumberFormat()
@@ -362,7 +369,6 @@ class CalculatorViewController: UIViewController {
 
     // MARK: - Debouncing
 
-    private var highlightWorkItem: DispatchWorkItem?
     private var evalWorkItem: DispatchWorkItem?
     private let evalQueue = DispatchQueue(label: "numby.eval", qos: .userInitiated)
     private let evalIDQueue = DispatchQueue(label: "numby.eval.id", qos: .userInitiated)
@@ -394,22 +400,39 @@ class CalculatorViewController: UIViewController {
         let text = textView.text ?? ""
         let lines = text.components(separatedBy: .newlines)
         let evalID = nextEvalID()
+        let lineStarts = lineStartUTF16Offsets(for: text)
 
         evalQueue.async { [weak self] in
             guard let self = self else { return }
             guard evalID == self.currentEvalID else { return }
 
-            let groups = self.buildLineGroups(lines)
             var newResults: [String] = Array(repeating: "", count: lines.count)
-
-            for group in groups {
+            var index = 0
+            while index < lines.count {
                 guard evalID == self.currentEvalID else { return }
-                let expr = group.expr.trimmingCharacters(in: .whitespaces)
-                guard !expr.isEmpty else { continue }
-                let result = self.numbyWrapper.evaluate(expr).formatted?
-                    .replacingOccurrences(of: "\n", with: "  ") ?? ""
-                if group.end < newResults.count {
-                    newResults[group.end] = result
+
+                let cursor = index < lineStarts.count ? lineStarts[index] : text.utf16.count
+                if let group = self.numbyWrapper.groupExpression(for: text, cursorUTF16: cursor) {
+                    let start = max(0, min(group.start, lines.count - 1))
+                    let end = max(start, min(group.end, lines.count - 1))
+
+                    if start > index {
+                        index += 1
+                        continue
+                    }
+
+                    let expr = group.expr.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !expr.isEmpty {
+                        let result = self.numbyWrapper.evaluate(expr).formatted?
+                            .replacingOccurrences(of: "\n", with: "  ") ?? ""
+                        if end < newResults.count {
+                            newResults[end] = result
+                        }
+                    }
+
+                    index = end + 1
+                } else {
+                    index += 1
                 }
             }
 
@@ -426,7 +449,64 @@ class CalculatorViewController: UIViewController {
 
     private func updateResultsOverlay() {
         let font = textView.font ?? .monospacedSystemFont(ofSize: 16, weight: .regular)
-        resultsOverlay.update(results: results, font: font, textColor: Theme.current.syntaxColor(for: .results), textView: textView)
+        let highlightColor = activeLineHighlightColor()
+        resultsOverlay.update(
+            results: results,
+            font: font,
+            textColor: Theme.current.syntaxColor(for: .results),
+            textView: textView,
+            activeLineIndex: activeLineIndex,
+            activeGroupStart: activeLineGroupStart,
+            activeGroupEnd: activeLineGroupEnd,
+            activeLineHighlightColor: highlightColor,
+            activeLineHighlightEnabled: Configuration.shared.config.activeLineHighlight
+        )
+    }
+
+    private func applyActiveLineAppearance() {
+        let highlightColor = activeLineHighlightColor()
+        textView.activeLineHighlightColor = highlightColor
+        textView.isActiveLineHighlightEnabled = Configuration.shared.config.activeLineHighlight
+        updateResultsOverlay()
+    }
+
+    private func updateActiveLine() {
+        let text = textView.text ?? ""
+        let cursor = textView.selectedRange.location
+        activeLineIndex = lineIndex(for: text, cursorPosition: cursor)
+        if let bounds = numbyWrapper.groupBounds(for: text, cursorUTF16: cursor) {
+            activeLineGroupStart = bounds.start
+            activeLineGroupEnd = bounds.end
+        } else {
+            activeLineGroupStart = activeLineIndex
+            activeLineGroupEnd = activeLineIndex
+        }
+        textView.activeLineIndex = activeLineIndex
+        textView.activeLineGroupStart = activeLineGroupStart
+        textView.activeLineGroupEnd = activeLineGroupEnd
+        updateResultsOverlay()
+    }
+
+    private func lineIndex(for text: String, cursorPosition: Int) -> Int {
+        let utf16Count = text.utf16.count
+        let clamped = max(0, min(cursorPosition, utf16Count))
+        var lineIndex = 0
+        var idx = 0
+        for unit in text.utf16 {
+            if idx >= clamped { break }
+            if unit == 10 { lineIndex += 1 }
+            idx += 1
+        }
+        return lineIndex
+    }
+
+    private func activeLineHighlightColor() -> UIColor? {
+        let config = Configuration.shared.config
+        guard config.activeLineHighlight else { return nil }
+        let intensity = min(max(config.activeLineHighlightIntensity, 0.0), 0.3)
+        let base = (textView.backgroundColor ?? Theme.current.backgroundColor).resolvedColor(with: traitCollection)
+        let overlay: UIColor = base.isDark ? .white : .black
+        return base.blended(with: overlay, fraction: CGFloat(intensity))
     }
 
     // MARK: - Autosave & History Snapshots
@@ -490,7 +570,8 @@ class CalculatorViewController: UIViewController {
         if state.cursorPosition <= (textView.text?.count ?? 0) {
             textView.selectedRange = NSRange(location: state.cursorPosition, length: 0)
         }
-        applySyntaxHighlighting()
+        scheduleHighlighting(force: true)
+        updateActiveLine()
         scheduleEvaluation()
     }
 
@@ -499,91 +580,75 @@ class CalculatorViewController: UIViewController {
         performAutosaveIfNeeded()
     }
 
-    private func buildLineGroups(_ lines: [String]) -> [(start: Int, end: Int, expr: String)] {
-        var groups: [(start: Int, end: Int, expr: String)] = []
-        var currentStart: Int? = nil
-        var currentParts: [String] = []
-        var prevLine: String?
-
-        for (idx, line) in lines.enumerated() {
-            if isCommentOrEmpty(line) {
-                if let start = currentStart {
-                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: "\n")))
-                    currentStart = nil
-                    currentParts.removeAll()
-                }
-                prevLine = nil
-                continue
+    private func lineStartUTF16Offsets(for text: String) -> [Int] {
+        var offsets: [Int] = [0]
+        offsets.reserveCapacity(max(1, text.filter { $0 == "\n" }.count + 1))
+        var index = 0
+        for unit in text.utf16 {
+            if unit == 10 {
+                offsets.append(index + 1)
             }
-
-            let startsWithOp = lineStartsWithOperator(line)
-            let prevEndsWithOp = prevLine.map { lineEndsWithOperator($0) } ?? false
-            let isContinuation = startsWithOp || prevEndsWithOp
-
-            if currentStart == nil || !isContinuation {
-                if let start = currentStart {
-                    groups.append((start: start, end: idx - 1, expr: currentParts.joined(separator: "\n")))
-                    currentParts.removeAll()
-                }
-                currentStart = idx
-            }
-
-            currentParts.append(line.trimmingCharacters(in: .whitespaces))
-            prevLine = line
+            index += 1
         }
-
-        if let start = currentStart {
-            groups.append((start: start, end: max(0, lines.count - 1), expr: currentParts.joined(separator: "\n")))
-        }
-
-        return groups
-    }
-
-    private func isCommentOrEmpty(_ line: String) -> Bool {
-        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty || trimmed.hasPrefix("//") || trimmed.hasPrefix("#")
-    }
-
-    private func lineStartsWithOperator(_ line: String) -> Bool {
-        let trimmed = stripLineCommentsForContinuation(line).trimmingCharacters(in: .whitespaces)
-        guard let first = trimmed.first else { return false }
-        return "+-*/%^".contains(first)
-    }
-
-    private func lineEndsWithOperator(_ line: String) -> Bool {
-        let trimmed = stripLineCommentsForContinuation(line).trimmingCharacters(in: .whitespaces)
-        guard let last = trimmed.last else { return false }
-        return "+-*/%^(".contains(last)
-    }
-
-    private func stripLineCommentsForContinuation(_ line: String) -> String {
-        var end = line.endIndex
-        if let range = line.range(of: "//") {
-            end = min(end, range.lowerBound)
-        }
-        if let range = line.range(of: "#") {
-            end = min(end, range.lowerBound)
-        }
-        if let range = line.range(of: "/*") {
-            end = min(end, range.lowerBound)
-        }
-        return String(line[..<end])
+        return offsets
     }
 
     // MARK: - Syntax Highlighting
 
     private var lastHighlightedText: String = ""
+    private var didApplyPlainAttributesForLargeText = false
+    private let highlightCharLimit: Int = 200000
+    private let syncHighlightCharLimit: Int = 8000
+    private let highlightQueue = DispatchQueue(label: "numby.highlight", qos: .userInitiated)
+    private var highlightToken: Int = 0
 
-    private func applySyntaxHighlighting() {
+    private func scheduleHighlighting(force: Bool = false) {
+        applySyntaxHighlighting(force: force)
+    }
+
+    private func applySyntaxHighlighting(force: Bool = false) {
         guard Configuration.shared.config.syntaxHighlighting else { return }
         let storage = textView.textStorage
 
         let text = storage.string
 
         // Skip if text hasn't changed since last highlight
-        guard text != lastHighlightedText else { return }
+        if !force, text == lastHighlightedText {
+            return
+        }
+
+        if text.count > highlightCharLimit {
+            if !didApplyPlainAttributesForLargeText || force {
+                applyBaseAttributes(storage: storage)
+            }
+            didApplyPlainAttributesForLargeText = true
+            lastHighlightedText = text
+            return
+        }
+        didApplyPlainAttributesForLargeText = false
         lastHighlightedText = text
 
+        if text.count <= syncHighlightCharLimit {
+            let spans = numbyWrapper.highlightSpans(for: text)
+            applyHighlightSpans(spans, storage: storage)
+            return
+        }
+
+        highlightToken &+= 1
+        let token = highlightToken
+        let snapshot = text
+        highlightQueue.async { [weak self] in
+            guard let self = self else { return }
+            let spans = self.numbyWrapper.highlightSpans(for: snapshot)
+            DispatchQueue.main.async {
+                guard token == self.highlightToken else { return }
+                guard self.textView.textStorage.string == snapshot else { return }
+                self.applyHighlightSpans(spans, storage: self.textView.textStorage)
+            }
+        }
+    }
+
+    private func applyHighlightSpans(_ spans: [NumbyHighlightSpan], storage: NSTextStorage) {
         // Save cursor position before modifying storage
         let savedSelectedRange = textView.selectedRange
 
@@ -598,7 +663,6 @@ class CalculatorViewController: UIViewController {
         storage.addAttribute(.foregroundColor, value: theme.textColor, range: fullRange)
         storage.addAttribute(.font, value: font, range: fullRange)
         storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
-        let spans = numbyWrapper.highlightSpans(for: text)
         for span in spans {
             let start = Int(span.start)
             let length = Int(span.len)
@@ -608,11 +672,24 @@ class CalculatorViewController: UIViewController {
             let color = colorForHighlightKind(span.kind, theme: theme)
             storage.addAttribute(.foregroundColor, value: color, range: range)
         }
-
         storage.endEditing()
 
         // Restore cursor position after modifying storage
         textView.selectedRange = savedSelectedRange
+    }
+
+    private func applyBaseAttributes(storage: NSTextStorage) {
+        let fullRange = NSRange(location: 0, length: storage.length)
+        let theme = Theme.current
+        let font = textView.font ?? .monospacedSystemFont(ofSize: 16, weight: .regular)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = 8
+
+        storage.beginEditing()
+        storage.addAttribute(.foregroundColor, value: theme.textColor, range: fullRange)
+        storage.addAttribute(.font, value: font, range: fullRange)
+        storage.addAttribute(.paragraphStyle, value: paragraph, range: fullRange)
+        storage.endEditing()
     }
 
     private func colorForHighlightKind(_ kindValue: UInt8, theme: Theme) -> UIColor {
@@ -658,6 +735,11 @@ class CalculatorViewController: UIViewController {
     @objc private func configDidChange() {
         applyNumberFormat()
         scheduleEvaluation()
+        applyActiveLineAppearance()
+    }
+
+    @objc private func activeLineHighlightDidChange() {
+        applyActiveLineAppearance()
     }
 
     private func applyNumberFormat() {
@@ -704,7 +786,8 @@ class CalculatorViewController: UIViewController {
 
         // Reset cache so highlighting re-applies with new theme/font
         lastHighlightedText = ""
-        applySyntaxHighlighting()
+        scheduleHighlighting(force: true)
+        applyActiveLineAppearance()
     }
 
     // MARK: - Actions
@@ -834,7 +917,7 @@ class CalculatorViewController: UIViewController {
         guard let expr = notification.userInfo?["expression"] as? String else { return }
         textView.text = expr
         textView.becomeFirstResponder()
-        applySyntaxHighlighting()
+        scheduleHighlighting(force: true)
         scheduleEvaluation()
     }
 }
@@ -854,15 +937,21 @@ extension CalculatorViewController: UITextViewDelegate {
         if let leafId = leafId {
             splitContainerDelegate?.paneTapped(leafId: leafId)
         }
+        updateActiveLine()
     }
 
     func textViewDidChange(_ textView: UITextView) {
         // Apply syntax highlighting immediately for responsive feel
-        applySyntaxHighlighting()
+        scheduleHighlighting(force: true)
+        updateActiveLine()
         // Debounce evaluation (expensive)
         scheduleEvaluation()
         // Debounce autosave + history snapshots
         scheduleAutosave()
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        updateResultsOverlay()
     }
 }
 
@@ -875,86 +964,232 @@ extension CalculatorViewController: UIGestureRecognizerDelegate {
     }
 }
 
+// MARK: - Active Line Text View
+
+class ActiveLineTextView: UITextView {
+    var activeLineIndex: Int = 0 { didSet { setNeedsDisplay() } }
+    var activeLineGroupStart: Int = 0 { didSet { setNeedsDisplay() } }
+    var activeLineGroupEnd: Int = 0 { didSet { setNeedsDisplay() } }
+    var activeLineHighlightColor: UIColor? { didSet { setNeedsDisplay() } }
+    var isActiveLineHighlightEnabled: Bool = false { didSet { setNeedsDisplay() } }
+
+    override func draw(_ rect: CGRect) {
+        if isActiveLineHighlightEnabled, let color = activeLineHighlightColor {
+            drawActiveLineBackground(color)
+        }
+        super.draw(rect)
+    }
+
+    private func drawActiveLineBackground(_ color: UIColor) {
+        let text = (self.text ?? "") as NSString
+        let start = min(activeLineGroupStart, activeLineGroupEnd)
+        let end = max(activeLineGroupStart, activeLineGroupEnd)
+        var minY: CGFloat?
+        var maxY: CGFloat?
+
+        for lineIndex in start...end {
+            guard let lineRange = lineRange(for: lineIndex, in: text) else { continue }
+            if lineRange.length == 0 {
+                if let position = position(from: beginningOfDocument, offset: lineRange.location) {
+                    let caret = caretRect(for: position)
+                    if !caret.isEmpty {
+                        minY = min(minY ?? caret.minY, caret.minY)
+                        maxY = max(maxY ?? caret.maxY, caret.maxY)
+                    }
+                }
+                continue
+            }
+
+            guard let startPosition = position(from: beginningOfDocument, offset: lineRange.location),
+                  let endPosition = position(from: startPosition, offset: lineRange.length),
+                  let textRange = textRange(from: startPosition, to: endPosition) else {
+                continue
+            }
+
+            let rects = selectionRects(for: textRange)
+            for selectionRect in rects {
+                let rect = selectionRect.rect
+                if rect.isEmpty { continue }
+                minY = min(minY ?? rect.minY, rect.minY)
+                maxY = max(maxY ?? rect.maxY, rect.maxY)
+            }
+        }
+
+        if let minY, let maxY {
+            let highlightRect = CGRect(x: 0, y: minY, width: bounds.width, height: maxY - minY)
+            color.setFill()
+            UIRectFill(highlightRect)
+        }
+    }
+
+    private func lineRange(for lineIndex: Int, in text: NSString) -> NSRange? {
+        guard lineIndex >= 0 else { return nil }
+        var currentLine = 0
+        var searchIndex = 0
+        while searchIndex <= text.length {
+            let range = text.lineRange(for: NSRange(location: searchIndex, length: 0))
+            if currentLine == lineIndex {
+                return range
+            }
+            if range.length == 0 {
+                break
+            }
+            searchIndex = range.upperBound
+            currentLine += 1
+        }
+        return nil
+    }
+}
+
 // MARK: - Results Overlay
 
 class ResultsOverlayView: UIView {
     private var labels: [UILabel] = []
+    private let activeLineHighlightView = UIView()
 
-    func update(results: [String], font: UIFont, textColor: UIColor, textView: UITextView) {
-        let insets = textView.textContainerInset
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isOpaque = false
+        activeLineHighlightView.isUserInteractionEnabled = false
+        activeLineHighlightView.isOpaque = false
+        activeLineHighlightView.isHidden = true
+        insertSubview(activeLineHighlightView, at: 0)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        isOpaque = false
+        activeLineHighlightView.isUserInteractionEnabled = false
+        activeLineHighlightView.isOpaque = false
+        activeLineHighlightView.isHidden = true
+        insertSubview(activeLineHighlightView, at: 0)
+    }
+
+    func update(
+        results: [String],
+        font: UIFont,
+        textColor: UIColor,
+        textView: UITextView,
+        activeLineIndex: Int,
+        activeGroupStart: Int,
+        activeGroupEnd: Int,
+        activeLineHighlightColor: UIColor?,
+        activeLineHighlightEnabled: Bool
+    ) {
         let rightPadding: CGFloat = 16
 
-        while labels.count < results.count {
+        let text = textView.text ?? ""
+        let nsText = text as NSString
+        let lines = text.components(separatedBy: "\n")
+        let lineCount = max(lines.count, results.count)
+
+        while labels.count < lineCount {
             let label = UILabel()
             label.textAlignment = .right
             addSubview(label)
             labels.append(label)
         }
 
-        let text = textView.text ?? ""
-        let lines = text.components(separatedBy: "\n")
+        let lineSpacing: CGFloat = 8
+        var fallbackY: CGFloat = textView.textContainerInset.top
+        let fallbackHeight: CGFloat = font.lineHeight
+        var highlightMinY: CGFloat?
+        var highlightMaxY: CGFloat?
+        var minResultX: CGFloat?
 
-        // Get paragraph style for line spacing
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineSpacing = 8
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .paragraphStyle: paragraphStyle
-        ]
-
-        let textContainerWidth = textView.bounds.width - insets.left - insets.right - textView.textContainer.lineFragmentPadding * 2
-
-        var currentY: CGFloat = insets.top
-
-        for (i, label) in labels.enumerated() {
-            guard i < results.count && i < lines.count else {
-                label.isHidden = true
-                continue
-            }
-
-            let line = lines[i]
-            let hasResult = !results[i].isEmpty
+        for i in 0..<lineCount {
+            let label = labels[i]
+            let line = i < lines.count ? lines[i] : ""
+            let result = i < results.count ? results[i] : ""
+            let hasResult = !result.isEmpty
+            let lineRect = lineRect(for: i, in: nsText, textView: textView)
+            let lineMinY = lineRect?.minY ?? fallbackY
+            let lineHeight = lineRect?.height ?? fallbackHeight
 
             if hasResult {
-                label.text = results[i]
+                label.text = result
                 label.font = font
                 label.textColor = textColor
                 label.isHidden = false
                 label.sizeToFit()
 
-                // Calculate line height including wrapping
-                let lineAttrString = NSAttributedString(string: line.isEmpty ? " " : line, attributes: attributes)
-                let boundingRect = lineAttrString.boundingRect(
-                    with: CGSize(width: textContainerWidth, height: .greatestFiniteMagnitude),
-                    options: [.usesLineFragmentOrigin, .usesFontLeading],
-                    context: nil
-                )
-
                 let resultWidth = label.frame.width
                 let availableWidth = bounds.width - rightPadding
                 let resultX = availableWidth - resultWidth
-
-                // Position result at the first line of this text line
-                label.frame.origin = CGPoint(x: resultX, y: currentY)
-
-                currentY += ceil(boundingRect.height) + paragraphStyle.lineSpacing
+                label.frame.origin = CGPoint(x: resultX, y: lineMinY)
+                if i >= activeGroupStart && i <= activeGroupEnd {
+                    minResultX = min(minResultX ?? resultX, resultX)
+                }
             } else {
                 label.isHidden = true
-
-                // Still need to advance Y position for empty results
-                let lineAttrString = NSAttributedString(string: line.isEmpty ? " " : line, attributes: attributes)
-                let boundingRect = lineAttrString.boundingRect(
-                    with: CGSize(width: textContainerWidth, height: .greatestFiniteMagnitude),
-                    options: [.usesLineFragmentOrigin, .usesFontLeading],
-                    context: nil
-                )
-                currentY += ceil(boundingRect.height) + paragraphStyle.lineSpacing
             }
+
+            if i >= activeGroupStart && i <= activeGroupEnd {
+                let lineMaxY = lineMinY + lineHeight
+                highlightMinY = min(highlightMinY ?? lineMinY, lineMinY)
+                highlightMaxY = max(highlightMaxY ?? lineMaxY, lineMaxY)
+            }
+
+            fallbackY = lineMinY + lineHeight + lineSpacing
         }
 
-        for i in results.count..<labels.count {
+        for i in lineCount..<labels.count {
             labels[i].isHidden = true
         }
+
+        if activeLineHighlightEnabled,
+           let color = activeLineHighlightColor,
+           let minY = highlightMinY,
+           let maxY = highlightMaxY,
+           let highlightStartX = minResultX {
+            activeLineHighlightView.backgroundColor = color
+            activeLineHighlightView.frame = CGRect(x: highlightStartX, y: minY, width: bounds.width - highlightStartX, height: maxY - minY)
+            activeLineHighlightView.isHidden = false
+        } else {
+            activeLineHighlightView.isHidden = true
+        }
+    }
+
+    private func lineRect(for lineIndex: Int, in text: NSString, textView: UITextView) -> CGRect? {
+        guard let lineRange = lineRange(for: lineIndex, in: text) else { return nil }
+
+        if lineRange.length == 0 {
+            if let position = textView.position(from: textView.beginningOfDocument, offset: lineRange.location) {
+                return textView.caretRect(for: position)
+            }
+            return nil
+        }
+
+        guard let startPosition = textView.position(from: textView.beginningOfDocument, offset: lineRange.location),
+              let endPosition = textView.position(from: startPosition, offset: lineRange.length),
+              let textRange = textView.textRange(from: startPosition, to: endPosition) else {
+            return nil
+        }
+
+        let rects = textView.selectionRects(for: textRange).map { $0.rect }.filter { !$0.isEmpty }
+        guard var unionRect = rects.first else { return nil }
+        for rect in rects.dropFirst() {
+            unionRect = unionRect.union(rect)
+        }
+        return unionRect
+    }
+
+    private func lineRange(for lineIndex: Int, in text: NSString) -> NSRange? {
+        guard lineIndex >= 0 else { return nil }
+        var currentLine = 0
+        var searchIndex = 0
+        while searchIndex <= text.length {
+            let range = text.lineRange(for: NSRange(location: searchIndex, length: 0))
+            if currentLine == lineIndex {
+                return range
+            }
+            if range.length == 0 {
+                break
+            }
+            searchIndex = range.upperBound
+            currentLine += 1
+        }
+        return nil
     }
 }
 

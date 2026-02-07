@@ -56,6 +56,12 @@ struct AppConfiguration: Codable {
     /// Enable syntax highlighting
     var syntaxHighlighting: Bool = true
 
+    /// Highlight active line
+    var activeLineHighlight: Bool = true
+
+    /// Active line highlight intensity (0.0 - 0.3)
+    var activeLineHighlightIntensity: Double = 0.08
+
     /// Auto-evaluate on input
     var autoEvaluate: Bool = true
 
@@ -236,3 +242,28 @@ extension PlatformColor {
         #endif
     }
 }
+
+#if os(macOS)
+extension NSColor {
+    var isDark: Bool {
+        guard let color = usingColorSpace(.sRGB) else { return false }
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+
+        let luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+        return luminance < 0.5
+    }
+
+    func blended(with color: NSColor, fraction: CGFloat) -> NSColor {
+        let clamped = max(0, min(1, fraction))
+        guard let base = usingColorSpace(.sRGB),
+              let target = color.usingColorSpace(.sRGB) else {
+            return self
+        }
+        return base.blended(withFraction: clamped, of: target) ?? self
+    }
+}
+#endif

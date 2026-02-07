@@ -5,6 +5,7 @@ mod currency_fetcher;
 mod evaluator;
 mod highlight;
 mod i18n;
+mod line_groups;
 mod models;
 mod parser;
 mod prettify;
