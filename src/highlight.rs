@@ -68,6 +68,11 @@ struct LineInfo {
 }
 
 pub fn highlight_spans(input: &str, state: &AppState, config: &Config) -> Vec<HighlightSpan> {
+    if let Err(e) = crate::security::validate_highlight_input_size(input) {
+        eprintln!("{e}");
+        return Vec::new();
+    }
+
     let mut spans = Vec::new();
     let mut idx = 0;
     let bytes = input.as_bytes();
@@ -750,6 +755,15 @@ mod tests {
     use super::*;
     use crate::config::Config;
     use crate::models::AppState;
+
+    #[test]
+    fn highlight_spans_skips_highlight_for_huge_input() {
+        let config = Config::default();
+        let state = AppState::builder(&config).build();
+        let input = "x".repeat(crate::security::MAX_HIGHLIGHT_LENGTH + 1);
+        let spans = highlight_spans(&input, &state, &config);
+        assert!(spans.is_empty(), "Expected no spans for huge input");
+    }
 
     #[test]
     fn highlights_inline_annotations() {
