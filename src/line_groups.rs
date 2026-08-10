@@ -1,3 +1,5 @@
+use crate::evaluator::contains_word_numbers;
+
 #[derive(Clone, Debug)]
 pub struct LineGroup {
     pub start: usize,
@@ -72,6 +74,10 @@ fn is_annotation_only_line(line: &str) -> bool {
     }
 
     if trimmed.chars().any(|c| c.is_ascii_digit()) {
+        return false;
+    }
+
+    if contains_word_numbers(trimmed) {
         return false;
     }
 
