@@ -328,6 +328,10 @@ fn replace_word_numbers(input: &str) -> String {
         .to_string()
 }
 
+pub fn contains_word_numbers(input: &str) -> bool {
+    WORD_NUMBER_RE.is_match(input)
+}
+
 fn word_to_currency(word: &str) -> Option<&'static str> {
     match word {
         "dollar" | "dollars" => Some("USD"),
