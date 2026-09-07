@@ -11,6 +11,10 @@ import AppKit
 
 /// Hosting view that never draws an AppKit focus ring and skips becoming first responder
 final class FocuslessHostingView<Content: View>: NSHostingView<Content> {
+    // Explicit deinit avoids the Swift 6.2/6.3 generic deinit optimizer crash.
+    // https://github.com/swiftlang/swift/issues/87736
+    deinit {}
+
     override var acceptsFirstResponder: Bool {
         return false
     }
@@ -30,6 +34,9 @@ final class FocuslessHostingView<Content: View>: NSHostingView<Content> {
 
 /// Hosting controller that wraps content inside a `FocuslessHostingView`
 final class FocuslessHostingController<Content: View>: NSHostingController<Content> {
+    // Keep this explicit for the same generic hosting-class compiler workaround.
+    deinit {}
+
     override func loadView() {
         view = FocuslessHostingView(rootView: rootView)
     }
