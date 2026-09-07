@@ -22,6 +22,17 @@ class NumbyWrapper: ObservableObject {
         setup()
     }
 
+    func variableCompletion(in text: String, selection: NSRange) -> String? {
+        guard let context, selection.length == 0,
+              selection.location <= text.utf16.count,
+              let cursor = UInt32(exactly: selection.location) else { return nil }
+        guard let suffix = text.withCString({ libnumby_complete_variable(context, $0, cursor) }) else {
+            return nil
+        }
+        defer { libnumby_free_string(suffix) }
+        return String(cString: suffix)
+    }
+
     func highlightSpans(for text: String) -> [NumbyHighlightSpan] {
         guard let context else { return [] }
         var count: UInt32 = 0

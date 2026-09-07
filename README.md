@@ -34,7 +34,9 @@ A powerful natural language calculator with both CLI and terminal user interface
 - **Mass/Weight**: gram, kg, tonne, pound, ounce, stone, carat
 - **Speed**: m/s, km/h, mph, knot
 - **Angles**: degree, radian
-- **Data**: bit, byte
+- **Data**: bit, byte, SI prefixes (`Mb`, `GB`), IEC prefixes (`Mib`, `GiB`), and rates (`Mbps`, `MBps`, `Mb/s`)
+- **Data-rate math**: `3 Gb / 15 Mbps` → `200 seconds`; `3 GB / 2 minutes in Mbps` → `200 Mbps`
+- Data symbols are case-sensitive: `b` is bits and `B` is bytes. `5b` keeps the billion shorthand; use `5 b` for five bits.
 - **Energy**: joule, calorie
 
 ### Currency & Financial
@@ -116,6 +118,8 @@ Launches the split-panel terminal interface with live evaluation.
 - Arrow keys: Navigate cursor
 - `Home` / `End`: Jump to line start/end
 - `Enter`: Evaluate line and insert newline
+- `Tab`: Complete a variable name. Multiple matches extend only to their common prefix.
+- Tab completion also works in the Apple app editors with a hardware keyboard.
 - `Ctrl+Y`: Copy current result to clipboard
 - `Ctrl+I`: Copy current input to clipboard
 - `:q`: Quit | `:w`: Save | `:w <file>`: Save as

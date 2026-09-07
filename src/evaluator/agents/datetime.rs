@@ -102,7 +102,7 @@ impl Agent for DateTimeAgent {
 
 lazy_static! {
     static ref RELATIVE_RE: Regex = Regex::new(
-        r"(?P<num>-?\d+)\s+(?P<unit>seconds?|minutes?|hours?|days?|weeks?|months?|years?)\s+(?P<dir>from now|from today|from tomorrow|later|in|ago|before now|before today|before tomorrow)"
+        r"^\s*(?P<num>-?\d+)\s+(?P<unit>seconds?|minutes?|hours?|days?|weeks?|months?|years?)\s+(?P<dir>from now|from today|from tomorrow|later|ago|before now|before today|before tomorrow)(?:\s+(?:in|to)\s+.+)?\s*$"
     )
     .expect("relative regex");
     static ref DATE_ARITH_RE: Regex = Regex::new(

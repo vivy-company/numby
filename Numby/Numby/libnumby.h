@@ -141,6 +141,9 @@ int32_t libnumby_clear_history(NumbyContext *ctx);
  */
 int32_t libnumby_clear_variables(NumbyContext *ctx);
 
+/** Complete a variable at a UTF-16 cursor offset. Free with libnumby_free_string. */
+char *libnumby_complete_variable(NumbyContext *ctx, const char *input, uint32_t cursor_utf16);
+
 int32_t libnumby_get_history_count(NumbyContext *ctx);
 
 void libnumby_context_free(NumbyContext *ctx);

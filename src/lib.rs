@@ -13,6 +13,7 @@
 //! - `security`: Path validation and input sanitization.
 //! - `i18n`: Internationalization and localization support.
 
+mod completion;
 pub mod config;
 pub mod conversions;
 pub mod currency_fetcher;
@@ -1184,4 +1185,45 @@ mod i18n_tests {
         // Should return the key itself as fallback
         assert_eq!(msg, "non-existent-key");
     }
+}
+
+/// Return the common completion suffix for the variable at a UTF-16 cursor offset.
+/// The caller frees the returned string with libnumby_free_string.
+///
+/// # Safety
+/// ctx must be a valid context. input must be a valid NUL-terminated UTF-8 string.
+#[no_mangle]
+pub unsafe extern "C" fn libnumby_complete_variable(
+    ctx: *mut NumbyContext,
+    input: *const c_char,
+    cursor_utf16: u32,
+) -> *mut c_char {
+    if ctx.is_null() || input.is_null() {
+        return std::ptr::null_mut();
+    }
+    let Ok(input) = CStr::from_ptr(input).to_str() else {
+        return std::ptr::null_mut();
+    };
+    if crate::security::validate_input_size(input).is_err() {
+        return std::ptr::null_mut();
+    }
+    let mut utf16 = 0usize;
+    let cursor = input
+        .char_indices()
+        .map(|(i, c)| (i, Some(c)))
+        .chain(std::iter::once((input.len(), None)))
+        .find_map(|(i, c)| {
+            if utf16 == cursor_utf16 as usize {
+                return Some(i);
+            }
+            utf16 += c.map_or(0, char::len_utf16);
+            None
+        });
+    let Some(cursor) = cursor else {
+        return std::ptr::null_mut();
+    };
+    let config = get_cached_config();
+    crate::completion::variable_suffix(input, cursor, &*ctx, &config)
+        .and_then(|suffix| CString::new(suffix).ok())
+        .map_or(std::ptr::null_mut(), CString::into_raw)
 }

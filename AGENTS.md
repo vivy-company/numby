@@ -121,7 +121,9 @@ Key principles:
 **Rules**:
 - Detects category from the target unit (`right` side) using lowercase/plural matching.
 - Attempts direct conversion first; if it fails, preprocesses and evaluates the left expression, then converts the numeric result (retaining any unit it produced).
-- Units and currencies are case-insensitive; plural forms and currency symbols are normalized during preprocessing.
+- Units and currencies are case-insensitive except data symbols: `b` means bits and `B` means bytes. SI and IEC data prefixes and `ps` or `/s` rates are supported.
+- Data amount / data rate returns seconds; data amount / time returns bits per second; data rate × time returns bits. Invalid data dimensions and non-finite rate results are rejected.
+- Plural forms and currency symbols are normalized during preprocessing.
 - Custom units defined in `config.custom_units` are included automatically.
 
 **Invocation**: After percentage and date/time agents, via `find(" in ")` or `find(" to ")`; routes to category-specific functions (e.g., `evaluate_generic_conversion`, `evaluate_temperature_conversion`).
@@ -208,6 +210,7 @@ Key principles:
    - Unit conversion retries by evaluating the left expression when a direct conversion fails; otherwise math is the final fallback.
 
 5. **TUI Integration**:
+   - Tab completes variable names to the shared matching prefix. The same Rust completion function serves the TUI and Apple app editors through FFI.
    - Agents run on Enter (current line) or full input eval.
    - Results displayed right-aligned; input highlighted (variables blue, keywords colored, comments gray).
    - Copy: Ctrl+Y (result), Ctrl+I/A (input).

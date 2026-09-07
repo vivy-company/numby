@@ -925,6 +925,15 @@ class CalculatorViewController: UIViewController {
 // MARK: - UITextViewDelegate
 
 extension CalculatorViewController: UITextViewDelegate {
+    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        guard text == "\t", textView.markedTextRange == nil,
+              let suffix = numbyWrapper.variableCompletion(in: textView.text ?? "", selection: range) else {
+            return true
+        }
+        textView.insertText(suffix)
+        return false
+    }
+
     func textViewDidBeginEditing(_ textView: UITextView) {
         // Notify split container that this pane is now focused
         if let leafId = leafId {

@@ -68,6 +68,9 @@ struct LineInfo {
 }
 
 pub fn highlight_spans(input: &str, state: &AppState, config: &Config) -> Vec<HighlightSpan> {
+    if crate::security::validate_highlight_input_size(input).is_err() {
+        return Vec::new();
+    }
     let mut spans = Vec::new();
     let mut idx = 0;
     let bytes = input.as_bytes();
@@ -181,13 +184,7 @@ fn highlight_code_segment(
                 HighlightKind::Text,
             ));
             if token_text.contains('\n') {
-                let newlines = token_text.chars().filter(|c| *c == '\n').count();
-                for _ in 0..newlines {
-                    if line_idx + 1 < line_infos.len() {
-                        line_idx += 1;
-                    }
-                    *prev_kind = PrevKind::None;
-                }
+                *prev_kind = PrevKind::None;
             }
             continue;
         }
@@ -197,7 +194,7 @@ fn highlight_code_segment(
             .and_then(|info| info.assignment_pos);
         let is_lhs = assignment_pos.map(|pos| token.start < pos).unwrap_or(false);
 
-        if is_lhs && token.kind == TokenKind::Word && is_variable_like(token_text) {
+        if is_lhs && token.kind == TokenKind::Word && crate::parser::is_variable_name(token_text) {
             spans.push(HighlightSpan::new(
                 token.start,
                 token.end,
@@ -256,6 +253,7 @@ fn highlight_code_segment(
                     || state.weight_units.contains_key(&lower)
                     || state.angular_units.contains_key(&lower)
                     || state.data_units.contains_key(&lower)
+                    || crate::conversions::data_unit(cleaned).is_some()
                     || state.speed_units.contains_key(&lower);
                 let is_known_currency =
                     state.rates.contains_key(&upper) || is_currency_word(&lower);
@@ -622,18 +620,6 @@ fn find_assignment_pos(line: &str) -> Option<usize> {
         }
     }
     None
-}
-
-fn is_variable_like(word: &str) -> bool {
-    let mut chars = word.chars();
-    let first = match chars.next() {
-        Some(c) => c,
-        None => return false,
-    };
-    if !(first.is_alphabetic() || first == '_') {
-        return false;
-    }
-    chars.all(|c| c.is_alphanumeric() || c == '_')
 }
 
 fn is_operator_char(ch: char) -> bool {

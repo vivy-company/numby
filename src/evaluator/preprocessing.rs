@@ -15,6 +15,8 @@ lazy_static! {
     static ref COMMA_RE: Regex = Regex::new(r"(\d),(\d)").expect("Invalid regex for comma removal");
     static ref BLOCK_COMMENT_RE: Regex =
         Regex::new(r"(?s)/\*.*?\*/").expect("Invalid regex for block comments");
+    static ref DATA_UNIT_RE: Regex = Regex::new(r"(\d)([a-zA-Z]+(?:/s)?)\b")
+        .expect("Invalid data unit regex");
     static ref WORD_NUMBER_RE: Regex = Regex::new(
         r"(?i)\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b"
     )
@@ -65,6 +67,17 @@ pub fn preprocess_input(
         Regex::new(r"(\d)([$€£¥₹￥])").expect("Invalid regex for currency symbols");
     expr_str = currency_symbol_re
         .replace_all(&expr_str, "$1 $2")
+        .to_string();
+
+    // Separate attached data units while keeping the existing 5b billion shorthand.
+    expr_str = DATA_UNIT_RE
+        .replace_all(&expr_str, |caps: &regex::Captures| {
+            if &caps[2] != "b" && crate::conversions::data_unit(&caps[2]).is_some() {
+                format!("{} {}", &caps[1], &caps[2])
+            } else {
+                caps[0].to_string()
+            }
+        })
         .to_string();
 
     // Replace simple word numbers (one..ninety) with digits so "ten plus five" works
@@ -225,11 +238,6 @@ pub fn preprocess_input(
         .replace_all(&expr_str, &format!("(log($1) / {})", log_e))
         .to_string();
 
-    // Replace operators
-    for (op, repl) in &config.operators {
-        expr_str = expr_str.replace(op, repl);
-    }
-
     // Constants
     let pi_re = Regex::new(r"\bpi\b").expect("Invalid regex pattern for pi constant");
     expr_str = pi_re
@@ -262,8 +270,12 @@ pub fn preprocess_input(
 
     // Scales
     for (scale, factor) in &config.scales {
-        let re = Regex::new(&format!(r"(\d+(?:\.\d+)?)\s*{}\b", regex::escape(scale)))
-            .expect("Invalid regex pattern in scale replacement");
+        let separator = if scale == "b" { "" } else { r"\s*" };
+        let re = Regex::new(&format!(
+            r"(\d+(?:\.\d+)?){separator}{}\b",
+            regex::escape(scale)
+        ))
+        .expect("Invalid regex pattern in scale replacement");
         expr_str = re
             .replace_all(&expr_str, |caps: &regex::Captures| {
                 if let Ok(num) = caps[1].parse::<f64>() {
@@ -282,7 +294,7 @@ pub fn preprocess_input(
     expr_str
 }
 
-fn word_to_number(word: &str) -> Option<&'static str> {
+pub(crate) fn word_to_number(word: &str) -> Option<&'static str> {
     match word {
         "zero" => Some("0"),
         "one" => Some("1"),
@@ -518,6 +530,7 @@ fn strip_inline_annotations(
             || config.weight_units.contains_key(&lower)
             || config.angular_units.contains_key(&lower)
             || config.data_units.contains_key(&lower)
+            || crate::conversions::data_unit(&cleaned).is_some()
             || config.speed_units.contains_key(&lower);
         let is_known_currency =
             config.currencies.contains_key(upper.as_str()) || is_currency_word(&lower);

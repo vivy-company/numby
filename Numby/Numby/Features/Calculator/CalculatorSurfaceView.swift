@@ -900,6 +900,16 @@ struct InputTextView: NSViewRepresentable {
             self.parent = parent
         }
 
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            guard commandSelector == #selector(NSTextView.insertTab(_:)),
+                  !textView.hasMarkedText(),
+                  let suffix = parent.numby.variableCompletion(in: textView.string, selection: textView.selectedRange()) else {
+                return false
+            }
+            textView.insertText(suffix, replacementRange: textView.selectedRange())
+            return true
+        }
+
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
             guard !isUpdatingView else { return }

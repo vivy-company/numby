@@ -4,7 +4,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::conversions::{
-    evaluate_currency_conversion, evaluate_generic_conversion, evaluate_temperature_conversion,
+    data_unit, evaluate_currency_conversion, evaluate_generic_conversion,
+    evaluate_temperature_conversion, DataDimension,
 };
 use crate::evaluator::{EvaluatorError, Result};
 use crate::models::{HistoryEntry, Rates, TempUnits, Units};
@@ -357,9 +358,8 @@ pub fn evaluate_expr_with_original(
 
     // Try to parse and handle unit algebra for multiplication/division
     // Check if expression contains units and operations
-    let result_from_algebra = try_evaluate_with_unit_algebra(&expr_str, ctx);
-    if result_from_algebra.is_ok() {
-        return result_from_algebra;
+    if let Some(result) = try_evaluate_with_unit_algebra(&expr_str, ctx)? {
+        return Ok(result);
     }
 
     // Fall back to original unit extraction logic for simple cases
@@ -377,6 +377,7 @@ pub fn evaluate_expr_with_original(
             || ctx.weight_units.get(&lower).is_some()
             || ctx.angular_units.get(&lower).is_some()
             || ctx.data_units.get(&lower).is_some()
+            || data_unit(word).is_some()
             || ctx.speed_units.get(&lower).is_some()
             || ctx.rates.get(&upper).is_some()
             || ctx.custom_units.values().any(|u| u.contains_key(&lower))
@@ -416,11 +417,11 @@ pub fn evaluate_expr_with_original(
 }
 
 /// Try to evaluate an expression with unit algebra (multiplication/division)
-fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalResult> {
+fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<Option<EvalResult>> {
     // Simple regex to match patterns like: "number unit * number unit" or "number unit * number"
     lazy_static! {
         static ref MULT_DIV_RE: Regex =
-            Regex::new(r"^\s*([\d.]+)\s+([a-zA-Z]+)\s*([*/])\s*([\d.]+)\s*([a-zA-Z]*)\s*$")
+            Regex::new(r"^\s*([+-]?[\d.]+)\s+([a-zA-Z]+(?:/s)?)\s*([*/])\s*([+-]?[\d.]+)\s*([a-zA-Z]*(?:/s)?)\s*$")
                 .expect("Invalid unit algebra regex");
     }
 
@@ -434,6 +435,59 @@ fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalR
             .parse()
             .map_err(|_| EvaluatorError::ParseError(crate::fl!("unit-algebra-parse-right")))?;
         let right_unit = caps.get(5).map(|m| m.as_str().to_string());
+
+        let left_data = data_unit(&left_unit);
+        let right_data = right_unit.as_deref().and_then(data_unit);
+        if left_data.is_some() || right_data.is_some() {
+            let right_u = right_unit.as_deref().unwrap_or("");
+            let left_time = ctx.time_units.get(&left_unit.to_lowercase());
+            let right_time = ctx.time_units.get(&right_u.to_lowercase());
+            let (value, unit) = match (op, left_data, right_data) {
+                ("/", Some((lf, ld)), Some((rf, rd))) => {
+                    let unit = match (ld, rd) {
+                        (DataDimension::Amount, DataDimension::Rate) => Some("seconds".to_string()),
+                        (a, b) if a == b => None,
+                        _ => {
+                            return Err(EvaluatorError::InvalidExpression(
+                                "Unsupported data dimensions".into(),
+                            ))
+                        }
+                    };
+                    (left_val / right_val * (lf / rf), unit)
+                }
+                ("/", Some((factor, DataDimension::Amount)), None) if right_time.is_some() => (
+                    left_val / right_val * (factor / right_time.unwrap()),
+                    Some("bps".to_string()),
+                ),
+                ("*", Some((factor, DataDimension::Rate)), None) if right_time.is_some() => (
+                    left_val * right_val * factor * right_time.unwrap(),
+                    Some("bits".to_string()),
+                ),
+                ("*", None, Some((factor, DataDimension::Rate))) if left_time.is_some() => (
+                    left_val * right_val * factor * left_time.unwrap(),
+                    Some("bits".to_string()),
+                ),
+                (op, Some(_), None) if right_u.is_empty() => (
+                    if op == "/" {
+                        left_val / right_val
+                    } else {
+                        left_val * right_val
+                    },
+                    Some(left_unit),
+                ),
+                _ => {
+                    return Err(EvaluatorError::InvalidExpression(
+                        "Unsupported data dimensions".into(),
+                    ))
+                }
+            };
+            if !value.is_finite() {
+                return Err(EvaluatorError::InvalidExpression(
+                    "Invalid data rate".into(),
+                ));
+            }
+            return Ok(Some(EvalResult { value, unit }));
+        }
 
         // Perform the operation
         let value = match op {
@@ -483,11 +537,9 @@ fn try_evaluate_with_unit_algebra(expr: &str, ctx: &EvalContext) -> Result<EvalR
             }
         };
 
-        Ok(EvalResult { value, unit })
+        Ok(Some(EvalResult { value, unit }))
     } else {
-        Err(EvaluatorError::InvalidExpression(crate::fl!(
-            "unit-algebra-not-expression"
-        )))
+        Ok(None)
     }
 }
 
@@ -514,6 +566,23 @@ pub fn evaluate_unit_conversion(
     number_format: &str,
     number_max_decimals: usize,
 ) -> Option<String> {
+    if let Some((target_factor, target_dimension)) = data_unit(right.trim()) {
+        let mut parts = left.split_whitespace();
+        let value = crate::conversions::parse_number_with_scale(parts.next()?)?;
+        let (source_factor, source_dimension) = data_unit(parts.next()?)?;
+        if parts.next().is_some() || source_dimension != target_dimension {
+            return None;
+        }
+        let value = value * (source_factor / target_factor);
+        return value.is_finite().then(|| {
+            format!(
+                "{} {}",
+                format_number(value, number_format, number_max_decimals),
+                right.trim()
+            )
+        });
+    }
+
     fn normalized_unit(right: &str, units: &Units) -> Option<String> {
         let trimmed = right.trim();
         let compact = trimmed.replace(' ', "");

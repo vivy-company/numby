@@ -306,6 +306,11 @@ pub fn handle_normal_mode(
                 *cursor_pos = utils::find_line_end(input, *cursor_pos);
                 clear_selection(selection_start);
             }
+            KeyCode::Tab => {
+                if selection_start.is_none() {
+                    text_changed = complete_variable(input, cursor_pos, state, registry.config());
+                }
+            }
             KeyCode::Enter => {
                 clear_selection(selection_start);
                 let current_line = utils::get_current_line(input, *cursor_pos);
@@ -437,6 +442,62 @@ pub(crate) fn save_file(state: &mut AppState, input: &Rope, new_filename: Option
         }
         Err(e) => {
             let _ = state.set_status(crate::fl!("error-saving-file", "error" => &e.to_string()));
+        }
+    }
+}
+
+/// Extend the variable at the cursor without storing completion state.
+fn complete_variable(
+    input: &mut Rope,
+    cursor: &mut usize,
+    state: &AppState,
+    config: &crate::config::Config,
+) -> bool {
+    if *cursor > input.len_chars() {
+        return false;
+    }
+    let Some(suffix) = crate::completion::variable_suffix(
+        &input.to_string(),
+        input.char_to_byte(*cursor),
+        state,
+        config,
+    ) else {
+        return false;
+    };
+    input.insert(*cursor, &suffix);
+    *cursor += suffix.chars().count();
+    true
+}
+
+#[cfg(test)]
+mod completion_tests {
+    use super::*;
+    #[test]
+    fn completes_variables_without_changing_other_text() {
+        let config = crate::config::Config::default();
+        let state = AppState::builder(&config).build();
+        for name in ["price", "principal", "сумма"] {
+            state
+                .variables
+                .write()
+                .unwrap()
+                .insert(name.into(), (1.0, None));
+        }
+        for (text, cursor, expected, changed) in [
+            ("2 + pri", 7, "2 + pri", false),
+            ("2 + pric", 8, "2 + price", true),
+            ("су", 2, "сумма", true),
+            ("price", 2, "price", false),
+            ("", 0, "", false),
+            ("unknown", 7, "unknown", false),
+        ] {
+            let mut input = Rope::from_str(text);
+            let mut cursor = cursor;
+            assert_eq!(
+                complete_variable(&mut input, &mut cursor, &state, &config),
+                changed
+            );
+            assert_eq!(input.to_string(), expected);
         }
     }
 }

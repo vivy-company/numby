@@ -90,6 +90,12 @@ fn is_annotation_only_line(line: &str) -> bool {
     }
 
     let lower = trimmed.to_lowercase();
+    if lower
+        .split_whitespace()
+        .any(|word| crate::evaluator::word_to_number(word).is_some())
+    {
+        return false;
+    }
     !matches!(
         lower.as_str(),
         "sum"
@@ -122,6 +128,7 @@ fn is_annotation_only_line(line: &str) -> bool {
 
 pub fn group_multiline_expressions(lines: &[String]) -> Vec<LineGroup> {
     let mut groups = Vec::new();
+    let mut variable_names = std::collections::HashSet::new();
     let mut current_start: Option<usize> = None;
     let mut current_parts: Vec<String> = Vec::new();
     let mut last_content_idx: Option<usize> = None;
@@ -143,7 +150,21 @@ pub fn group_multiline_expressions(lines: &[String]) -> Vec<LineGroup> {
             prev_line = None;
             continue;
         }
-        if is_annotation_only_line(line) {
+        let code = strip_line_comments_for_continuation(line);
+        if let Some((name, value)) = code.split_once('=') {
+            let name = name.trim();
+            if crate::parser::is_variable_name(name)
+                && !value.trim().is_empty()
+                && !value.trim_start().starts_with('=')
+            {
+                variable_names.insert(name.to_string());
+            }
+        }
+        if is_annotation_only_line(line)
+            && !code
+                .split_whitespace()
+                .any(|word| variable_names.contains(word))
+        {
             continue;
         }
 

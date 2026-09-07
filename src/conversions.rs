@@ -5,6 +5,53 @@
 
 use crate::models::{Rates, Units};
 
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum DataDimension {
+    Amount,
+    Rate,
+}
+
+/// Data symbols preserve b (bits) and B (bytes). SI and IEC prefixes are supported.
+pub(crate) fn data_unit(unit: &str) -> Option<(f64, DataDimension)> {
+    let (unit, dimension) =
+        if let Some(base) = unit.strip_suffix("ps").or_else(|| unit.strip_suffix("/s")) {
+            (base, DataDimension::Rate)
+        } else {
+            (unit, DataDimension::Amount)
+        };
+    let lower = unit.to_ascii_lowercase();
+    let (prefix, factor) = if let Some(prefix) = lower
+        .strip_suffix("bytes")
+        .or_else(|| lower.strip_suffix("byte"))
+    {
+        (prefix, 8.0)
+    } else if let Some(prefix) = lower
+        .strip_suffix("bits")
+        .or_else(|| lower.strip_suffix("bit"))
+    {
+        (prefix, 1.0)
+    } else if let Some(prefix) = unit.strip_suffix('B') {
+        (prefix, 8.0)
+    } else if let Some(prefix) = unit.strip_suffix('b') {
+        (prefix, 1.0)
+    } else {
+        return None;
+    };
+    let scale = match prefix.to_ascii_lowercase().as_str() {
+        "" => 1.0,
+        "k" | "kilo" => 1e3,
+        "m" | "mega" => 1e6,
+        "g" | "giga" => 1e9,
+        "t" | "tera" => 1e12,
+        "ki" | "kibi" => 1024.0,
+        "mi" | "mebi" => 1048576.0,
+        "gi" | "gibi" => 1073741824.0,
+        "ti" | "tebi" => 1099511627776.0,
+        _ => return None,
+    };
+    Some((factor * scale, dimension))
+}
+
 /// Map currency symbols to their ISO currency codes.
 ///
 /// # Examples

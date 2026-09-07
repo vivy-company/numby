@@ -35,15 +35,7 @@ impl Agent for VariableAgent {
             let val_expr = parts[1].trim();
 
             // Validate variable name: not empty, valid identifier, starts with letter/underscore
-            if var.is_empty()
-                || val_expr.is_empty()
-                || !var.chars().all(|c| c.is_alphanumeric() || c == '_')
-                || !var
-                    .chars()
-                    .next()
-                    .map(|c| c.is_alphabetic() || c == '_')
-                    .unwrap_or(false)
-            {
+            if !crate::parser::is_variable_name(var) || val_expr.is_empty() {
                 return None;
             }
             // Use original val_expr if available, otherwise use preprocessed

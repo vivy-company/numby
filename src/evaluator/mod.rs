@@ -14,6 +14,7 @@ pub use cache::CacheManager;
 pub use core::{evaluate_expr, evaluate_expr_with_original, evaluate_unit_conversion, EvalContext};
 pub use error::{EvaluatorError, Result};
 pub use events::{EventSubscriber, StateEvent};
+pub(crate) use preprocessing::word_to_number;
 pub use preprocessing::{preprocess, preprocess_input};
 
 use crate::config::Config;
@@ -45,6 +46,11 @@ pub struct AgentRegistry {
 }
 
 impl AgentRegistry {
+    /// Configuration used by evaluation and editor features.
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
     /// Create a new agent registry with default agents.
     ///
     /// # Errors

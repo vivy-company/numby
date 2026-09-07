@@ -1,4 +1,5 @@
 mod cli;
+mod completion;
 mod config;
 mod conversions;
 mod currency_fetcher;

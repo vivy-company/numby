@@ -24,7 +24,7 @@ lazy_static! {
     static ref T_RE: Regex =
         Regex::new(r"(\d+(?:\.\d+)?)\s*T\b").expect("Invalid regex pattern for tera scale");
     static ref B_RE: Regex =
-        Regex::new(r"(\d+(?:\.\d+)?)\s*b\b").expect("Invalid regex pattern for bit scale");
+        Regex::new(r"(\d+(?:\.\d+)?)b\b").expect("Invalid regex pattern for bit scale");
     static ref KILO_RE: Regex =
         Regex::new(r"(\d+(?:\.\d+)?)\s*kilo\b").expect("Invalid regex pattern for kilo scale");
     static ref MEGA_RE: Regex =
@@ -369,6 +369,18 @@ pub fn preprocess_percentage_parens(mut expr: String) -> String {
     }
 
     expr
+}
+
+pub(crate) fn is_variable_name(word: &str) -> bool {
+    let mut chars = word.chars();
+    let first = match chars.next() {
+        Some(c) => c,
+        None => return false,
+    };
+    if !(first.is_alphabetic() || first == '_') {
+        return false;
+    }
+    chars.all(|c| c.is_alphanumeric() || c == '_')
 }
 
 #[cfg(test)]
