@@ -7,6 +7,11 @@ repository = "https://github.com/vivy-company/numby"
 license = "MIT"
 keywords = ["calculator", "cli", "tui", "natural-language", "math"]
 categories = ["command-line-utilities", "mathematics"]
+include = [
+    "/src/**", "/locales/**", "/tests/**", "/examples/**",
+    "/Cargo.toml", "/Cargo.lock", "/README.md", "/LICENSE",
+    "/config.json", "/schema.json",
+]
 
 [lib]
 name = "numby"
