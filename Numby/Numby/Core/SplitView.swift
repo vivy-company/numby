@@ -59,6 +59,13 @@ struct SplitView<Left: View, Right: View>: NSViewRepresentable {
     }
 
     class Coordinator: NSObject, NSSplitViewDelegate {
+        // Avoid Swift 6.2/6.3's crash when optimizing an implicit generic deinit.
+        // https://github.com/swiftlang/swift/issues/90150
+        deinit {
+            leftController = nil
+            rightController = nil
+        }
+
         var parent: SplitView
         var leftController: FocuslessHostingController<Left>?
         var rightController: FocuslessHostingController<Right>?
