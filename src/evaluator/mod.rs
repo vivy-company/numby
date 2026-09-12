@@ -16,6 +16,7 @@ pub use error::{EvaluatorError, Result};
 pub use events::{EventSubscriber, StateEvent};
 pub(crate) use preprocessing::word_to_number;
 pub use preprocessing::{preprocess, preprocess_input};
+pub(crate) use preprocessing::contains_word_numbers;
 
 use crate::config::Config;
 use crate::models::{Agent, AppState};
